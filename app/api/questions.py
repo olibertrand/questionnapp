@@ -1,7 +1,8 @@
 import json
+import os
 import secrets
 
-from .. import db, engine_client, security
+from .. import config, db, engine_client, security
 from ..web import HttpError, int_list, json_response, require_str, router, to_int
 
 MAX_TEMPLATE_SIZE = 200_000
@@ -151,6 +152,26 @@ def export(req):
     return json_response({"format": "questionnapp/questions", "version": 1, "questions": out})
 
 
+def _import_items(conn, user, items, class_ids, validate=True, skip_existing=False):
+    existing = {r["title"] for r in db.all_(conn, "SELECT title FROM questions WHERE archived = 0")} if skip_existing else set()
+    created, skipped, errors = [], [], []
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            errors.append(f"question {i + 1} : format invalide")
+            continue
+        if item.get("title") in existing:
+            skipped.append(item["title"])
+            continue
+        try:
+            payload = {"title": item.get("title"), "difficulty": item.get("difficulty", 2),
+                       "skills": item.get("skills") or [], "template": item.get("template"),
+                       "chapter_name": item.get("chapter") or None, "class_ids": class_ids}
+            created.append(save_question(conn, user, payload, validate=validate))
+        except HttpError as exc:
+            errors.append(f"question {i + 1} ({item.get('title', '?')}) : {exc.message}")
+    return {"created": created, "skipped": skipped, "errors": errors}
+
+
 @router.post("/api/questions/import")
 def import_questions(req):
     user = security.require_staff(req)
@@ -159,16 +180,20 @@ def import_questions(req):
     if not isinstance(items, list):
         raise HttpError(400, "Liste « questions » attendue")
     class_ids = int_list(data, "class_ids") if isinstance(data, dict) and "class_ids" in data else []
-    created, errors = [], []
-    for i, item in enumerate(items):
-        try:
-            payload = {"title": item.get("title"), "difficulty": item.get("difficulty", 2),
-                       "skills": item.get("skills") or [], "template": item.get("template"),
-                       "chapter_name": item.get("chapter") or None, "class_ids": class_ids}
-            created.append(save_question(req.db, user, payload, validate=data.get("validate", True)))
-        except HttpError as exc:
-            errors.append(f"question {i + 1} ({item.get('title', '?')}) : {exc.message}")
-    return json_response({"created": created, "errors": errors})
+    validate = data.get("validate", True) if isinstance(data, dict) else True
+    return json_response(_import_items(req.db, user, items, class_ids, validate))
+
+
+@router.post("/api/questions/import-examples")
+def import_examples(req):
+    """Importe la banque d'exemples fournie (examples/questions-informatique.json).
+    Les questions déjà présentes (même titre) ne sont pas dupliquées."""
+    user = security.require_staff(req)
+    class_ids = int_list(req.json, "class_ids") if "class_ids" in req.json else []
+    with open(os.path.join(config.ROOT, "examples", "questions-informatique.json"), encoding="utf-8") as f:
+        items = json.load(f)["questions"]
+    # ces exemples sont testés automatiquement (tests/test_examples.py) : pas besoin de les revalider
+    return json_response(_import_items(req.db, user, items, class_ids, validate=False, skip_existing=True))
 
 
 @router.post("/api/questions/preview")

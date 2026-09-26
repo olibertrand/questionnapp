@@ -28,7 +28,8 @@ export async function listPage({ query }) {
     h('button', { onclick: () => exportQuestions(selected()) }, 'Exporter (JSON)'),
     h('label', { class: 'btn', style: { cursor: 'pointer' } }, 'Importer (JSON)',
       h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: (e) => importFile(e.target.files[0]) })),
-    h('button', { onclick: () => chaptersModal(chapters) }, 'Chapitres…'));
+    h('button', { onclick: () => chaptersModal(chapters) }, 'Chapitres…'),
+    h('button', { onclick: () => examplesModal(classes) }, 'Ajouter les questions d\'exemple…'));
 
   const rows = questions.map((q) => {
     const cb = h('input', { type: 'checkbox', value: q.id, 'aria-label': 'Sélectionner' });
@@ -54,7 +55,33 @@ export async function listPage({ query }) {
     questions.length ? h('div', { class: 'table-wrap', style: { marginTop: '1rem' } }, h('table', { class: 'data' },
       h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Classes'), h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussite'))),
       h('tbody', {}, rows)))
-      : h('div', { class: 'empty', style: { marginTop: '1rem' } }, 'Aucune question. Créez-en une ou importez le fichier examples/questions-informatique.json.'));
+      : h('div', { class: 'empty', style: { marginTop: '1rem' } },
+        h('p', {}, 'La banque de questions est vide.'),
+        h('div', { class: 'row', style: { justifyContent: 'center' } },
+          h('button', { class: 'primary', onclick: () => examplesModal(classes) }, 'Ajouter les 20 questions d\'exemple'),
+          h('a', { class: 'btn', href: '#/questions/nouvelle' }, 'Créer ma première question'))));
+}
+
+function examplesModal(classes) {
+  const boxes = classes.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id, checked: true }), c.name));
+  const out = h('div');
+  const btn = h('button', { class: 'primary', style: { marginTop: '1rem' } }, 'Ajouter');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    try {
+      const class_ids = boxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value));
+      const r = await api.post('/questions/import-examples', { class_ids });
+      close();
+      toast(`${r.created.length} question(s) ajoutée(s)` + (r.skipped.length ? `, ${r.skipped.length} déjà présente(s)` : '') + '.');
+      render();
+    } catch (e) { out.replaceChildren(errorBox(e)); btn.disabled = false; }
+  });
+  const close = modal("Questions d'exemple", h('div', {},
+    h('p', {}, "20 questions à données aléatoires : Python (bases, listes, chaînes), algorithmique (tris, dichotomie, complexité), représentation des données (bases, complément à deux, booléens) et bases de données (SQL)."),
+    h('p', { class: 'small muted' }, "Vous pourrez ensuite les modifier, les dupliquer ou vous en inspirer pour écrire les vôtres. Les questions déjà présentes ne sont pas dupliquées."),
+    classes.length ? [h('label', {}, 'Affecter aussi aux classes (pour que les élèves puissent s\'entraîner)'), h('div', { class: 'row' }, boxes)]
+      : h('p', { class: 'alert info' }, "Aucune classe pour l'instant : vous pourrez affecter les questions plus tard depuis la page de la classe."),
+    out, btn));
 }
 
 function bulkClasses(classes, ids) {

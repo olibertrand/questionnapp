@@ -161,6 +161,13 @@ class ApiTest(unittest.TestCase):
         # suppression d'une question déjà utilisée = archivage
         self.assertTrue(prof.ok("DELETE", f"/api/questions/{qid}")["archived"])
 
+        # banque d'exemples : import en un clic, sans doublon au second appel
+        ex = prof.ok("POST", "/api/questions/import-examples", {"class_ids": [cid]})
+        self.assertGreaterEqual(len(ex["created"]), 20)
+        self.assertEqual(prof.ok("POST", "/api/questions/import-examples", {})["created"], [])
+        self.assertEqual(eleve.call("POST", "/api/questions/import-examples", {})[0], 403)
+        self.assertGreater(len(eleve.ok("GET", "/api/me/dashboard")["chapters"]), 3)
+
         eleve.ok("POST", "/api/auth/logout")
         self.assertEqual(eleve.call("GET", "/api/me/dashboard")[0], 401)
 

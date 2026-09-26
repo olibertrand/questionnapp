@@ -57,7 +57,8 @@ question invalide, avec en plus `where` et `line`).
 | POST | `/questions/try` | `{template, seed, answers}` → réponse brute du moteur (`check`) |
 | POST | `/questions/bulk-classes` | `{question_ids, class_ids, add: bool}` |
 | GET | `/questions/export?ids=1,2` | `{format: "questionnapp/questions", version: 1, questions: [...]}` |
-| POST | `/questions/import` | même format (+ `class_ids`) → `{created, errors}` |
+| POST | `/questions/import` | même format (+ `class_ids`) → `{created, skipped, errors}` |
+| POST | `/questions/import-examples` | `{class_ids}` : importe `examples/questions-informatique.json` (sans doublon de titre) |
 
 ## Séances
 | Méthode | Route | |
