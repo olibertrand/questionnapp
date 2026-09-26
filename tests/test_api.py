@@ -162,8 +162,13 @@ class ApiTest(unittest.TestCase):
         self.assertTrue(prof.ok("DELETE", f"/api/questions/{qid}")["archived"])
 
         # banque d'exemples : import en un clic, sans doublon au second appel
+        examples = prof.ok("GET", "/api/questions/examples")["questions"]
+        self.assertFalse(any(e["imported"] for e in examples))
+        one = prof.ok("POST", "/api/questions/import-examples", {"titles": [examples[0]["title"]]})
+        self.assertEqual(len(one["created"]), 1)
+        self.assertTrue(prof.ok("GET", "/api/questions/examples")["questions"][0]["imported"])
         ex = prof.ok("POST", "/api/questions/import-examples", {"class_ids": [cid]})
-        self.assertGreaterEqual(len(ex["created"]), 20)
+        self.assertEqual(len(ex["created"]), len(examples) - 1)
         self.assertEqual(prof.ok("POST", "/api/questions/import-examples", {})["created"], [])
         self.assertEqual(eleve.call("POST", "/api/questions/import-examples", {})[0], 403)
         self.assertGreater(len(eleve.ok("GET", "/api/me/dashboard")["chapters"]), 3)

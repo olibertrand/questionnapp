@@ -29,18 +29,19 @@ export async function listPage({ query }) {
     h('label', { class: 'btn', style: { cursor: 'pointer' } }, 'Importer (JSON)',
       h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: (e) => importFile(e.target.files[0]) })),
     h('button', { onclick: () => chaptersModal(chapters) }, 'Chapitres…'),
-    h('button', { onclick: () => examplesModal(classes) }, 'Ajouter les questions d\'exemple…'));
+    h('button', { onclick: () => examplesModal(classes) }, 'Questions d\'exemple…'));
 
   const rows = questions.map((q) => {
     const cb = h('input', { type: 'checkbox', value: q.id, 'aria-label': 'Sélectionner' });
     checks.push(cb);
     return h('tr', {},
       h('td', {}, cb),
-      h('td', {}, h('a', { href: `#/questions/${q.id}` }, q.title), q.archived ? h('span', { class: 'pill bad', style: { marginLeft: '.3rem' } }, 'archivée') : null,
+      h('td', {}, h('a', { href: `#/questions/${q.id}`, title: 'Modifier' }, q.title), q.archived ? h('span', { class: 'pill bad', style: { marginLeft: '.3rem' } }, 'archivée') : null,
         h('div', { class: 'small muted' }, q.skills.join(' · '))),
       h('td', {}, q.chapter || h('span', { class: 'muted' }, '—')),
       h('td', { class: 'small' }, q.class_ids.map((id) => className[id]).filter(Boolean).join(', ') || h('span', { class: 'muted' }, 'aucune')),
-      h('td', { class: 'num' }, q.attempts), h('td', { class: 'num' }, pct(q.avg_score)));
+      h('td', { class: 'num' }, q.attempts), h('td', { class: 'num' }, pct(q.avg_score)),
+      h('td', { class: 'num' }, h('button', { class: 'small', onclick: () => previewQuestion(q.id) }, 'Aperçu')));
   });
   const all = h('input', { type: 'checkbox', 'aria-label': 'Tout sélectionner', onchange: (e) => checks.forEach((c) => { c.checked = e.target.checked; }) });
 
@@ -53,34 +54,81 @@ export async function listPage({ query }) {
       h('label', { class: 'inline small' }, h('input', { type: 'checkbox', checked: query.archives === '1', onchange: (e) => setQuery('archives', e.target.checked ? '1' : '') }), 'archivées')),
     bulk,
     questions.length ? h('div', { class: 'table-wrap', style: { marginTop: '1rem' } }, h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Classes'), h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussite'))),
+      h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Classes'), h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussite'), h('th', {}, ''))),
       h('tbody', {}, rows)))
       : h('div', { class: 'empty', style: { marginTop: '1rem' } },
         h('p', {}, 'La banque de questions est vide.'),
         h('div', { class: 'row', style: { justifyContent: 'center' } },
-          h('button', { class: 'primary', onclick: () => examplesModal(classes) }, 'Ajouter les 20 questions d\'exemple'),
+          h('button', { class: 'primary', onclick: () => examplesModal(classes) }, 'Parcourir les questions d\'exemple'),
           h('a', { class: 'btn', href: '#/questions/nouvelle' }, 'Créer ma première question'))));
 }
 
-function examplesModal(classes) {
-  const boxes = classes.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id, checked: true }), c.name));
+// Aperçu d'une question telle que la verra un élève (données tirées au hasard, réponse testable).
+export function previewModal(title, template) {
+  const box = h('div', {}, h('p', { class: 'muted' }, 'Génération…'));
+  const show = async () => {
+    const r = await api.post('/questions/preview', { template }).catch((e) => ({ ok: false, error: e.message }));
+    if (!r.ok) return mount(box, h('div', { class: 'alert error' }, r.error));
+    const res = r.result;
+    mount(box,
+      h('div', { class: 'row between small muted', style: { marginBottom: '.6rem' } },
+        h('span', {}, `${res.variety.distinct} énoncé(s) différent(s) sur ${res.variety.samples} tirages`),
+        h('button', { class: 'small primary', onclick: show }, '🎲 Nouvel exemple')),
+      questionView(res.public, { submitLabel: 'Tester une réponse', onSubmit: async (answers) => {
+        const c = await api.post('/questions/try', { template, seed: res.seed, answers });
+        if (!c.ok) throw new Error(c.error);
+        return c.result;
+      } }),
+      h('details', { class: 'help' }, h('summary', {}, 'Réponses attendues'),
+        res.expected.map((e, i) => h('div', {}, h('strong', {}, `Réponse ${i + 1} : `), e ? md(e) : h('span', { class: 'muted' }, 'vérifiée par des tests cachés')))),
+      res.solution ? h('details', { class: 'help' }, h('summary', {}, 'Correction'), md(res.solution)) : null);
+  };
+  show();
+  return modal(title, box);
+}
+
+async function previewQuestion(id) {
+  const { question } = await api.get(`/questions/${id}`);
+  previewModal(question.title, question.template);
+}
+
+async function examplesModal(classes) {
+  const { questions } = await api.get('/questions/examples');
+  const groups = {};
+  questions.forEach((q) => (groups[q.chapter] ||= []).push(q));
+  const checks = [];
+  const list = h('div', { class: 'checklist', style: { maxHeight: '24rem' } }, Object.entries(groups).map(([ch, qs]) => [
+    h('div', { class: 'group' }, ch),
+    qs.map((q) => {
+      const cb = h('input', { type: 'checkbox', value: q.title, checked: !q.imported, disabled: q.imported });
+      checks.push(cb);
+      return h('div', { class: 'row between', style: { padding: '.1rem 0' } },
+        h('label', { class: 'inline' }, cb, q.title, q.imported ? h('span', { class: 'pill good' }, 'déjà importée') : null),
+        h('button', { class: 'small', type: 'button', onclick: () => previewModal(q.title, q.template) }, 'Aperçu'));
+    }),
+  ]));
+  const boxes = classes.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id }), c.name));
   const out = h('div');
-  const btn = h('button', { class: 'primary', style: { marginTop: '1rem' } }, 'Ajouter');
+  const btn = h('button', { class: 'primary', style: { marginTop: '1rem' } }, 'Importer la sélection');
   btn.addEventListener('click', async () => {
+    const titles = checks.filter((c) => c.checked && !c.disabled).map((c) => c.value);
+    if (!titles.length) return mount(out, h('div', { class: 'alert error' }, 'Aucune question sélectionnée.'));
     btn.disabled = true;
     try {
       const class_ids = boxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value));
-      const r = await api.post('/questions/import-examples', { class_ids });
+      const r = await api.post('/questions/import-examples', { class_ids, titles });
       close();
-      toast(`${r.created.length} question(s) ajoutée(s)` + (r.skipped.length ? `, ${r.skipped.length} déjà présente(s)` : '') + '.');
+      toast(`${r.created.length} question(s) importée(s).`);
       render();
-    } catch (e) { out.replaceChildren(errorBox(e)); btn.disabled = false; }
+    } catch (e) { mount(out, errorBox(e)); btn.disabled = false; }
   });
   const close = modal("Questions d'exemple", h('div', {},
-    h('p', {}, "20 questions à données aléatoires : Python (bases, listes, chaînes), algorithmique (tris, dichotomie, complexité), représentation des données (bases, complément à deux, booléens) et bases de données (SQL)."),
-    h('p', { class: 'small muted' }, "Vous pourrez ensuite les modifier, les dupliquer ou vous en inspirer pour écrire les vôtres. Les questions déjà présentes ne sont pas dupliquées."),
-    classes.length ? [h('label', {}, 'Affecter aussi aux classes (pour que les élèves puissent s\'entraîner)'), h('div', { class: 'row' }, boxes)]
-      : h('p', { class: 'alert info' }, "Aucune classe pour l'instant : vous pourrez affecter les questions plus tard depuis la page de la classe."),
+    h('p', { class: 'small muted', style: { marginTop: 0 } }, "Cliquez sur « Aperçu » pour essayer une question avant de l'importer. Une fois importées, vous pourrez les modifier ou vous en inspirer."),
+    h('div', { class: 'row small' },
+      h('button', { class: 'small link', type: 'button', onclick: () => checks.forEach((c) => { if (!c.disabled) c.checked = true; }) }, 'tout cocher'),
+      h('button', { class: 'small link', type: 'button', onclick: () => checks.forEach((c) => { c.checked = false; }) }, 'tout décocher')),
+    list,
+    classes.length ? h('div', { style: { marginTop: '.8rem' } }, h('label', {}, 'Affecter aussi aux classes (facultatif, faisable plus tard)'), h('div', { class: 'row' }, boxes)) : null,
     out, btn));
 }
 

@@ -41,7 +41,7 @@ export function toast(message, type = 'info') {
 
 export function modal(title, content, { onClose } = {}) {
   const close = () => { bg.remove(); document.removeEventListener('keydown', onKey); onClose && onClose(); };
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const onKey = (e) => { if (e.key === 'Escape' && bg === [...document.querySelectorAll('.modal-bg')].pop()) close(); };
   const bg = h('div', { class: 'modal-bg', onclick: (e) => { if (e.target === bg) close(); } },
     h('div', { class: 'modal', role: 'dialog', 'aria-label': title },
       h('div', { class: 'row between' }, h('h2', { style: { margin: 0 } }, title), h('button', { class: 'small', onclick: close, 'aria-label': 'Fermer' }, '✕')),

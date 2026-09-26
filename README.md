@@ -51,7 +51,9 @@ python3 run.py            # puis ouvrir http://127.0.0.1:8000
 
 Sans les données de démo, le premier lancement crée un compte `admin` et affiche son mot de
 passe dans le terminal (ou utilise `QUESTIONNAPP_ADMIN_PASSWORD`). Pour charger les 20 questions
-d'exemple : *Questions → Ajouter les questions d'exemple* (en cochant les classes concernées).
+d'exemple : *Questions → Questions d'exemple…* (chaque question peut être essayée avec
+« Aperçu » avant import). Dans la banque, le bouton « Aperçu » montre une question comme la
+verra un élève, sans qu'elle soit affectée à une classe.
 
 Premiers pas : 1) créer une classe et y ajouter les élèves ; 2) ajouter des questions et les
 affecter à la classe ; 3) éventuellement créer une séance datée. Les élèves ne voient que les

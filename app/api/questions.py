@@ -184,14 +184,30 @@ def import_questions(req):
     return json_response(_import_items(req.db, user, items, class_ids, validate))
 
 
+def _load_examples():
+    with open(os.path.join(config.ROOT, "examples", "questions-informatique.json"), encoding="utf-8") as f:
+        return json.load(f)["questions"]
+
+
+@router.get("/api/questions/examples")
+def list_examples(req):
+    """Banque d'exemples fournie, consultable (avec aperçu) avant import."""
+    security.require_staff(req)
+    existing = {r["title"] for r in db.all_(req.db, "SELECT title FROM questions WHERE archived = 0")}
+    items = [dict(item, imported=item["title"] in existing) for item in _load_examples()]
+    return json_response({"questions": items})
+
+
 @router.post("/api/questions/import-examples")
 def import_examples(req):
-    """Importe la banque d'exemples fournie (examples/questions-informatique.json).
+    """Importe les exemples (tous, ou ceux dont le titre est dans `titles`).
     Les questions déjà présentes (même titre) ne sont pas dupliquées."""
     user = security.require_staff(req)
     class_ids = int_list(req.json, "class_ids") if "class_ids" in req.json else []
-    with open(os.path.join(config.ROOT, "examples", "questions-informatique.json"), encoding="utf-8") as f:
-        items = json.load(f)["questions"]
+    items = _load_examples()
+    titles = req.json.get("titles")
+    if isinstance(titles, list):
+        items = [it for it in items if it["title"] in titles]
     # ces exemples sont testés automatiquement (tests/test_examples.py) : pas besoin de les revalider
     return json_response(_import_items(req.db, user, items, class_ids, validate=False, skip_existing=True))
 
