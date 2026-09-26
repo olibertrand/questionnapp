@@ -232,6 +232,8 @@ def _build(template, seed):
                 elif ftype == "code":
                     pub["starter"] = render(f.get("starter", ""), ns, where + ".starter")
                     pub["language"] = "python"
+                    if f.get("reference"):
+                        priv["reference"] = render(f["reference"], ns, where + ".reference")
                 elif ftype == "sql":
                     pub["language"] = "sql"
                     pub["starter"] = render(f.get("starter", ""), ns, where + ".starter")
@@ -674,3 +676,97 @@ def check(template, seed, answers):
     score = round(total / len(fields_out), 3) if fields_out else 0.0
     return {"score": score, "correct": score >= 1.0, "fields": fields_out, "solution": priv["solution"],
             "fingerprint": fingerprint(public)}
+
+
+# ---------------------------------------------------------------------------
+# Auto-test d'un modèle (import, questions produites par une IA...)
+# ---------------------------------------------------------------------------
+
+_PY_BLOCK = re.compile(r"```python\n(.*?)```", re.S)
+
+
+def reference_answers(template, public, priv):
+    """Réponses « parfaites » d'une instance ; pour un champ `code`, le code de référence est
+    `reference` (clé du champ, avec {{ }}) ou, à défaut, le premier bloc ```python de la correction."""
+    answers, missing = [], []
+    for i, (f, pub, prv) in enumerate(zip(template["fields"], public["fields"], priv["fields"])):
+        t = f["type"]
+        if t == "number":
+            answers.append(repr(prv["expected"]))
+        elif t == "text":
+            answers.append(prv["accepted"][0])
+        elif t == "choice":
+            answers.append(prv["correct"] if f.get("multiple") else prv["correct"][0])
+        elif t == "sql":
+            answers.append(prv["query"])
+        else:
+            code = prv.get("reference")
+            if not code:
+                m = _PY_BLOCK.search(priv["solution"] or "")
+                code = m.group(1) if m else None
+            if not code:
+                missing.append(i)
+            answers.append(code or "")
+    return answers, missing
+
+
+def selftest(template, samples=20, base_seed=12345):
+    """Vérifie un modèle sur `samples` graines : génération sans erreur, variété, réponse de
+    référence acceptée, tests de code non triviaux. Renvoie un rapport (jamais d'exception)."""
+    errors, warnings = [], []
+    fps, fields_ok = set(), True
+    rng = random.Random(base_seed)
+    seeds = [rng.getrandbits(32) for _ in range(samples)]
+    empty_sql = 0
+    code_fields = [i for i, f in enumerate(template.get("fields") or []) if isinstance(f, dict) and f.get("type") == "code"]
+    missing_ref = set()
+    trivial_passes = set()
+    done = 0
+    try:
+        with time_limit(40):
+            for seed in seeds:
+                try:
+                    public, priv, _ns = _build(template, seed)
+                except TemplateError as exc:
+                    errors.append({"seed": seed, **exc.to_dict()})
+                    if len(errors) >= 3:
+                        break
+                    continue
+                fps.add(fingerprint(public))
+                answers, missing = reference_answers(template, public, priv)
+                missing_ref.update(missing)
+                for f, prv in zip(template["fields"], priv["fields"]):
+                    if f["type"] == "sql" and not helpers.sql_run(prv["setup"], prv["query"]):
+                        empty_sql += 1
+                result = check(template, seed, answers)
+                for i, fr in enumerate(result["fields"]):
+                    if i in missing:
+                        continue
+                    if not fr["correct"] and len(errors) < 5:
+                        fields_ok = False
+                        errors.append({"seed": seed, "where": f"fields[{i}]",
+                                       "error": "la réponse de référence est refusée : " + (fr["feedback"] or "réponse incorrecte")})
+                # un code qui ne fait rien ne doit pas passer les tests
+                for i in code_fields:
+                    f = template["fields"][i]
+                    fname = f.get("function")
+                    dummy = f"def {fname}(*args, **kwargs):\n    return None\n" if fname else "pass\n"
+                    probe = list(answers)
+                    probe[i] = dummy
+                    if check(template, seed, probe)["fields"][i]["correct"]:
+                        trivial_passes.add(i)
+                done += 1
+    except TimeLimit:
+        warnings.append(f"auto-test interrompu (trop long) après {done} tirage(s)")
+    for i in sorted(missing_ref):
+        warnings.append(f"fields[{i}] : pas de code de référence (clé « reference » ou bloc ```python dans la correction) : "
+                        "les tests n'ont pas pu être vérifiés")
+    for i in sorted(trivial_passes):
+        warnings.append(f"fields[{i}] : les tests acceptent une fonction qui ne fait rien")
+    if done and empty_sql >= done / 2:
+        warnings.append("la requête de référence renvoie souvent un résultat vide")
+    if done and len(fps) < min(5, done) and not code_fields:
+        warnings.append(f"peu de variété : {len(fps)} énoncé(s) différent(s) sur {done} tirages")
+    status = "error" if errors else ("warning" if warnings else "ok")
+    return {"status": status, "samples": done, "distinct": len(fps), "errors": errors, "warnings": warnings,
+            "reference_ok": fields_ok and not errors}

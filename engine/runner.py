@@ -26,10 +26,11 @@ def main():
 
     from . import core, sandbox
 
-    if os.environ.get("QUESTIONNAPP_NO_SANDBOX") != "1":
-        sandbox.install(cpu_seconds=int(os.environ.get("QUESTIONNAPP_CPU_LIMIT", "20")))
-
     action = request.get("action")
+    if os.environ.get("QUESTIONNAPP_NO_SANDBOX") != "1":
+        cpu = int(os.environ.get("QUESTIONNAPP_CPU_LIMIT", "20"))
+        sandbox.install(cpu_seconds=cpu * 3 if action == "selftest" else cpu)
+
     template = request.get("template") or {}
     seed = int(request.get("seed") or 0) & 0xFFFFFFFF
     try:
@@ -37,6 +38,8 @@ def main():
             result = core.generate(template, seed, request.get("avoid") or (), int(request.get("max_tries") or 25))
         elif action == "preview":
             result = core.preview(template, seed)
+        elif action == "selftest":
+            result = core.selftest(template, int(request.get("samples") or 20))
         elif action == "check":
             result = core.check(template, seed, request.get("answers") or [])
         else:

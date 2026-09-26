@@ -35,8 +35,8 @@ def call(request, timeout=None):
         return {"ok": False, "error": f"Le moteur a échoué : {detail[0]}"}
 
 
-def call_or_raise(request, status=422):
-    res = call(request)
+def call_or_raise(request, status=422, timeout=None):
+    res = call(request, timeout)
     if not res.get("ok"):
         raise HttpError(status, res.get("error", "Erreur du moteur"), where=res.get("where"), line=res.get("line"))
     return res["result"]

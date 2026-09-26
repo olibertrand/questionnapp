@@ -173,6 +173,29 @@ class ApiTest(unittest.TestCase):
         self.assertEqual(eleve.call("POST", "/api/questions/import-examples", {})[0], 403)
         self.assertGreater(len(eleve.ok("GET", "/api/me/dashboard")["chapters"]), 3)
 
+        # import d'un fichier (ex. produit par Claude) : auto-test de chaque question
+        bundle = {"format": "questionnapp/questions", "version": 1, "questions": [
+            {"title": "Dico : accès", "chapter": "Dictionnaires", "skills": ["Dictionnaires : accès"],
+             "template": {"code": "k = choice(['a', 'b'])\nv = randint(1, 50)", "statement": "d = {'{{ k }}': {{ v }}} ; d['{{ k }}'] ?",
+                          "fields": [{"type": "number", "answer": "v"}]}},
+            {"title": "Plante", "template": {"code": "x = 1 / 0", "fields": [{"type": "number", "answer": "1"}]}},
+            {"title": "Correction fausse", "chapter": "Dictionnaires", "template": {
+                "code": "n = randint(1, 9)", "statement": "Écrire double(x) ({{ n }})",
+                "fields": [{"type": "code", "function": "double", "cases": "[((n,), 2 * n)]"}],
+                "solution": "```python\ndef double(x):\n    return x + 1\n```"}},
+        ]}
+        r = prof.ok("POST", "/api/questions/import", bundle)
+        self.assertEqual(len(r["created"]), 2)
+        self.assertEqual(len(r["errors"]), 1)
+        self.assertEqual([w["title"] for w in r["warnings"]], ["Correction fausse"])
+        st = prof.ok("POST", "/api/questions/selftest", {"template": bundle["questions"][0]["template"]})
+        self.assertEqual(st["status"], "ok")
+        req = urllib.request.Request(self.base + "/api/questions/referential")
+        with prof.opener.open(req) as resp:
+            ref = resp.read().decode()
+        self.assertIn("## Chapitre : Dictionnaires", ref)
+        self.assertIn("Dictionnaires : accès", ref)
+
         eleve.ok("POST", "/api/auth/logout")
         self.assertEqual(eleve.call("GET", "/api/me/dashboard")[0], 401)
 

@@ -1,8 +1,7 @@
-"""Chaque question d'exemple doit se générer sans erreur, varier, et accepter sa propre réponse."""
+"""Chaque question d'exemple doit passer l'auto-test du moteur (génération, variété, correction)."""
 
 import json
 import os
-import re
 import sys
 import unittest
 
@@ -16,21 +15,7 @@ EXAMPLES = os.path.join(ROOT, "examples", "questions-informatique.json")
 
 def reference_answers(template, seed):
     public, priv, _ns = core._build(template, seed)
-    answers = []
-    for f, pub, prv in zip(template["fields"], public["fields"], priv["fields"]):
-        t = f["type"]
-        if t == "number":
-            answers.append(str(prv["expected"]).replace(".", ","))
-        elif t == "text":
-            answers.append(prv["accepted"][0])
-        elif t == "choice":
-            answers.append(prv["correct"] if f.get("multiple") else prv["correct"][0])
-        elif t == "sql":
-            answers.append(prv["query"])
-        elif t == "code":
-            m = re.search(r"```python\n(.*?)```", priv["solution"], re.S)
-            answers.append(m.group(1) if m else "")
-    return answers
+    return core.reference_answers(template, public, priv)[0]
 
 
 class ExamplesTest(unittest.TestCase):
@@ -40,13 +25,30 @@ class ExamplesTest(unittest.TestCase):
         self.assertGreater(len(questions), 10)
         for q in questions:
             with self.subTest(q["title"]):
-                fps = set()
-                for seed in range(30):
-                    inst = core.generate(q["template"], seed)
-                    fps.add(inst["fingerprint"])
-                    res = core.check(q["template"], seed, reference_answers(q["template"], seed))
-                    self.assertTrue(res["correct"], (seed, res))
-                self.assertGreaterEqual(len(fps), 4, "pas assez de variété")
+                report = core.selftest(q["template"], samples=30)
+                self.assertEqual(report["status"], "ok", report)
+                self.assertGreaterEqual(report["distinct"], 4)
+
+    def test_selftest_detects_problems(self):
+        bad_ref = {"code": "a = randint(1, 9)", "statement": "{{ a }}",
+                   "fields": [{"type": "code", "function": "f", "cases": "[((a,), a * 2)]"}],
+                   "solution": "```python\ndef f(x):\n    return x * 3\n```"}
+        r = core.selftest(bad_ref, samples=5)
+        self.assertEqual(r["status"], "error")
+        self.assertIn("référence est refusée", r["errors"][0]["error"])
+
+        lax = {"code": "a = randint(1, 9)", "statement": "{{ a }}",
+               "fields": [{"type": "code", "tests": "check(True)"}],
+               "solution": "```python\nprint(1)\n```"}
+        r = core.selftest(lax, samples=3)
+        self.assertTrue(any("ne fait rien" in w for w in r["warnings"]), r)
+
+        crash = {"code": "x = 1 / randint(0, 1)", "statement": "", "fields": [{"type": "number", "answer": "x"}]}
+        self.assertEqual(core.selftest(crash, samples=10)["status"], "error")
+
+        dull = {"code": "", "statement": "2 + 2 ?", "fields": [{"type": "number", "answer": "4"}]}
+        r = core.selftest(dull, samples=5)
+        self.assertTrue(any("variété" in w for w in r["warnings"]))
 
 
 if __name__ == "__main__":

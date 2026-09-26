@@ -1,9 +1,10 @@
 import json
 import os
+import re
 import secrets
 
 from .. import config, db, engine_client, security
-from ..web import HttpError, int_list, json_response, require_str, router, to_int
+from ..web import HttpError, Response, int_list, json_response, require_str, router, to_int
 
 MAX_TEMPLATE_SIZE = 200_000
 
@@ -152,24 +153,55 @@ def export(req):
     return json_response({"format": "questionnapp/questions", "version": 1, "questions": out})
 
 
+def _selftest_messages(report):
+    """Messages lisibles et sans doublon (« fields[0] » devient « réponse 1 »)."""
+    def human(text):
+        return re.sub(r"fields\[(\d+)\]", lambda m: f"réponse {int(m.group(1)) + 1}", text)
+    msgs = []
+    for e in report["errors"]:
+        where = f" ({e['where']}{', ligne ' + str(e['line']) if e.get('line') else ''})" if e.get("where") else ""
+        msgs.append(human(f"{e['error']}{where}"))
+    msgs += [human(w) for w in report["warnings"]]
+    return list(dict.fromkeys(msgs))
+
+
+def selftest(template):
+    return engine_client.call_or_raise({"action": "selftest", "template": template, "samples": 20}, timeout=75)
+
+
 def _import_items(conn, user, items, class_ids, validate=True, skip_existing=False):
+    """Importe une liste de questions. Avec `validate`, chaque modèle passe l'auto-test du moteur :
+    une question qui ne se génère pas est refusée ; une question importée mais suspecte
+    (correction refusée, tests laxistes, peu de variété) est signalée dans `warnings`."""
     existing = {r["title"] for r in db.all_(conn, "SELECT title FROM questions WHERE archived = 0")} if skip_existing else set()
-    created, skipped, errors = [], [], []
+    created, skipped, errors, warnings = [], [], [], []
     for i, item in enumerate(items):
         if not isinstance(item, dict):
             errors.append(f"question {i + 1} : format invalide")
             continue
-        if item.get("title") in existing:
-            skipped.append(item["title"])
+        title = item.get("title") or "?"
+        if title in existing:
+            skipped.append(title)
             continue
         try:
+            template = item.get("template")
+            if validate:
+                if not isinstance(template, dict):
+                    raise HttpError(400, "modèle manquant")
+                report = selftest(template)
+                generation_failed = [e for e in report["errors"] if "référence" not in e["error"]]
+                if generation_failed or not report["samples"]:
+                    raise HttpError(422, "; ".join(_selftest_messages(report)[:3]) or "génération impossible")
             payload = {"title": item.get("title"), "difficulty": item.get("difficulty", 2),
-                       "skills": item.get("skills") or [], "template": item.get("template"),
+                       "skills": item.get("skills") or [], "template": template,
                        "chapter_name": item.get("chapter") or None, "class_ids": class_ids}
-            created.append(save_question(conn, user, payload, validate=validate))
+            qid = save_question(conn, user, payload, validate=False)
+            created.append(qid)
+            if validate and report["status"] != "ok":
+                warnings.append({"id": qid, "title": title, "messages": _selftest_messages(report)})
         except HttpError as exc:
-            errors.append(f"question {i + 1} ({item.get('title', '?')}) : {exc.message}")
-    return {"created": created, "skipped": skipped, "errors": errors}
+            errors.append(f"question {i + 1} ({title}) : {exc.message}")
+    return {"created": created, "skipped": skipped, "errors": errors, "warnings": warnings}
 
 
 @router.post("/api/questions/import")
@@ -187,6 +219,36 @@ def import_questions(req):
 def _load_examples():
     with open(os.path.join(config.ROOT, "examples", "questions-informatique.json"), encoding="utf-8") as f:
         return json.load(f)["questions"]
+
+
+@router.get("/api/questions/referential")
+def referential(req):
+    """Chapitres, compétences et questions existantes au format Markdown, à fournir à une IA
+    (projet Claude) pour qu'elle réutilise les mêmes noms et évite les doublons."""
+    security.require_staff(req)
+    conn = req.db
+    chapters = db.all_(conn, "SELECT id, name FROM chapters ORDER BY position, name")
+    lines = ["# Référentiel QuestionnApp", "",
+             "Chapitres, compétences et questions déjà présentes dans la banque. Réutiliser exactement ces noms "
+             "de chapitres et de compétences quand ils conviennent ; n'en créer de nouveaux que si nécessaire.", ""]
+    for ch in chapters + [{"id": None, "name": "Sans chapitre"}]:
+        qs = db.all_(conn, """SELECT q.id, q.title, q.difficulty,
+                                     (SELECT group_concat(s.name, ' ; ') FROM question_skills qs JOIN skills s ON s.id = qs.skill_id
+                                      WHERE qs.question_id = q.id) AS skills
+                              FROM questions q WHERE q.archived = 0 AND q.chapter_id IS ? ORDER BY q.title""", ch["id"])
+        skills = db.all_(conn, """SELECT DISTINCT s.name FROM skills s LEFT JOIN question_skills qs ON qs.skill_id = s.id
+                                  LEFT JOIN questions q ON q.id = qs.question_id
+                                  WHERE s.chapter_id IS ? OR q.chapter_id IS ? ORDER BY s.name""", ch["id"], ch["id"])
+        if ch["id"] is None and not qs:
+            continue
+        lines.append(f"## Chapitre : {ch['name']}")
+        lines.append("Compétences : " + (" ; ".join(s["name"] for s in skills) if skills else "(aucune)"))
+        lines.append("")
+        for q in qs:
+            lines.append(f"- {q['title']} (difficulté {q['difficulty']}) — {q['skills'] or 'sans compétence'}")
+        lines.append("")
+    return Response("\n".join(lines), content_type="text/markdown; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="referentiel-questionnapp.md"'})
 
 
 @router.get("/api/questions/examples")
@@ -220,6 +282,17 @@ def preview(req):
     seed = secrets.randbits(32) if seed in (None, "") else to_int(seed, "graine")
     res = engine_client.call({"action": "preview", "template": data.get("template"), "seed": seed})
     return json_response(res)
+
+
+@router.post("/api/questions/selftest")
+def selftest_route(req):
+    security.require_staff(req)
+    template = req.json.get("template")
+    if not isinstance(template, dict):
+        raise HttpError(400, "Modèle invalide")
+    report = selftest(template)
+    report["messages"] = _selftest_messages(report)
+    return json_response(report)
 
 
 @router.post("/api/questions/try")

@@ -54,10 +54,12 @@ question invalide, avec en plus `where` et `line`).
 | DELETE | `/questions/:id` | supprime, ou archive si des élèves y ont répondu |
 | POST | `/questions/:id/duplicate` | |
 | POST | `/questions/preview` | `{template, seed?}` → réponse brute du moteur (`preview`) |
+| POST | `/questions/selftest` | `{template}` → rapport d'auto-test du moteur + `messages` |
+| GET | `/questions/referential` | Markdown : chapitres, compétences et questions existantes (pour un projet Claude) |
 | POST | `/questions/try` | `{template, seed, answers}` → réponse brute du moteur (`check`) |
 | POST | `/questions/bulk-classes` | `{question_ids, class_ids, add: bool}` |
 | GET | `/questions/export?ids=1,2` | `{format: "questionnapp/questions", version: 1, questions: [...]}` |
-| POST | `/questions/import` | même format (+ `class_ids`) → `{created, skipped, errors}` |
+| POST | `/questions/import` | même format (+ `class_ids`) → `{created, skipped, errors, warnings}` : chaque question passe l'auto-test ; refusée si elle ne se génère pas, signalée dans `warnings` si elle est douteuse |
 | GET | `/questions/examples` | banque d'exemples fournie, avec `imported` (déjà présente ?) et le modèle pour l'aperçu |
 | POST | `/questions/import-examples` | `{class_ids, titles?}` : importe les exemples (tous ou ceux listés), sans doublon de titre |
 

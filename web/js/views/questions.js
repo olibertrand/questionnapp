@@ -29,7 +29,8 @@ export async function listPage({ query }) {
     h('label', { class: 'btn', style: { cursor: 'pointer' } }, 'Importer (JSON)',
       h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: (e) => importFile(e.target.files[0]) })),
     h('button', { onclick: () => chaptersModal(chapters) }, 'Chapitres…'),
-    h('button', { onclick: () => examplesModal(classes) }, 'Questions d\'exemple…'));
+    h('button', { onclick: () => examplesModal(classes) }, 'Questions d\'exemple…'),
+    h('button', { onclick: downloadReferential, title: 'Chapitres, compétences et questions existantes, à fournir à Claude pour créer de nouvelles questions' }, 'Référentiel pour Claude'));
 
   const rows = questions.map((q) => {
     const cb = h('input', { type: 'checkbox', value: q.id, 'aria-label': 'Sélectionner' });
@@ -159,14 +160,37 @@ async function exportQuestions(ids) {
 
 async function importFile(file) {
   if (!file) return;
+  let data;
   try {
-    const data = JSON.parse(await file.text());
-    toast('Import en cours (chaque question est testée)…');
+    data = JSON.parse(await file.text());
+  } catch (e) {
+    return modal('Fichier illisible', h('div', { class: 'alert error' }, `Ce fichier n'est pas un JSON valide : ${e.message}`));
+  }
+  const close = modal('Import en cours', h('p', {}, 'Chaque question est testée sur 20 tirages (génération, variété, correction)… cela peut prendre une minute.'));
+  try {
     const r = await api.post('/questions/import', data);
-    toast(`${r.created.length} question(s) importée(s).`);
-    if (r.errors.length) modal("Erreurs d'import", h('ul', {}, r.errors.map((e) => h('li', {}, e))));
+    close();
+    importReport(r);
     render();
-  } catch (e) { toast(e.message, 'error'); }
+  } catch (e) { close(); toast(e.message, 'error'); }
+}
+
+function importReport(r) {
+  modal("Résultat de l'import", h('div', {},
+    h('div', { class: 'alert info' }, `${r.created.length} question(s) importée(s)` + (r.skipped && r.skipped.length ? `, ${r.skipped.length} déjà présente(s)` : '') + '.'),
+    r.warnings && r.warnings.length ? [h('h3', {}, 'À vérifier'),
+      h('p', { class: 'small muted' }, "Ces questions ont été importées mais l'auto-test a relevé des points à contrôler. Ouvrez-les dans l'éditeur pour les corriger."),
+      h('ul', {}, r.warnings.map((w) => h('li', {}, h('a', { href: `#/questions/${w.id}` }, w.title), h('ul', { class: 'small' }, w.messages.map((m) => h('li', {}, m))))))] : null,
+    r.errors.length ? [h('h3', {}, 'Non importées'), h('div', { class: 'alert error' }, h('ul', {}, r.errors.map((e) => h('li', {}, e))))] : null));
+}
+
+async function downloadReferential() {
+  const res = await fetch('/api/questions/referential', { credentials: 'same-origin' });
+  if (!res.ok) return toast('Export impossible', 'error');
+  const a = h('a', { href: URL.createObjectURL(await res.blob()), download: 'referentiel-questionnapp.md' });
+  document.body.append(a);
+  a.click();
+  a.remove();
 }
 
 function chaptersModal(chapters) {
@@ -490,7 +514,21 @@ export async function editorPage({ params }) {
       await api.del(`/questions/${params.id}`);
       navigate('/questions');
     } }, 'Supprimer'),
+    h('button', { onclick: runSelftest, title: 'Teste le modèle sur 20 tirages' }, 'Vérifier'),
     jsonBtn, starterSel);
+
+  async function runSelftest() {
+    const close = modal('Vérification', h('p', {}, 'Test sur 20 tirages…'));
+    try {
+      const r = await api.post('/questions/selftest', { template: t });
+      close();
+      modal('Vérification', h('div', {},
+        h('div', { class: 'alert ' + (r.status === 'ok' ? 'info' : r.status === 'warning' ? 'warn' : 'error') },
+          r.status === 'ok' ? `✓ Tout va bien : ${r.samples} tirages, ${r.distinct} énoncé(s) différent(s), la correction est acceptée à chaque fois.`
+            : `${r.samples} tirage(s) réussi(s), ${r.distinct} énoncé(s) différent(s).`),
+        r.messages.length ? h('ul', {}, r.messages.map((m) => h('li', {}, m))) : null));
+    } catch (e) { close(); toast(e.message, 'error'); }
+  }
 
   setTimeout(() => doPreview(true), 0);
   return h('div', {},

@@ -122,6 +122,7 @@ Deux options identiques après tirage déclenchent un nouveau tirage des valeurs
 | clé | rôle |
 |---|---|
 | `starter` | code de départ (Markdown non interprété, `{{ }}` autorisés) |
+| `reference` | solution de référence (`{{ }}` autorisés) utilisée par l'auto-test ; à défaut, le premier bloc ```python de la correction |
 | `function` + `cases` | nom de la fonction à tester et expression donnant `[((arg1, arg2), attendu), ...]` |
 | `tests` | code Python supplémentaire ; y utiliser `check(cond, message)` et `check_equal(obtenu, attendu, message)`. Y sont visibles : les variables du générateur, les définitions de l'élève, `student` (son espace de noms) et `student_output` (ce que son programme a affiché). |
 | `forbid` | noms interdits (`"sum"`, `"sorted"`, `"sort"`, `"import"`, `"while"`, `"for"`…) |
@@ -176,6 +177,7 @@ echo '{"action":"generate","template":{...},"seed":42,"avoid":[]}' | \
 |---|---|---|
 | `generate` | `template`, `seed`, `avoid` (empreintes), `max_tries` | `{seed, fingerprint, public: {statement, fields}, fresh}` |
 | `preview` | `template`, `seed` | idem + `expected` (réponses affichables), `solution`, `variety`, `deterministic` |
+| `selftest` | `template`, `samples` | `{status: ok \| warning \| error, samples, distinct, errors, warnings}` : génération sur plusieurs graines, variété, réponse de référence acceptée, tests de code non triviaux |
 | `check` | `template`, `seed`, `answers` | `{score, correct, fields: [{score, correct, feedback, expected}], solution, fingerprint}` |
 
 Erreur : `{"ok": false, "error": "...", "where": "code" | "statement" | "fields[0].answer"…, "line": 3}`.

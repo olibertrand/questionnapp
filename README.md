@@ -74,6 +74,13 @@ En production : placer l'application derrière un proxy HTTPS (nginx, Caddy), ac
 cookies sécurisés et isoler le moteur (voir `docs/ARCHITECTURE.md`, § Sécurité).
 Sauvegarde : copier le fichier SQLite.
 
+## Créer des questions avec Claude
+
+Le dossier [`claude-projet/`](claude-projet/LISEZMOI.md) permet de monter un projet Claude
+(claude.ai) qui transforme un cours et ses exercices en questions : notions du chapitre et
+prérequis mobilisés dans les exercices. Claude teste ses questions avec le moteur de l'app,
+puis on importe le fichier JSON obtenu ; l'import refait un auto-test de chaque question.
+
 ## Tests
 
 ```sh
