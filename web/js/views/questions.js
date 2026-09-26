@@ -1,0 +1,470 @@
+import { api, qs } from '../api.js';
+import { codeArea, confirmBox, errorBox, h, modal, mount, pct, toast } from '../dom.js';
+import { navigate, render } from '../app.js';
+import { md } from '../markdown.js';
+import { questionView } from '../player.js';
+
+// ---------------------------------------------------------------------------
+// Liste
+// ---------------------------------------------------------------------------
+
+export async function listPage({ query }) {
+  const [{ questions }, { chapters }, { classes }] = await Promise.all([
+    api.get('/questions' + qs({ chapter_id: query.chapitre, class_id: query.classe, q: query.q, archived: query.archives })),
+    api.get('/chapters'), api.get('/classes')]);
+  const className = Object.fromEntries(classes.map((c) => [c.id, c.name]));
+  const setQuery = (k, v) => navigate('/questions' + qs({ ...query, [k]: v }));
+  const search = h('input', { type: 'search', placeholder: 'Rechercher (titre, compétence)…', value: query.q || '' });
+  search.addEventListener('change', () => setQuery('q', search.value));
+  const chapterSel = h('select', { onchange: (e) => setQuery('chapitre', e.target.value) },
+    h('option', { value: '' }, 'Tous les chapitres'), chapters.map((c) => h('option', { value: c.id, selected: String(c.id) === query.chapitre }, c.name)));
+  const classSel = h('select', { onchange: (e) => setQuery('classe', e.target.value) },
+    h('option', { value: '' }, 'Toutes les classes'), classes.map((c) => h('option', { value: c.id, selected: String(c.id) === query.classe }, c.name)));
+  const checks = [];
+  const selected = () => checks.filter((c) => c.checked).map((c) => Number(c.value));
+
+  const bulk = h('div', { class: 'row' },
+    h('button', { onclick: () => bulkClasses(classes, selected()) }, 'Affecter la sélection à des classes…'),
+    h('button', { onclick: () => exportQuestions(selected()) }, 'Exporter (JSON)'),
+    h('label', { class: 'btn', style: { cursor: 'pointer' } }, 'Importer (JSON)',
+      h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: (e) => importFile(e.target.files[0]) })),
+    h('button', { onclick: () => chaptersModal(chapters) }, 'Chapitres…'));
+
+  const rows = questions.map((q) => {
+    const cb = h('input', { type: 'checkbox', value: q.id, 'aria-label': 'Sélectionner' });
+    checks.push(cb);
+    return h('tr', {},
+      h('td', {}, cb),
+      h('td', {}, h('a', { href: `#/questions/${q.id}` }, q.title), q.archived ? h('span', { class: 'pill bad', style: { marginLeft: '.3rem' } }, 'archivée') : null,
+        h('div', { class: 'small muted' }, q.skills.join(' · '))),
+      h('td', {}, q.chapter || h('span', { class: 'muted' }, '—')),
+      h('td', { class: 'small' }, q.class_ids.map((id) => className[id]).filter(Boolean).join(', ') || h('span', { class: 'muted' }, 'aucune')),
+      h('td', { class: 'num' }, q.attempts), h('td', { class: 'num' }, pct(q.avg_score)));
+  });
+  const all = h('input', { type: 'checkbox', 'aria-label': 'Tout sélectionner', onchange: (e) => checks.forEach((c) => { c.checked = e.target.checked; }) });
+
+  return h('div', {},
+    h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, 'Banque de questions'),
+      h('a', { class: 'btn primary', href: '#/questions/nouvelle' }, '+ Nouvelle question')),
+    h('div', { class: 'row', style: { margin: '1rem 0' } },
+      h('div', { style: { flex: 2, minWidth: '14rem' } }, search), h('div', { style: { flex: 1, minWidth: '10rem' } }, chapterSel),
+      h('div', { style: { flex: 1, minWidth: '10rem' } }, classSel),
+      h('label', { class: 'inline small' }, h('input', { type: 'checkbox', checked: query.archives === '1', onchange: (e) => setQuery('archives', e.target.checked ? '1' : '') }), 'archivées')),
+    bulk,
+    questions.length ? h('div', { class: 'table-wrap', style: { marginTop: '1rem' } }, h('table', { class: 'data' },
+      h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Classes'), h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussite'))),
+      h('tbody', {}, rows)))
+      : h('div', { class: 'empty', style: { marginTop: '1rem' } }, 'Aucune question. Créez-en une ou importez le fichier examples/questions-informatique.json.'));
+}
+
+function bulkClasses(classes, ids) {
+  if (!ids.length) return toast('Sélectionnez des questions.', 'error');
+  const boxes = classes.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id }), c.name));
+  const go = async (add) => {
+    const cids = boxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value));
+    await api.post('/questions/bulk-classes', { question_ids: ids, class_ids: cids, add });
+    close();
+    render();
+  };
+  const close = modal(`${ids.length} question(s) sélectionnée(s)`, h('div', {},
+    h('div', { class: 'stack' }, boxes),
+    h('div', { class: 'row', style: { marginTop: '1rem' } },
+      h('button', { class: 'primary', onclick: () => go(true) }, 'Ajouter à ces classes'),
+      h('button', { onclick: () => go(false) }, 'Retirer de ces classes'))));
+}
+
+async function exportQuestions(ids) {
+  const data = await api.get('/questions/export' + qs({ ids: ids.join(',') }));
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = h('a', { href: URL.createObjectURL(blob), download: 'questions.json' });
+  document.body.append(a);
+  a.click();
+  a.remove();
+}
+
+async function importFile(file) {
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    toast('Import en cours (chaque question est testée)…');
+    const r = await api.post('/questions/import', data);
+    toast(`${r.created.length} question(s) importée(s).`);
+    if (r.errors.length) modal("Erreurs d'import", h('ul', {}, r.errors.map((e) => h('li', {}, e))));
+    render();
+  } catch (e) { toast(e.message, 'error'); }
+}
+
+function chaptersModal(chapters) {
+  const name = h('input', { type: 'text', placeholder: 'Nouveau chapitre' });
+  const list = h('table', { class: 'data' }, h('tbody', {}, chapters.map((c, i) => h('tr', {},
+    h('td', {}, c.name), h('td', { class: 'num small muted' }, `${c.questions} q.`),
+    h('td', { class: 'num' },
+      h('button', { class: 'small', disabled: i === 0, onclick: () => move(i, -1) }, '↑'),
+      h('button', { class: 'small', disabled: i === chapters.length - 1, onclick: () => move(i, 1) }, '↓'),
+      h('button', { class: 'small', onclick: async () => {
+        const n = prompt('Nouveau nom', c.name);
+        if (n) { await api.patch(`/chapters/${c.id}`, { name: n }); close(); render(); }
+      } }, 'Renommer'),
+      h('button', { class: 'small danger', onclick: async () => {
+        if (!confirmBox(`Supprimer le chapitre « ${c.name} » ? Ses questions deviennent « sans chapitre ».`)) return;
+        await api.del(`/chapters/${c.id}`);
+        close();
+        render();
+      } }, '✕'))))));
+  async function move(i, d) {
+    const order = [...chapters];
+    [order[i], order[i + d]] = [order[i + d], order[i]];
+    await Promise.all(order.map((c, pos) => api.patch(`/chapters/${c.id}`, { position: pos + 1 })));
+    close();
+    render();
+  }
+  const close = modal('Chapitres', h('div', {}, list,
+    h('form', { class: 'row', style: { marginTop: '1rem' }, onsubmit: async (e) => {
+      e.preventDefault();
+      if (!name.value.trim()) return;
+      await api.post('/chapters', { name: name.value });
+      close();
+      render();
+    } }, h('div', { style: { flex: 1 } }, name), h('button', { class: 'primary', type: 'submit' }, 'Ajouter'))));
+}
+
+// ---------------------------------------------------------------------------
+// Modèles de départ
+// ---------------------------------------------------------------------------
+
+const STARTERS = {
+  sortie: {
+    label: "Qu'affiche ce programme ?",
+    template: {
+      code: 'a = randint(2, 9)\nn = randint(3, 6)\nsrc = f"""s = 0\nfor i in range({n}):\n    s = s + {a}\nprint(s)"""\nsortie = run(src)',
+      statement: "Qu'affiche le programme suivant ?\n\n{{ code_block(src) }}",
+      fields: [{ type: 'text', label: 'Affichage', answer: 'sortie' }],
+      solution: 'La boucle ajoute {{ a }} à `s`, {{ n }} fois : le programme affiche **{{ sortie }}**.',
+    },
+  },
+  fonction: {
+    label: 'Écrire une fonction (tests aléatoires)',
+    template: {
+      code: 'k = randint(2, 5)\ncases = []\nfor _ in range(6):\n    L = randlist(randint(0, 8), -20, 20)\n    cases.append(((L,), [x * k for x in L]))',
+      statement: 'Écrire une fonction `multiplie(L)` qui renvoie une nouvelle liste où chaque élément de `L` est multiplié par {{ k }}.',
+      fields: [{ type: 'code', label: 'Votre code', function: 'multiplie', cases: 'cases', forbid: [], starter: 'def multiplie(L):\n    ' }],
+      solution: '```python\ndef multiplie(L):\n    return [x * {{ k }} for x in L]\n```',
+    },
+  },
+  qcm: {
+    label: 'QCM (options générées)',
+    template: {
+      code: "a, b = randint(10, 30), randint(2, 5)\nexpr = f'{a} // {b}'\nbonne = a // b\nmauvaises = sample(sorted({round(a / b, 2), a % b, bonne + 1, bonne - 1} - {bonne}), 3)",
+      statement: 'Que vaut `{{ expr }}` ?',
+      fields: [{ type: 'choice', label: '', options: '[(str(bonne), True)] + [(str(m), False) for m in mauvaises]' }],
+      solution: '`//` est la division entière : `{{ expr }}` vaut {{ bonne }}.',
+    },
+  },
+  sql: {
+    label: 'Requête SQL',
+    template: {
+      code: "rows = [(i, choice(PRENOMS), randint(8, 20)) for i in range(1, 9)]\nsetup = 'CREATE TABLE Note(id INTEGER PRIMARY KEY, prenom TEXT, note INTEGER);\\n' + sql_insert('Note', rows)\nseuil = randint(10, 15)",
+      statement: "Table **Note** :\n\n{{ sql_table(setup, 'Note') }}\n\nÉcrire une requête donnant le prénom des élèves ayant une note supérieure ou égale à {{ seuil }}.",
+      fields: [{ type: 'sql', label: 'Requête', setup: 'setup', answer: "f'SELECT prenom FROM Note WHERE note >= {seuil}'" }],
+      solution: '```sql\nSELECT prenom FROM Note WHERE note >= {{ seuil }}\n```',
+    },
+  },
+  nombre: {
+    label: 'Réponse numérique (conversion)',
+    template: {
+      code: 'n = randint(16, 255)',
+      statement: "Quelle est l'écriture décimale du nombre binaire `{{ tobase(n, 2) }}` ?",
+      fields: [{ type: 'number', label: '', answer: 'n' }],
+      solution: '`{{ tobase(n, 2) }}` = {{ n }}',
+    },
+  },
+};
+
+const FIELD_TYPES = { number: 'Nombre', text: 'Texte / sortie de programme', choice: 'QCM', code: 'Code Python', sql: 'Requête SQL' };
+
+function defaultField(type) {
+  return {
+    number: { type, label: '', answer: '', tolerance: 0 },
+    text: { type, label: '', answer: '' },
+    choice: { type, label: '', options: [{ text: '', correct: true }, { text: '', correct: false }] },
+    code: { type, label: '', starter: '', function: '', cases: '', tests: '', forbid: [] },
+    sql: { type, label: '', setup: 'setup', answer: '' },
+  }[type];
+}
+
+// ---------------------------------------------------------------------------
+// Éditeur
+// ---------------------------------------------------------------------------
+
+export async function editorPage({ params }) {
+  const isNew = !params.id;
+  const [{ chapters }, { skills }, { classes }, existing] = await Promise.all([
+    api.get('/chapters'), api.get('/skills'), api.get('/classes'),
+    isNew ? Promise.resolve(null) : api.get(`/questions/${params.id}`).then((r) => r.question)]);
+  const model = existing
+    ? { title: existing.title, chapter_id: existing.chapter_id, difficulty: existing.difficulty, skills: existing.skills, class_ids: existing.class_ids, template: existing.template }
+    : { title: '', chapter_id: null, difficulty: 2, skills: [], class_ids: [], template: structuredClone(STARTERS.sortie.template) };
+  const t = model.template;
+  t.fields = t.fields || [];
+
+  let seed = null;
+  let previewTimer = null;
+  const schedulePreview = () => {
+    if (!autoPreview.checked) return;
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => doPreview(false), 900);
+  };
+
+  // --- métadonnées
+  const title = h('input', { type: 'text', value: model.title, placeholder: 'ex. Boucle for et range' });
+  const chapterSel = h('select', {}, h('option', { value: '' }, '— aucun —'),
+    chapters.map((c) => h('option', { value: c.id, selected: c.id === model.chapter_id }, c.name)),
+    h('option', { value: '__new' }, '+ Nouveau chapitre…'));
+  const newChapter = h('input', { type: 'text', placeholder: 'Nom du nouveau chapitre', style: { display: 'none', marginTop: '.3rem' } });
+  chapterSel.addEventListener('change', () => { newChapter.style.display = chapterSel.value === '__new' ? '' : 'none'; });
+  const difficulty = h('select', {}, [[1, 'Facile'], [2, 'Moyen'], [3, 'Difficile']].map(([v, l]) => h('option', { value: v, selected: v === model.difficulty }, l)));
+  const skillsInput = h('input', { type: 'text', value: model.skills.join(' ; '), list: 'skills-list', placeholder: 'ex. Boucle for ; Tracer un programme' });
+  const skillsList = h('datalist', { id: 'skills-list' }, skills.map((s) => h('option', { value: s.name })));
+  const classBoxes = classes.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id, checked: model.class_ids.includes(c.id) }), c.name));
+
+  // --- modèle
+  const code = codeArea({ rows: 12, 'aria-label': 'Code générateur' });
+  code.value = t.code || '';
+  code.addEventListener('input', () => { t.code = code.value; schedulePreview(); });
+  const statement = h('textarea', { rows: 6, class: 'code', style: { whiteSpace: 'pre-wrap' }, 'aria-label': 'Énoncé' });
+  statement.value = t.statement || '';
+  statement.addEventListener('input', () => { t.statement = statement.value; schedulePreview(); });
+  const solution = h('textarea', { rows: 4, class: 'code', style: { whiteSpace: 'pre-wrap', minHeight: '5rem' }, 'aria-label': 'Correction' });
+  solution.value = t.solution || '';
+  solution.addEventListener('input', () => { t.solution = solution.value; schedulePreview(); });
+  const fieldsBox = h('div');
+
+  const renderFields = () => {
+    fieldsBox.replaceChildren(...t.fields.map((f, i) => fieldEditor(f, i)),
+      h('div', { class: 'row' }, h('span', { class: 'small muted' }, 'Ajouter une réponse :'),
+        Object.entries(FIELD_TYPES).map(([k, l]) => h('button', { class: 'small', type: 'button', onclick: () => { t.fields.push(defaultField(k)); renderFields(); schedulePreview(); } }, '+ ' + l))));
+  };
+
+  const input = (obj, key, attrs = {}, parse = (v) => v) => {
+    const el = h('input', { type: 'text', value: obj[key] ?? '', ...attrs });
+    el.addEventListener('input', () => { obj[key] = parse(el.value); schedulePreview(); });
+    return el;
+  };
+  const check = (obj, key, label) => {
+    const el = h('input', { type: 'checkbox', checked: Boolean(obj[key]) });
+    el.addEventListener('change', () => { obj[key] = el.checked; schedulePreview(); });
+    return h('label', { class: 'inline small' }, el, label);
+  };
+  const area = (obj, key, rows = 4, isCode = true) => {
+    const el = isCode ? codeArea({ rows }) : h('textarea', { rows });
+    el.value = obj[key] ?? '';
+    el.addEventListener('input', () => { obj[key] = el.value; schedulePreview(); });
+    return el;
+  };
+  const labelled = (label, el, hint) => h('div', { class: 'field' }, h('label', {}, label), el, hint ? h('div', { class: 'hint' }, hint) : null);
+
+  function fieldEditor(f, i) {
+    const typeSel = h('select', { style: { width: 'auto' } }, Object.entries(FIELD_TYPES).map(([k, l]) => h('option', { value: k, selected: k === f.type }, l)));
+    typeSel.addEventListener('change', () => { t.fields[i] = { ...defaultField(typeSel.value), label: f.label }; renderFields(); schedulePreview(); });
+    const body = [];
+    body.push(labelled('Intitulé (facultatif, Markdown, {{ }} autorisés)', input(f, 'label')));
+    if (f.type === 'number') {
+      body.push(h('div', { class: 'fields-3' },
+        labelled('Réponse (expression Python)', input(f, 'answer', { class: 'code', placeholder: 'ex. a * b' })),
+        labelled('Tolérance', input(f, 'tolerance', { type: 'number', step: 'any' }, (v) => Number(v) || 0)),
+        labelled('Unité affichée', input(f, 'suffix', { placeholder: 'ex. octets' }))));
+    } else if (f.type === 'text') {
+      body.push(labelled('Réponse (expression Python : une chaîne, ou une liste de chaînes acceptées)', input(f, 'answer', { placeholder: 'ex. run(src)  ou  [str(n), hex(n)]' })));
+      body.push(h('div', { class: 'row' }, check(f, 'multiline', 'réponse sur plusieurs lignes'), check(f, 'ignore_case', 'ignorer la casse'),
+        check(f, 'ignore_spaces', 'ignorer les espaces'), check(f, 'ignore_accents', 'ignorer les accents')));
+    } else if (f.type === 'choice') {
+      const exprMode = typeof f.options === 'string';
+      const modeSel = h('select', { style: { width: 'auto' } }, h('option', { value: 'list', selected: !exprMode }, 'Liste d\'options'), h('option', { value: 'expr', selected: exprMode }, 'Options générées (expression Python)'));
+      modeSel.addEventListener('change', () => {
+        f.options = modeSel.value === 'expr' ? "[('bonne réponse', True), ('mauvaise', False)]" : [{ text: '', correct: true }, { text: '', correct: false }];
+        renderFields(); schedulePreview();
+      });
+      body.push(h('div', { class: 'row', style: { marginBottom: '.5rem' } }, modeSel, check(f, 'multiple', 'plusieurs réponses correctes'),
+        h('label', { class: 'inline small' }, (() => { const el = h('input', { type: 'checkbox', checked: f.shuffle !== false }); el.addEventListener('change', () => { f.shuffle = el.checked; schedulePreview(); }); return el; })(), 'mélanger les options')));
+      if (exprMode) {
+        body.push(labelled('Expression donnant une liste de couples (texte, correct)', input(f, 'options', { placeholder: "[(str(bonne), True)] + [(str(x), False) for x in pieges]" }),
+          'Deux options identiques déclenchent un nouveau tirage des valeurs.'));
+      } else {
+        f.options.forEach((o, j) => {
+          const corrSel = h('select', {}, h('option', { value: 'true', selected: o.correct === true }, '✓ correcte'), h('option', { value: 'false', selected: o.correct === false || o.correct === undefined }, '✗ incorrecte'),
+            h('option', { value: 'expr', selected: typeof o.correct === 'string' }, 'si condition…'));
+          const cond = h('input', { type: 'text', value: typeof o.correct === 'string' ? o.correct : '', placeholder: 'condition Python, ex. a % 2 == 0', style: { display: typeof o.correct === 'string' ? '' : 'none', gridColumn: '1 / -1' } });
+          corrSel.addEventListener('change', () => { o.correct = corrSel.value === 'expr' ? (cond.value || 'True') : corrSel.value === 'true'; cond.style.display = corrSel.value === 'expr' ? '' : 'none'; schedulePreview(); });
+          cond.addEventListener('input', () => { o.correct = cond.value; schedulePreview(); });
+          body.push(h('div', { class: 'opt-row' }, input(o, 'text', { placeholder: `Option ${j + 1} (Markdown, {{ }} autorisés)` }), corrSel,
+            h('button', { class: 'small', type: 'button', title: 'Supprimer', onclick: () => { f.options.splice(j, 1); renderFields(); schedulePreview(); } }, '✕'), cond));
+        });
+        body.push(h('button', { class: 'small', type: 'button', onclick: () => { f.options.push({ text: '', correct: false }); renderFields(); } }, '+ option'));
+      }
+    } else if (f.type === 'code') {
+      body.push(labelled('Code de départ proposé à l\'élève', area(f, 'starter', 3)));
+      body.push(h('div', { class: 'fields-2' },
+        labelled('Nom de la fonction à tester', input(f, 'function', { placeholder: 'ex. somme' })),
+        labelled('Cas de test (expression Python)', input(f, 'cases', { placeholder: 'ex. cases' }), 'Liste de couples ((arguments,), résultat attendu), générée dans le code.')));
+      body.push(labelled('Tests supplémentaires (Python, facultatif)', area(f, 'tests', 3),
+        "Utilisez check(condition, message) ou check_equal(obtenu, attendu). Les fonctions de l'élève et les variables du générateur sont accessibles."));
+      const forbid = h('input', { type: 'text', value: (f.forbid || []).join(', '), placeholder: 'ex. sum, sorted, import, while' });
+      forbid.addEventListener('input', () => { f.forbid = forbid.value.split(',').map((s) => s.trim()).filter(Boolean); });
+      body.push(h('div', { class: 'fields-2' }, labelled('Noms interdits', forbid),
+        labelled('Temps max (s)', input(f, 'time_limit', { type: 'number', step: '0.5', placeholder: '2' }, (v) => Number(v) || undefined))));
+      body.push(h('div', { class: 'row' }, check(f, 'all_or_nothing', 'tout ou rien (sinon score = proportion de tests réussis)')));
+    } else if (f.type === 'sql') {
+      body.push(h('div', { class: 'fields-2' },
+        labelled('Script de création de la base (expression)', input(f, 'setup', { placeholder: 'setup' }), 'Variable du générateur contenant CREATE TABLE / INSERT.'),
+        labelled('Requête de référence (expression)', input(f, 'answer', { placeholder: "f'SELECT ... WHERE x > {seuil}'" }))));
+      body.push(labelled('Requête de départ', area(f, 'starter', 2)));
+      body.push(check(f, 'ordered', "l'ordre des lignes compte (ORDER BY)"));
+    }
+    return h('div', { class: 'field-card' },
+      h('div', { class: 'head' }, h('strong', {}, `Réponse ${i + 1}`), typeSel, h('span', { style: { flex: 1 } }),
+        h('button', { class: 'small', type: 'button', disabled: i === 0, onclick: () => { [t.fields[i - 1], t.fields[i]] = [t.fields[i], t.fields[i - 1]]; renderFields(); schedulePreview(); } }, '↑'),
+        h('button', { class: 'small danger', type: 'button', onclick: () => { t.fields.splice(i, 1); renderFields(); schedulePreview(); } }, 'Supprimer')),
+      body);
+  }
+  renderFields();
+
+  // --- aperçu
+  const previewBox = h('div', {}, h('p', { class: 'muted' }, "Cliquez sur « Nouvel exemple » pour générer l'énoncé."));
+  const autoPreview = h('input', { type: 'checkbox', checked: true });
+  async function doPreview(newSeed) {
+    if (newSeed) seed = null;
+    const body = { template: t };
+    if (seed !== null) body.seed = seed;
+    const r = await api.post('/questions/preview', body).catch((e) => ({ ok: false, error: e.message }));
+    if (!r.ok) {
+      mount(previewBox, h('div', { class: 'alert error' },
+        h('strong', {}, 'Erreur'), r.where ? ` (${r.where}${r.line ? `, ligne ${r.line}` : ''})` : '', ' : ', r.error));
+      return;
+    }
+    const res = r.result;
+    seed = res.seed;
+    const v = res.variety;
+    mount(previewBox, 
+      h('div', { class: 'row small muted', style: { marginBottom: '.6rem' } }, `Graine ${res.seed}`,
+        h('span', { class: 'pill ' + (v.distinct >= Math.min(10, v.samples) ? 'good' : 'bad') }, `${v.distinct} énoncé(s) différent(s) sur ${v.samples} tirages`)),
+      res.deterministic ? null : h('div', { class: 'alert warn' }, "Attention : le générateur ne donne pas le même résultat pour une même graine. N'utilisez que les fonctions aléatoires fournies (randint, choice…)."),
+      v.distinct < Math.min(5, v.samples) ? h('div', { class: 'alert warn' }, "Peu de variété : les élèves risquent de retomber sur les mêmes données. (C'est normal si seuls les tests cachés varient.)") : null,
+      questionView(res.public, { submitLabel: 'Tester ma réponse', onSubmit: async (answers) => {
+        const c = await api.post('/questions/try', { template: t, seed: res.seed, answers });
+        if (!c.ok) throw new Error(c.error);
+        return c.result;
+      } }),
+      h('details', { class: 'help' }, h('summary', {}, 'Réponses attendues'),
+        res.expected.map((e, i) => h('div', {}, h('strong', {}, `Réponse ${i + 1} : `), e ? md(e) : h('span', { class: 'muted' }, 'vérifiée par les tests')))),
+      res.solution ? h('details', { class: 'help' }, h('summary', {}, 'Correction'), md(res.solution)) : null);
+  }
+
+  // --- enregistrement
+  const err = h('div');
+  async function save() {
+    err.replaceChildren();
+    const payload = {
+      title: title.value, difficulty: Number(difficulty.value), template: t,
+      skills: skillsInput.value.split(/[;\n]/).map((s) => s.trim()).filter(Boolean),
+      class_ids: classBoxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value)),
+    };
+    if (chapterSel.value === '__new') payload.chapter_name = newChapter.value;
+    else payload.chapter_id = chapterSel.value ? Number(chapterSel.value) : null;
+    try {
+      if (isNew) {
+        const r = await api.post('/questions', payload);
+        toast('Question créée.');
+        navigate(`/questions/${r.id}`);
+      } else {
+        await api.put(`/questions/${params.id}`, payload);
+        toast('Question enregistrée.');
+      }
+    } catch (e) {
+      err.replaceChildren(h('div', { class: 'alert error' }, e.message, e.data.where ? ` (${e.data.where}${e.data.line ? `, ligne ${e.data.line}` : ''})` : ''));
+    }
+  }
+
+  const starterSel = h('select', { style: { width: 'auto' } }, h('option', { value: '' }, 'Partir d\'un modèle…'),
+    Object.entries(STARTERS).map(([k, s]) => h('option', { value: k }, s.label)));
+  starterSel.addEventListener('change', () => {
+    const s = STARTERS[starterSel.value];
+    if (!s || !confirmBox('Remplacer le contenu actuel par ce modèle ?')) { starterSel.value = ''; return; }
+    model.template = structuredClone(s.template);
+    editorReplace();
+  });
+  function editorReplace() {
+    Object.assign(t, model.template);
+    code.value = t.code; statement.value = t.statement; solution.value = t.solution || '';
+    renderFields();
+    doPreview(true);
+  }
+  const jsonBtn = h('button', { type: 'button', onclick: () => {
+    const ta = h('textarea', { class: 'code', rows: 20 });
+    ta.value = JSON.stringify(t, null, 2);
+    const e2 = h('div');
+    const close = modal('Modèle au format JSON', h('div', {}, ta, e2, h('button', { class: 'primary', style: { marginTop: '.6rem' }, onclick: () => {
+      try { model.template = JSON.parse(ta.value); for (const k of Object.keys(t)) delete t[k]; editorReplace(); close(); } catch (ex) { e2.replaceChildren(errorBox(ex)); }
+    } }, 'Appliquer')));
+  } }, 'JSON');
+
+  const actions = h('div', { class: 'row' },
+    h('button', { class: 'primary', onclick: save }, 'Enregistrer'),
+    isNew ? null : h('button', { onclick: async () => { const r = await api.post(`/questions/${params.id}/duplicate`); navigate(`/questions/${r.id}`); } }, 'Dupliquer'),
+    isNew ? null : h('button', { class: 'danger', onclick: async () => {
+      if (!confirmBox('Supprimer cette question ? (Elle sera archivée si des élèves y ont déjà répondu.)')) return;
+      await api.del(`/questions/${params.id}`);
+      navigate('/questions');
+    } }, 'Supprimer'),
+    jsonBtn, starterSel);
+
+  setTimeout(() => doPreview(true), 0);
+  return h('div', {},
+    h('p', {}, h('a', { href: '#/questions' }, '← Banque de questions')),
+    h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, isNew ? 'Nouvelle question' : 'Modifier la question'), actions),
+    err,
+    h('div', { class: 'split', style: { marginTop: '1rem' } },
+      h('div', {},
+        h('div', { class: 'card' },
+          labelled('Titre', title),
+          h('div', { class: 'fields-2' }, h('div', { class: 'field' }, h('label', {}, 'Chapitre'), chapterSel, newChapter), labelled('Difficulté', difficulty)),
+          labelled('Compétences travaillées (séparées par « ; »)', h('div', {}, skillsInput, skillsList), 'Elles servent aux statistiques par compétence et au mode automatique.'),
+          classes.length ? labelled('Classes', h('div', { class: 'row' }, classBoxes)) : null),
+        h('div', { class: 'card', style: { marginTop: '1rem' } },
+          h('h3', {}, '1. Générateur (Python)'),
+          h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Tire les données au hasard et calcule les réponses. Toutes les variables sont utilisables dans l\'énoncé avec {{ variable }}.'),
+          code, helpPanel(),
+          h('h3', {}, '2. Énoncé (Markdown)'), statement,
+          h('div', { class: 'hint' }, '**gras**, `code`, blocs ```python, tableaux | a | b |, et {{ expression }} pour insérer une valeur.'),
+          h('h3', {}, '3. Réponses attendues'), fieldsBox,
+          h('h3', {}, '4. Correction affichée après réponse (facultatif)'), solution)),
+      h('div', { class: 'card sticky' },
+        h('div', { class: 'row between' }, h('h3', { style: { margin: 0 } }, 'Aperçu élève'),
+          h('div', { class: 'row' }, h('label', { class: 'inline small' }, autoPreview, 'auto'),
+            h('button', { class: 'small', onclick: () => doPreview(false) }, 'Rafraîchir'),
+            h('button', { class: 'small primary', onclick: () => doPreview(true) }, '🎲 Nouvel exemple'))),
+        h('hr'), previewBox)));
+}
+
+function helpPanel() {
+  const items = [
+    ['randint(a, b)', 'entier aléatoire entre a et b inclus'],
+    ['randnz(a, b)', 'entier aléatoire non nul'],
+    ['choice(seq), sample(seq, k), shuffled(seq)', 'un élément, k éléments distincts, copie mélangée'],
+    ['randlist(n, a, b, distinct=False)', 'liste de n entiers aléatoires'],
+    ['randname(pool=None, k=None)', 'nom(s) de variable aléatoire(s) ; aussi PRENOMS, FRUITS, VILLES, NOMS_FONCTIONS, NOMS_LISTES'],
+    ['coin(p=0.5)', 'booléen aléatoire'],
+    ['require(condition) / reject()', 'refaire le tirage si la condition est fausse'],
+    ['run(code, inputs=None)', "exécute du code Python et renvoie ce qu'il affiche (inputs : valeurs données à input())"],
+    ['run_error(code)', "nom de l'exception levée (ou None)"],
+    ['evaluate(code, expr)', 'exécute le code puis renvoie la valeur de expr'],
+    ['dedent(code), code_block(code, lang)', 'nettoie l\'indentation ; bloc de code Markdown'],
+    ['sql_insert(table, lignes), sql_table(setup, table), sql_schema(setup)', 'fabriquer une base et l\'afficher'],
+    ['sql_run(setup, requête), sql_value(setup, requête)', 'résultat d\'une requête'],
+    ['md_table(lignes, entêtes)', 'tableau Markdown'],
+    ['tobase(n, b, largeur), frombase(s, b), twos(n, bits), from_twos(s), group(s, 4)', 'bases, complément à deux, groupement de chiffres'],
+    ['fr(x, décimales)', 'nombre avec virgule décimale'],
+  ];
+  return h('details', { class: 'help' }, h('summary', {}, 'Fonctions disponibles'),
+    h('dl', {}, items.map(([k, v]) => [h('dt', {}, k), h('dd', {}, v)])),
+    h('p', { class: 'small' }, 'Modules : math, string, textwrap (déjà importés), et import possible de random, itertools, collections… Documentation complète : docs/QUESTION_FORMAT.md.'));
+}
