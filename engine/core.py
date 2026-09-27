@@ -562,7 +562,11 @@ def _check_code(field, ns, answer):
     if escape:
         return 0.0, f"Construction non autorisée dans les exercices : {escape}"
 
-    student_ns = {"__name__": "__main__", "__builtins__": _student_builtins()}
+    # variables fournies au code de l'élève (clé « given » : expression donnant un dict nom -> valeur)
+    given = _eval(field["given"], ns, "given") if field.get("given") else {}
+    if not isinstance(given, dict):
+        raise TemplateError("« given » doit donner un dictionnaire {nom: valeur}", "given")
+    student_ns = {"__name__": "__main__", "__builtins__": _student_builtins(), **copy.deepcopy(given)}
     out = io.StringIO()
     limit = float(field.get("time_limit") or 2)
     try:
@@ -581,6 +585,18 @@ def _check_code(field, ns, answer):
     test_ns.update({k: v for k, v in student_ns.items() if not k.startswith("__")})
     test_ns["student"] = student_ns
     test_ns["student_output"] = out.getvalue()
+    test_ns["student_code"] = code
+
+    def rerun(variables=None):
+        """Réexécute le code de l'élève avec d'autres variables fournies ; renvoie ce qu'il affiche.
+        Sert à vérifier qu'il utilise bien les données (et n'a pas recopié le résultat)."""
+        fresh = {"__name__": "__main__", "__builtins__": _student_builtins(), **copy.deepcopy(variables or {})}
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            exec(compile(tree, "<eleve>", "exec"), fresh)
+        return buf.getvalue()
+
+    test_ns["rerun"] = rerun
 
     def check(cond, message="test"):
         results.append((bool(cond), str(message)))

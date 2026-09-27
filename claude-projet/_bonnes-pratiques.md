@@ -40,6 +40,11 @@
   l'exemple « compter les occurrences ».
 - Pour une **classe** écrite par l'élève, les `tests` peuvent l'instancier : `C = student.get("Compte")`,
   puis appeler ses méthodes et vérifier avec `check_equal(...)` (voir l'exemple « Écrire une classe »).
+- Pour faire **écrire une instruction** qui utilise des données déjà définies (« écrire
+  l'instruction qui affiche la ville de Laure »), fournir les données avec `given`
+  (`{"membres": membres}`), comparer `student_output` au résultat attendu, puis appeler
+  `rerun({nom: autres_donnees})` pour vérifier que l'élève lit bien les données au lieu de
+  recopier la valeur (voir les exemples « écrire l'instruction d'affichage »).
 - `forbid` permet d'interdire les raccourcis qui vident l'exercice de son sens (`sum`, `max`,
   `sorted`, `sort`, `count`, `Counter`…).
 

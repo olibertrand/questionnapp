@@ -125,7 +125,8 @@ Deux options identiques après tirage déclenchent un nouveau tirage des valeurs
 | `starter` | code de départ (Markdown non interprété, `{{ }}` autorisés) |
 | `reference` | solution de référence (`{{ }}` autorisés) utilisée par l'auto-test ; à défaut, le premier bloc ```python de la correction |
 | `function` + `cases` | nom de la fonction à tester et expression donnant `[((arg1, arg2), attendu), ...]` |
-| `tests` | code Python supplémentaire ; y utiliser `check(cond, message)`, `check_equal(obtenu, attendu, message)` et `erreur(e)` (décrit une exception levée par le code de l'élève, avec sa ligne : « ZeroDivisionError: division by zero (ligne 4) »). Y sont visibles : les variables du générateur, les définitions de l'élève, `student` (son espace de noms) et `student_output` (ce que son programme a affiché). |
+| `tests` | code Python supplémentaire ; y utiliser `check(cond, message)`, `check_equal(obtenu, attendu, message)` et `erreur(e)` (décrit une exception levée par le code de l'élève, avec sa ligne : « ZeroDivisionError: division by zero (ligne 4) »), ainsi que `rerun(variables)`, qui réexécute le code de l'élève avec d'autres variables fournies et renvoie ce qu'il affiche (pour vérifier qu'il utilise les données au lieu de recopier le résultat). Y sont visibles : les variables du générateur, les définitions de l'élève, `student` (son espace de noms) `student_output` (ce que son programme a affiché) et `student_code` (le code soumis). |
+| `given` | expression donnant un dictionnaire `{nom: valeur}` de variables **déjà définies** pour le code de l'élève (ex. `{"membres": membres}`) : l'élève écrit seulement les instructions qui les utilisent |
 | `forbid` | noms interdits (`"sum"`, `"sorted"`, `"sort"`, `"import"`, `"while"`, `"for"`…) |
 | `time_limit` | secondes (défaut 2) |
 | `all_or_nothing` | sinon score = proportion de tests réussis |

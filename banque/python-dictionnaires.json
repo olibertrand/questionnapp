@@ -506,6 +506,74 @@
           "{{ {'habitants': 'Partez d’une liste vide et ajoutez le prénom quand la ville correspond.', 'age_moyen': 'Additionnez les âges puis divisez par le nombre d’élèves, `len(eleves)`.', 'plus_age': 'Gardez le prénom du plus âgé vu jusqu’ici, en partant de `None`.'}[kind] }}"
         ]
       }
+    },
+    {
+      "title": "Dictionnaire de dictionnaires : écrire l'instruction d'affichage",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 2,
+      "skills": [
+        "Données imbriquées : dictionnaire de dictionnaires",
+        "Dictionnaires : accès et modification"
+      ],
+      "template": {
+        "code": "def joli(d, nom):\n    lignes = [f\"    {k!r}: {v!r},\" for k, v in d.items()]\n    return nom + \" = {\\n\" + \"\\n\".join(lignes) + \"\\n}\"\n\ndef cible(consigne, expr):\n    ref = \"print(\" + expr + \")\"\n    c = {\"consigne\": consigne, \"ref\": ref,\n         \"attendu\": run(ref, namespace={nom: data}), \"attendu2\": run(ref, namespace={nom: data2})}\n    require(c[\"attendu\"] != c[\"attendu2\"])\n    return c\n\nnom = choice([\"membres\", \"eleves\", \"fiches\", \"club\"])\npersonnes = sample(PRENOMS, 4)\nvilles = sample(VILLES, 4)\nages = sample(range(14, 19), 4)\ndata = {p: {\"age\": a, \"ville\": v} for p, a, v in zip(personnes, ages, villes)}\n# second jeu de données : mêmes prénoms, autres valeurs (sert à vérifier que l'élève lit bien le dictionnaire)\ndata2 = {p: {\"age\": a, \"ville\": v} for p, a, v in\n         zip(personnes, sample([a for a in range(11, 22) if a not in ages], 4), sample([v for v in VILLES if v not in villes], 4))}\np1, p2, p3 = sample(personnes, 3)\nmodeles = [\n    (lambda p: f\"la ville dans laquelle habite {p}\", lambda p: f\"{nom}[{p!r}]['ville']\"),\n    (lambda p: f\"l'âge de {p}\", lambda p: f\"{nom}[{p!r}]['age']\"),\n    (lambda p: f\"toute la fiche de {p} (le dictionnaire complet)\", lambda p: f\"{nom}[{p!r}]\"),\n    (lambda p: f\"l'âge qu'aura {p} l'an prochain\", lambda p: f\"{nom}[{p!r}]['age'] + 1\"),\n]\nm1, m2 = sample(modeles, 2)\nc1 = cible(m1[0](p1), m1[1](p1))\nc2 = cible(m2[0](p2), m2[1](p2))",
+        "statement": "On dispose du dictionnaire suivant, **déjà défini** (inutile de le recopier) :\n\n{{ code_block(joli(data, nom)) }}\n\nPour chaque question, écrire l'instruction qui affiche la valeur demandée **en allant la chercher dans `{{ nom }}`** (et non en recopiant la valeur).",
+        "fields": [
+          {
+            "type": "code",
+            "label": "1. Instruction qui affiche {{ c1['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "c = c1\nsortie = student_output.strip()\nif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != c[\"attendu\"]:\n    check(False, f\"Votre code affiche `{sortie}`, alors qu'on attend `{c['attendu']}`.\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"], \"Le bon résultat s'affiche, mais votre instruction doit aller chercher la valeur \"\n          f\"dans le dictionnaire `{nom}` au lieu de l'écrire directement.\")",
+            "reference": "{{ c1['ref'] }}"
+          },
+          {
+            "type": "code",
+            "label": "2. Instruction qui affiche {{ c2['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "c = c2\nsortie = student_output.strip()\nif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != c[\"attendu\"]:\n    check(False, f\"Votre code affiche `{sortie}`, alors qu'on attend `{c['attendu']}`.\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"], \"Le bon résultat s'affiche, mais votre instruction doit aller chercher la valeur \"\n          f\"dans le dictionnaire `{nom}` au lieu de l'écrire directement.\")",
+            "reference": "{{ c2['ref'] }}"
+          }
+        ],
+        "solution": "{{ code_block(c1['ref'] + \"\\n\" + c2['ref']) }}\n\n`{{ nom }}[prénom]` donne la fiche de la personne (un dictionnaire) ; un deuxième crochet va chercher une information dans cette fiche : `{{ nom }}[prénom]['ville']`.",
+        "hints": [
+          "`{{ nom }}[{{ repr(p3) }}]` donne toute la fiche de {{ p3 }} : c'est un dictionnaire. Un **deuxième crochet** permet d'y chercher une information.",
+          "Par exemple, `print({{ nom }}[{{ repr(p3) }}]['age'])` afficherait l'âge de {{ p3 }}. Attention aux guillemets autour des chaînes (prénoms et noms de clés)."
+        ]
+      }
+    },
+    {
+      "title": "Dictionnaire de listes : écrire l'instruction d'affichage",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 2,
+      "skills": [
+        "Données imbriquées : dictionnaire de listes",
+        "Listes : indices et tranches"
+      ],
+      "template": {
+        "code": "def joli(d, nom):\n    lignes = [f\"    {k!r}: {v!r},\" for k, v in d.items()]\n    return nom + \" = {\\n\" + \"\\n\".join(lignes) + \"\\n}\"\n\ndef cible(consigne, expr):\n    ref = \"print(\" + expr + \")\"\n    c = {\"consigne\": consigne, \"ref\": ref,\n         \"attendu\": run(ref, namespace={nom: data}), \"attendu2\": run(ref, namespace={nom: data2})}\n    require(c[\"attendu\"] != c[\"attendu2\"])\n    return c\n\nnom = choice([\"notes\", \"resultats\", \"releves\", \"carnet\"])\npersonnes = sample(PRENOMS, 4)\ndata = {p: sample(range(5, 20), randint(3, 5)) for p in personnes}\ndata2 = {p: sample(range(0, 21), randint(2, 6)) for p in personnes}\np1, p2, p3 = sample(personnes, 3)\nmodeles = [\n    (lambda p: f\"la liste des notes de {p}\", lambda p: f\"{nom}[{p!r}]\"),\n    (lambda p: f\"la première note de {p}\", lambda p: f\"{nom}[{p!r}][0]\"),\n    (lambda p: f\"la deuxième note de {p}\", lambda p: f\"{nom}[{p!r}][1]\"),\n    (lambda p: f\"la dernière note de {p}\", lambda p: f\"{nom}[{p!r}][-1]\"),\n    (lambda p: f\"le nombre de notes de {p}\", lambda p: f\"len({nom}[{p!r}])\"),\n    (lambda p: f\"la somme des notes de {p}\", lambda p: f\"sum({nom}[{p!r}])\"),\n]\nm1, m2 = sample(modeles, 2)\nc1 = cible(m1[0](p1), m1[1](p1))\nc2 = cible(m2[0](p2), m2[1](p2))",
+        "statement": "On dispose du dictionnaire suivant, **déjà défini** (inutile de le recopier) :\n\n{{ code_block(joli(data, nom)) }}\n\nPour chaque question, écrire l'instruction qui affiche la valeur demandée **en allant la chercher dans `{{ nom }}`** (et non en recopiant la valeur).",
+        "fields": [
+          {
+            "type": "code",
+            "label": "1. Instruction qui affiche {{ c1['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "c = c1\nsortie = student_output.strip()\nif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != c[\"attendu\"]:\n    check(False, f\"Votre code affiche `{sortie}`, alors qu'on attend `{c['attendu']}`.\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"], \"Le bon résultat s'affiche, mais votre instruction doit aller chercher la valeur \"\n          f\"dans le dictionnaire `{nom}` au lieu de l'écrire directement.\")",
+            "reference": "{{ c1['ref'] }}"
+          },
+          {
+            "type": "code",
+            "label": "2. Instruction qui affiche {{ c2['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "c = c2\nsortie = student_output.strip()\nif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != c[\"attendu\"]:\n    check(False, f\"Votre code affiche `{sortie}`, alors qu'on attend `{c['attendu']}`.\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"], \"Le bon résultat s'affiche, mais votre instruction doit aller chercher la valeur \"\n          f\"dans le dictionnaire `{nom}` au lieu de l'écrire directement.\")",
+            "reference": "{{ c2['ref'] }}"
+          }
+        ],
+        "solution": "{{ code_block(c1['ref'] + \"\\n\" + c2['ref']) }}\n\n`{{ nom }}[prénom]` est une **liste** : on peut lui appliquer un indice (`[0]` pour la première, `[-1]` pour la dernière), `len` ou `sum`.",
+        "hints": [
+          "`{{ nom }}[{{ repr(p3) }}]` est la liste des notes de {{ p3 }} : on peut lui appliquer tout ce qu'on fait sur une liste (indice entre crochets, `len`, `sum`).",
+          "Par exemple, `print({{ nom }}[{{ repr(p3) }}][1])` afficherait la deuxième note de {{ p3 }} ; les indices commencent à 0 et `-1` désigne le dernier élément."
+        ]
+      }
     }
   ]
 }
