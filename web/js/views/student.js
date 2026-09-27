@@ -15,7 +15,9 @@ function assignmentCard(a, today) {
   const late = a.day < today && a.progress.done < a.progress.total;
   return h('div', { class: 'card' },
     h('div', { class: 'row between' }, h('strong', {}, a.title),
-      late ? h('span', { class: 'pill bad' }, 'à terminer') : a.progress.mastered === a.progress.total ? h('span', { class: 'pill good' }, '✓ terminé') : null),
+      h('div', { class: 'row' },
+        a.day === today ? h('span', { class: 'pill accent' }, "aujourd'hui") : null,
+        late ? h('span', { class: 'pill bad' }, 'à terminer') : a.progress.mastered === a.progress.total ? h('span', { class: 'pill good' }, '✓ terminé') : null)),
     h('div', { class: 'small muted', style: { margin: '.2rem 0 .6rem' } }, `${a.class_name} · ${fmtDay(a.day)}`),
     progressLine(a.progress),
     h('div', { class: 'row', style: { marginTop: '.8rem' } },
@@ -26,8 +28,8 @@ function assignmentCard(a, today) {
 export async function homePage() {
   const d = await api.get('/me/dashboard');
   const today = d.today;
-  const todays = d.assignments.filter((a) => a.day === today);
-  const upcoming = d.assignments.filter((a) => a.day > today);
+  // séances prévues : aujourd'hui et à venir, de la plus proche à la plus lointaine
+  const planned = d.assignments.filter((a) => a.day >= today).sort((x, y) => x.day.localeCompare(y.day) || x.id - y.id);
   const past = d.assignments.filter((a) => a.day < today).reverse();
   const chapterSelect = h('select', { 'aria-label': 'Limiter à un chapitre' },
     h('option', { value: '' }, 'Tous les chapitres'), d.chapters.map((c) => h('option', { value: c.id ?? '' }, c.name)));
@@ -40,9 +42,9 @@ export async function homePage() {
       tile(d.totals.week || 0, 'cette semaine'),
       tile(pct(d.totals.avg), 'score moyen')),
 
-    h('h2', {}, "Aujourd'hui"),
-    todays.length ? h('div', { class: 'grid' }, todays.map((a) => assignmentCard(a, today)))
-      : h('div', { class: 'empty' }, "Pas de séance prévue aujourd'hui."),
+    h('h2', {}, 'Séances prévues'),
+    planned.length ? h('div', { class: 'grid' }, planned.map((a) => assignmentCard(a, today)))
+      : h('div', { class: 'empty' }, "Aucune séance prévue pour l'instant."),
 
     h('h2', {}, "S'entraîner"),
     h('div', { class: 'card' },
@@ -64,7 +66,6 @@ export async function homePage() {
           h('td', {}, s.name), h('td', { style: { width: '40%' } }, meter(s.mastery)),
           h('td', { class: 'num small muted' }, `${s.attempts} essai(s)`))))))] : null,
 
-    upcoming.length ? [h('h2', {}, 'À venir'), h('div', { class: 'grid' }, upcoming.map((a) => assignmentCard(a, today)))] : null,
     past.length ? [h('h2', {}, 'Séances précédentes'), h('div', { class: 'grid' }, past.map((a) => assignmentCard(a, today)))] : null,
 
     d.recent.length ? [h('h2', {}, 'Dernières réponses'), attemptsTable(d.recent)] : null);
