@@ -91,7 +91,7 @@ class Handler(BaseHTTPRequestHandler):
         if length > MAX_BODY:
             return self._send(json_response({"error": "Requête trop volumineuse"}, 413))
         body = self.rfile.read(length) if length else b""
-        client_ip = self.headers.get("X-Forwarded-For", "").split(",")[0].strip() or self.client_address[0]
+        client_ip = self.headers.get("X-Forwarded-For", "").split(",")[-1].strip() or self.client_address[0]
         req = Request(self.command, path, urllib.parse.parse_qs(parsed.query), self.headers, body, client_ip)
         self._send(handle(req))
 
