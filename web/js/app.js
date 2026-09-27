@@ -1,6 +1,6 @@
 // Point d'entrée de l'interface : session, navigation, routage par « # ».
 import { api } from './api.js';
-import { errorBox, h, mount, toast } from './dom.js';
+import { errorBox, h, mount, passwordInput, toast } from './dom.js';
 import * as student from './views/student.js';
 import * as classes from './views/classes.js';
 import * as questions from './views/questions.js';
@@ -116,11 +116,11 @@ export async function render() {
 function loginView() {
   const err = h('div');
   const user = h('input', { type: 'text', id: 'username', autocomplete: 'username', autocapitalize: 'off', required: true });
-  const pass = h('input', { type: 'password', id: 'password', autocomplete: 'current-password', required: true });
+  const pass = passwordInput({ id: 'password', autocomplete: 'current-password', required: true });
   const form = h('form', { class: 'card' },
     h('h1', {}, 'Connexion'),
     h('div', { class: 'field' }, h('label', { for: 'username' }, 'Identifiant'), user),
-    h('div', { class: 'field' }, h('label', { for: 'password' }, 'Mot de passe'), pass),
+    h('div', { class: 'field' }, h('label', { for: 'password' }, 'Mot de passe'), pass.container),
     err,
     h('button', { class: 'primary', type: 'submit', style: { width: '100%', justifyContent: 'center' } }, 'Se connecter'));
   form.addEventListener('submit', async (e) => {
