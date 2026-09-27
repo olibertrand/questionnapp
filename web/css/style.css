@@ -199,6 +199,20 @@ button.link { border: none; background: none; color: var(--accent-ink); padding:
 .chart .bar:hover, .chart .hit:hover + .bar { fill: var(--seq-600); }
 .tooltip { position: fixed; pointer-events: none; background: var(--text); color: var(--bg); padding: .35rem .6rem; border-radius: 6px; font-size: .8rem; z-index: 200; white-space: pre; box-shadow: var(--shadow); }
 
+/* ---- numéros de ligne ---- */
+.code-wrap { display: flex; align-items: stretch; background: var(--code-bg); border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+.code-wrap:focus-within { outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent); }
+.code-wrap textarea.code { border: none; border-radius: 0; outline: none; flex: 1; min-width: 0; margin: 0; padding: .45rem .6rem; overflow: auto; }
+.code-wrap .gutter, .code-wrap textarea.code { font-family: var(--mono); font-size: 13.5px; line-height: 1.45; }
+.gutter { margin: 0; padding: .45rem .5rem; min-width: 2.6em; text-align: right; color: var(--muted); background: var(--surface-2);
+  border-right: 1px solid var(--border); user-select: none; overflow: hidden; white-space: pre; }
+.code-wrap .gutter span { display: block; }
+.code-wrap .gutter span.err { background: var(--bad); color: #fff; border-radius: 3px; font-weight: 700; }
+.code-block { display: flex; background: var(--code-bg); border-radius: 8px; margin: .6rem 0; overflow: hidden; }
+.code-block pre { margin: 0; border-radius: 0; }
+.code-block pre.gutter { padding: .8rem .5rem; line-height: 1.45; flex: none; }
+.code-block pre:not(.gutter) { flex: 1; min-width: 0; padding-left: .8rem; }
+
 /* ---- éditeur ---- */
 .field-card { border: 1px solid var(--border); border-radius: 8px; padding: .8rem; margin-bottom: .8rem; background: var(--surface-2); }
 .field-card .head { display: flex; gap: .5rem; align-items: center; margin-bottom: .6rem; }

@@ -14,6 +14,9 @@ function inline(text) {
   return s.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${esc(codes[+i])}</code>`);
 }
 
+// Langages dont les blocs de 3 lignes ou plus sont numérotés
+const NUMBERED = new Set(['python', 'py', 'sql']);
+
 function highlight(code, lang) {
   const hl = window.hljs;
   if (hl && lang && lang !== 'text' && hl.getLanguage(lang)) {
@@ -42,7 +45,14 @@ export function renderMarkdown(src) {
       while (i < lines.length && !lines[i].trim().startsWith(fence[1])) body.push(lines[i++]);
       i++;
       const lang = fence[2] || '';
-      out.push(`<pre><code class="language-${esc(lang)}">${highlight(body.join('\n'), lang)}</code></pre>`);
+      const code = `<pre><code class="language-${esc(lang)}">${highlight(body.join('\n'), lang)}</code></pre>`;
+      if (NUMBERED.has(lang) && body.length >= 3) {
+        // numéros de ligne dans une colonne séparée (compatible avec la coloration syntaxique)
+        const nums = body.map((_, k) => k + 1).join('\n');
+        out.push(`<div class="code-block"><pre class="gutter" aria-hidden="true">${nums}</pre>${code}</div>`);
+      } else {
+        out.push(code);
+      }
       continue;
     }
     if (!line.trim()) { i++; continue; }

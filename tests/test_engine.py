@@ -161,6 +161,21 @@ class SandboxTest(unittest.TestCase):
             r = run_engine({"action": "check", "template": FUNC_TEMPLATE, "seed": 3, "answers": [cheat]})
             self.assertFalse(r["result"]["correct"], cheat)
 
+    def test_student_runtime_error_reports_line(self):
+        """Une erreur dans la fonction de l'élève, pendant les tests, donne la ligne (bac à sable actif)."""
+        with_cases = dict(FUNC_TEMPLATE)
+        with_tests = {"code": "cases = [((3,), 6), ((0,), 0)]", "statement": "",
+                      "fields": [{"type": "code", "tests": "fn = student['double']\nfor (x,), att in cases:\n"
+                                  "    try:\n        check_equal(fn(x), att)\n    except Exception as e:\n"
+                                  "        check(False, 'erreur : ' + erreur(e))"}]}
+        code_cases = "def mult(L):\n    x = 1\n    return [e / 0 for e in L]\n"
+        code_tests = "def double(x):\n    y = x\n    return y / 0\n"
+        for template, code in ((with_cases, code_cases), (with_tests, code_tests)):
+            r = run_engine({"action": "check", "template": template, "seed": 2, "answers": [code]})
+            self.assertTrue(r["ok"], r)
+            self.assertIn("ZeroDivisionError", r["result"]["fields"][0]["feedback"])
+            self.assertIn("(ligne 3)", r["result"]["fields"][0]["feedback"])
+
     def test_sql_attach_denied(self):
         t = {"code": "setup = 'CREATE TABLE t(a);'", "fields": [{"type": "sql", "setup": "setup", "answer": "'SELECT a FROM t'"}]}
         r = run_engine({"action": "check", "template": t, "seed": 1, "answers": ["ATTACH DATABASE 'x.db' AS x"]})

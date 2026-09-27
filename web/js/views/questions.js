@@ -414,7 +414,7 @@ export async function editorPage({ params }) {
     const el = isCode ? codeArea({ rows }) : h('textarea', { rows });
     el.value = obj[key] ?? '';
     el.addEventListener('input', () => { obj[key] = el.value; schedulePreview(); });
-    return el;
+    return isCode ? el.container : el;
   };
   const labelled = (label, el, hint) => h('div', { class: 'field' }, h('label', {}, label), el, hint ? h('div', { class: 'hint' }, hint) : null);
 
@@ -491,6 +491,7 @@ export async function editorPage({ params }) {
     const body = { template: t };
     if (seed !== null) body.seed = seed;
     const r = await api.post('/questions/preview', body).catch((e) => ({ ok: false, error: e.message }));
+    code.markLine(!r.ok && r.where === 'code' ? r.line : null);
     if (!r.ok) {
       mount(previewBox, h('div', { class: 'alert error' },
         h('strong', {}, 'Erreur'), r.where ? ` (${r.where}${r.line ? `, ligne ${r.line}` : ''})` : '', ' : ', r.error));
@@ -604,7 +605,7 @@ export async function editorPage({ params }) {
         h('div', { class: 'card', style: { marginTop: '1rem' } },
           h('h3', {}, '1. Générateur (Python)'),
           h('p', { class: 'small muted', style: { marginTop: 0 } }, 'Tire les données au hasard et calcule les réponses. Toutes les variables sont utilisables dans l\'énoncé avec {{ variable }}.'),
-          code, helpPanel(),
+          code.container, helpPanel(),
           h('h3', {}, '2. Énoncé (Markdown)'), statement,
           h('div', { class: 'hint' }, '**gras**, `code`, blocs ```python, tableaux | a | b |, et {{ expression }} pour insérer une valeur.'),
           h('h3', {}, '3. Réponses attendues'), fieldsBox,

@@ -129,7 +129,7 @@ Deux options identiques après tirage déclenchent un nouveau tirage des valeurs
 | `starter` | code de départ (Markdown non interprété, `{{ }}` autorisés) |
 | `reference` | solution de référence (`{{ }}` autorisés) utilisée par l'auto-test ; à défaut, le premier bloc ```python de la correction |
 | `function` + `cases` | nom de la fonction à tester et expression donnant `[((arg1, arg2), attendu), ...]` |
-| `tests` | code Python supplémentaire ; y utiliser `check(cond, message)` et `check_equal(obtenu, attendu, message)`. Y sont visibles : les variables du générateur, les définitions de l'élève, `student` (son espace de noms) et `student_output` (ce que son programme a affiché). |
+| `tests` | code Python supplémentaire ; y utiliser `check(cond, message)`, `check_equal(obtenu, attendu, message)` et `erreur(e)` (décrit une exception levée par le code de l'élève, avec sa ligne : « ZeroDivisionError: division by zero (ligne 4) »). Y sont visibles : les variables du générateur, les définitions de l'élève, `student` (son espace de noms) et `student_output` (ce que son programme a affiché). |
 | `forbid` | noms interdits (`"sum"`, `"sorted"`, `"sort"`, `"import"`, `"while"`, `"for"`…) |
 | `time_limit` | secondes (défaut 2) |
 | `all_or_nothing` | sinon score = proportion de tests réussis |
@@ -828,7 +828,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
             "type": "code",
             "label": "Votre fonction",
             "starter": "def {{ fname }}({{ params }}):\n    ",
-            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {type(e).__name__}: {e}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
             "reference": "{{ ref }}",
             "forbid": [
               "max",
@@ -897,7 +897,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
             "type": "code",
             "label": "Votre fonction",
             "starter": "def {{ fname }}({{ params }}):\n    ",
-            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {type(e).__name__}: {e}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
             "reference": "{{ ref }}",
             "forbid": [
               "sum",
@@ -929,7 +929,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
             "type": "code",
             "label": "Votre fonction",
             "starter": "def {{ fname }}({{ params }}):\n    ",
-            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {type(e).__name__}: {e}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
             "reference": "{{ ref }}"
           }
         ],
@@ -1058,7 +1058,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
             "type": "code",
             "label": "Votre fonction",
             "starter": "def {{ fname }}({{ params }}):\n    ",
-            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {type(e).__name__}: {e}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
             "reference": "{{ ref }}",
             "forbid": [
               "max",
@@ -1092,7 +1092,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
             "type": "code",
             "label": "Votre fonction",
             "starter": "def {{ fname }}({{ params }}):\n    ",
-            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {type(e).__name__}: {e}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
             "reference": "{{ ref }}"
           }
         ],
@@ -1119,7 +1119,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
             "type": "code",
             "label": "Votre fonction",
             "starter": "def {{ fname }}({{ params }}):\n    ",
-            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {type(e).__name__}: {e}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "tests": "import copy\nfn = student.get(fname)\ncheck(callable(fn), f\"la fonction {fname} doit être définie\")\nif callable(fn):\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
             "reference": "{{ ref }}",
             "forbid": [
               "max",

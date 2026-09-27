@@ -22,7 +22,7 @@ function fieldInput(field, i, name) {
     case 'sql': {
       const ta = codeArea({ id: `${name}-${i}`, rows: Math.max(6, (field.starter || '').split('\n').length + 4) });
       ta.value = field.starter || '';
-      return ta;
+      return ta.container;
     }
     default:
       return h('p', { class: 'alert error' }, `Type de champ inconnu : ${field.type}`);
@@ -88,6 +88,12 @@ export function questionView(instance, options = {}) {
       if (x.checked) x.closest('.option').classList.add(fr.correct ? 'correct' : 'wrong');
     });
   };
+  const markErrorLine = (i, fr) => {
+    const ta = root.querySelector(`#${name}-${i}`);
+    if (!ta || !ta.markLine) return;
+    const m = !fr.correct && fr.feedback ? /ligne (\d+)/.exec(fr.feedback) : null;
+    ta.markLine(m ? Number(m[1]) : null);
+  };
   const lockField = (i) => fieldBoxes[i].querySelectorAll('input, textarea').forEach((el) => { el.disabled = true; });
 
   const showResult = (result) => {
@@ -96,6 +102,7 @@ export function questionView(instance, options = {}) {
     root.querySelectorAll('input, textarea').forEach((el) => { el.disabled = true; });
     result.fields.forEach((fr, i) => {
       if (instance.fields[i].type === 'choice') markChoice(i, fr);
+      markErrorLine(i, fr);
       const fb = h('div', { class: 'feedback ' + (fr.correct ? 'ok' : 'ko') }, verdict(fr.score),
         fr.feedback ? md(fr.feedback) : null,
         !fr.correct && fr.expected ? h('div', {}, h('div', { class: 'small muted' }, 'Réponse attendue :'), md(fr.expected)) : null);
@@ -120,6 +127,7 @@ export function questionView(instance, options = {}) {
     clearFeedback();
     res.result.fields.forEach((fr, i) => {
       if (instance.fields[i].type === 'choice') markChoice(i, fr);
+      markErrorLine(i, fr);
       if (fr.correct) lockField(i);
       fieldBoxes[i].append(h('div', { class: 'feedback ' + (fr.correct ? 'ok' : 'ko') }, verdict(fr.score),
         fr.feedback ? md(fr.feedback) : null));

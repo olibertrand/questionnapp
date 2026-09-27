@@ -526,6 +526,22 @@ def same_value(got, expected):
     return expected == got
 
 
+def student_error(exc):
+    """« NomErreur: message (ligne N) », la ligne étant celle du code de l'élève.
+
+    Le message est formaté dans le mode de l'appelant (un `__str__` écrit par l'élève reste
+    sous surveillance) ; seule la lecture de la pile d'appels, faite par le moteur, sort
+    temporairement du mode élève (l'introspection des frames y est interdite)."""
+    text = f"{type(exc).__name__}: {exc}"
+    previous = sandbox.STUDENT
+    sandbox.STUDENT = False
+    try:
+        line = _user_line(exc, "<eleve>")
+    finally:
+        sandbox.STUDENT = previous
+    return text + (f" (ligne {line})" if line else "")
+
+
 def _short(v, limit=120):
     s = repr(v)
     return s if len(s) <= limit else s[:limit] + "…"
@@ -577,6 +593,7 @@ def _check_code(field, ns, answer):
 
     test_ns["check"] = check
     test_ns["check_equal"] = check_equal
+    test_ns["erreur"] = student_error
 
     try:
         with contextlib.redirect_stdout(io.StringIO()), time_limit(max(limit * 3, 3)), _student_mode():
@@ -594,7 +611,7 @@ def _check_code(field, ns, answer):
                     except TimeLimit:
                         raise
                     except BaseException as exc:  # noqa: BLE001
-                        results.append((False, f"`{shown}` lève {type(exc).__name__}: {exc}"))
+                        results.append((False, f"`{shown}` provoque une erreur : {student_error(exc)}"))
                         continue
                     ok = same_value(got, expected)
                     results.append((ok, f"`{shown}` renvoie `{_short(got)}`" + ("" if ok else f", attendu `{_short(expected)}`")))
@@ -606,7 +623,7 @@ def _check_code(field, ns, answer):
                 except AssertionError as exc:
                     results.append((False, str(exc) or f"assertion ligne {_user_line(exc, '<tests>')}"))
                 except BaseException as exc:  # noqa: BLE001
-                    results.append((False, f"erreur pendant les tests : {type(exc).__name__}: {exc}"))
+                    results.append((False, f"erreur pendant les tests : {student_error(exc)}"))
     except TimeLimit as exc:
         results.append((False, f"Trop lent : {exc}."))
 

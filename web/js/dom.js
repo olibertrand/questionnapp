@@ -97,9 +97,34 @@ export function errorBox(err) {
   return h('div', { class: 'alert error' }, err.message || String(err));
 }
 
-// Zone de code : tabulation = 4 espaces, indentation automatique après « : ».
+// Zone de code avec numéros de ligne : tabulation = 4 espaces, indentation automatique après « : ».
+// Renvoie la zone de texte ; l'élément à insérer dans la page est `ta.container`,
+// et `ta.markLine(n)` met en évidence la ligne n (null pour effacer).
 export function codeArea(attrs = {}) {
-  const ta = h('textarea', { class: 'code', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', ...attrs });
+  const ta = h('textarea', { class: 'code', spellcheck: 'false', autocapitalize: 'off', autocomplete: 'off', wrap: 'off', ...attrs });
+  const gutter = h('div', { class: 'gutter', 'aria-hidden': 'true' });
+  ta.container = h('div', { class: 'code-wrap' }, gutter, ta);
+  let marked = null;
+  const refresh = () => {
+    const n = Math.max(1, ta.value.split('\n').length);
+    if (gutter.childElementCount !== n) {
+      gutter.replaceChildren(...Array.from({ length: n }, (_, i) => h('span', { class: i + 1 === marked ? 'err' : '' }, i + 1)));
+    }
+    gutter.scrollTop = ta.scrollTop;
+  };
+  ta.markLine = (line) => {
+    marked = line || null;
+    gutter.replaceChildren();
+    refresh();
+  };
+  ta.addEventListener('input', refresh);
+  ta.addEventListener('scroll', () => { gutter.scrollTop = ta.scrollTop; });
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set;
+  Object.defineProperty(ta, 'value', {
+    get() { return Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').get.call(this); },
+    set(v) { setter.call(this, v); refresh(); },
+  });
+  refresh();
   ta.addEventListener('keydown', (e) => {
     const { selectionStart: s, selectionEnd: end, value } = ta;
     if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey) {
