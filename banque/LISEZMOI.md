@@ -19,10 +19,12 @@ l'essayer avec **Aperçu**, puis l'importer (ou la mettre à jour) et l'affecter
 
 - **Déposer un fichier** : copiez ici un fichier au format d'import (par exemple celui produit
   par votre projet Claude, voir `claude-projet/`). Il apparaît aussitôt dans le menu Banques.
-- **Compléter un fichier existant** : ajoutez des questions à la liste `questions`. Les
-  questions sont reconnues par leur **titre**, qui doit donc être unique.
+- **Compléter un fichier existant** : ajoutez des questions à la liste `questions`, chacune
+  avec un **identifiant** `uid` unique qui suit la numérotation du fichier (`DICO-21`, `POO-03`…).
+  Les questions sont reconnues par cet identifiant (à défaut, par leur titre) : une question
+  déjà présente dans l'application n'est jamais réimportée.
 - Format : `{"format": "questionnapp/questions", "version": 1, "title": "...", "description": "...",
-  "questions": [...]}` ; chaque question a `title`, `chapter`, `difficulty`, `skills`, `template`
+  "questions": [...]}` ; chaque question a `uid`, `title`, `chapter`, `difficulty`, `skills`, `template`
   (voir `docs/QUESTION_FORMAT.md`).
 
 ## Modifier ou retirer des questions

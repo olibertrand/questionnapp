@@ -11,7 +11,7 @@ import re
 
 from .. import config, db, security
 from ..web import HttpError, int_list, json_response, router
-from .questions import _import_items, _selftest_messages, save_question, selftest
+from .questions import _import_items, _selftest_messages, clean_uid, find_existing, save_question, selftest
 
 _ID = re.compile(r"^[A-Za-z0-9_-]+$")
 
@@ -42,24 +42,42 @@ def bank_ids():
     return sorted(f[:-5] for f in os.listdir(config.BANK_DIR) if f.endswith(".json") and _ID.match(f[:-5]))
 
 
-def _current(conn):
-    """Questions non archivées par titre : {titre: (id, modèle)}."""
-    rows = db.all_(conn, """SELECT q.id, q.title, v.template FROM questions q
-                            JOIN question_versions v ON v.id = q.version_id WHERE q.archived = 0""")
-    return {r["title"]: (r["id"], json.loads(r["template"])) for r in rows}
-
-
-def _status(item, current):
-    if item["title"] not in current:
+def _status(conn, item):
+    """(état, id) d'une question du fichier : new, imported (identique), modified, ou archived."""
+    existing = find_existing(conn, item)
+    if not existing:
         return "new", None
-    qid, template = current[item["title"]]
-    return ("imported" if template == item.get("template") else "modified"), qid
+    if existing["archived"]:
+        return "archived", existing["id"]
+    return ("imported" if existing["template"] == item.get("template") else "modified"), existing["id"]
+
+
+def assign_missing_uids(conn):
+    """Donne un identifiant aux questions qui n'en ont pas (bases créées avant leur introduction) :
+    l'identifiant de la banque pour une question de même titre (la plus ancienne), sinon Q-0042."""
+    if not db.one(conn, "SELECT 1 FROM questions WHERE uid IS NULL LIMIT 1"):
+        return
+    used = {r["uid"] for r in db.all_(conn, "SELECT uid FROM questions WHERE uid IS NOT NULL")}
+    by_title = {}
+    for bid in bank_ids():
+        try:
+            for item in load_bank(bid)["questions"]:
+                uid = clean_uid(item.get("uid"))
+                if uid and uid not in used:
+                    by_title.setdefault(item["title"], uid)
+        except (ValueError, OSError, HttpError):
+            continue
+    for r in db.all_(conn, "SELECT id, title FROM questions WHERE uid IS NULL ORDER BY archived, id"):
+        uid = by_title.pop(r["title"], None) or f"Q-{r['id']:04d}"
+        if uid in used:
+            uid = f"Q-{r['id']:04d}"
+        conn.execute("UPDATE questions SET uid = ? WHERE id = ?", (uid, r["id"]))
+        used.add(uid)
 
 
 @router.get("/api/banks")
 def list_banks(req):
     security.require_staff(req)
-    current = _current(req.db)
     banks = []
     for bid in bank_ids():
         try:
@@ -67,9 +85,9 @@ def list_banks(req):
         except (ValueError, OSError) as exc:
             banks.append({"id": bid, "title": bid, "error": f"fichier illisible : {exc}"})
             continue
-        counts = {"new": 0, "imported": 0, "modified": 0}
+        counts = {"new": 0, "imported": 0, "modified": 0, "archived": 0}
         for item in b["questions"]:
-            counts[_status(item, current)[0]] += 1
+            counts[_status(req.db, item)[0]] += 1
         banks.append({"id": bid, "title": b["title"], "description": b["description"],
                       "count": len(b["questions"]), **counts})
     return json_response({"dir": config.BANK_DIR, "banks": banks})
@@ -82,9 +100,8 @@ def get_bank(req):
         b = load_bank(req.params["id"])
     except ValueError as exc:
         raise HttpError(422, f"Fichier illisible : {exc}") from None
-    current = _current(req.db)
     for item in b["questions"]:
-        item["status"], item["question_id"] = _status(item, current)
+        item["status"], item["question_id"] = _status(req.db, item)
     return json_response({"bank": b})
 
 
@@ -101,22 +118,22 @@ def import_bank(req):
     wanted = set(data.get("titles") or [])
     to_update = set(data.get("update") or [])
     items = [q for q in b["questions"] if q["title"] in wanted]
-    result = _import_items(req.db, user, items, class_ids, validate=True, skip_existing=True)
+    result = _import_items(req.db, user, items, class_ids, validate=True)
 
-    current = _current(req.db)
     updated = []
     for item in b["questions"]:
-        if item["title"] not in to_update or item["title"] not in current:
+        if item["title"] not in to_update:
             continue
-        qid, template = current[item["title"]]
-        if template == item.get("template"):
+        status, qid = _status(req.db, item)
+        if status != "modified":
             continue
         try:
             report = selftest(item.get("template") or {})
             if [e for e in report["errors"] if "référence" not in e["error"]] or not report["samples"]:
                 raise HttpError(422, "; ".join(_selftest_messages(report)[:3]))
-            payload = {"title": item["title"], "difficulty": item.get("difficulty", 2), "skills": item.get("skills") or [],
-                       "template": item["template"], "chapter_name": item.get("chapter") or None}
+            payload = {"uid": item.get("uid"), "title": item["title"], "difficulty": item.get("difficulty", 2),
+                       "skills": item.get("skills") or [], "template": item["template"],
+                       "chapter_name": item.get("chapter") or None}
             save_question(req.db, user, payload, qid, validate=False)
             for cid in class_ids:
                 req.db.execute("INSERT OR IGNORE INTO class_questions(class_id, question_id) VALUES (?, ?)", (cid, qid))

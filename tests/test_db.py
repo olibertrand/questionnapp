@@ -34,5 +34,22 @@ class MigrationTest(unittest.TestCase):
         self.assertEqual([r["tries"] for r in rows], [1, 0])
 
 
+class UidMigrationTest(unittest.TestCase):
+    def test_existing_questions_get_uids(self):
+        from app.api.banks import assign_missing_uids
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "old.db")
+            conn = db.connect(path)
+            db.init(conn)
+            for title in ("Dictionnaires : parcours", "Dictionnaires : parcours", "Ma question"):
+                conn.execute("INSERT INTO questions(title, created_at, updated_at) VALUES (?, 'x', 'x')", (title,))
+            conn.execute("UPDATE questions SET uid = NULL")
+            assign_missing_uids(conn)
+            uids = [r["uid"] for r in conn.execute("SELECT uid FROM questions ORDER BY id")]
+            conn.close()
+        self.assertTrue(uids[0].startswith("DICO-"))  # identifiant de la banque (la plus ancienne)
+        self.assertEqual(uids[1:], ["Q-0002", "Q-0003"])
+
+
 if __name__ == "__main__":
     unittest.main()

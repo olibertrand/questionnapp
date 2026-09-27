@@ -196,7 +196,8 @@ export async function playPage({ query }) {
     h('div', { class: 'split', style: { gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 1fr)' } },
       h('div', { class: 'card' },
         h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, at.question.title),
-          at.question.chapter ? h('span', { class: 'pill accent' }, at.question.chapter) : null),
+          h('div', { class: 'row' }, at.question.chapter ? h('span', { class: 'pill accent' }, at.question.chapter) : null,
+            at.question.uid ? h('span', { class: 'uid', title: 'Identifiant de la question (à citer pour signaler un problème)' }, at.question.uid) : null)),
         h('hr'), view),
       side));
 }
@@ -206,7 +207,7 @@ export async function attemptPage({ params }) {
   return h('div', {},
     h('p', {}, h('button', { class: 'link', onclick: () => history.back() }, '← Retour')),
     h('div', { class: 'card' },
-      h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, a.title), scorePill(a.score)),
+      h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, a.uid ? h('span', { class: 'uid' }, a.uid) : null, a.title), scorePill(a.score)),
       h('p', { class: 'small muted' }, `${MODE_LABEL[a.mode]} · servie ${fmtDateTime(a.created_at)}`,
         a.answered_at ? ` · répondue ${fmtDateTime(a.answered_at)}` : ''),
       h('hr'),

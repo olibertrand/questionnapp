@@ -5,6 +5,7 @@
   "description": "Classes, attributs, méthodes, objets et références.",
   "questions": [
     {
+      "uid": "POO-01",
       "title": "Objets : qu'affiche ce programme ?",
       "chapter": "Programmation orientée objet",
       "difficulty": 2,
@@ -31,6 +32,7 @@
       }
     },
     {
+      "uid": "POO-02",
       "title": "Écrire une classe",
       "chapter": "Programmation orientée objet",
       "difficulty": 3,

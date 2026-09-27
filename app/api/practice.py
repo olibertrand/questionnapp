@@ -30,7 +30,7 @@ def _avoid_list(conn, user_id, qid):
 
 
 def create_attempt(conn, user, qid, mode, assignment_id=None):
-    q = db.one(conn, """SELECT q.id, q.title, q.version_id, v.template, c.name AS chapter FROM questions q
+    q = db.one(conn, """SELECT q.id, q.uid, q.title, q.version_id, v.template, c.name AS chapter FROM questions q
                         JOIN question_versions v ON v.id = q.version_id LEFT JOIN chapters c ON c.id = q.chapter_id
                         WHERE q.id = ?""", qid)
     if not q:
@@ -44,7 +44,7 @@ def create_attempt(conn, user, qid, mode, assignment_id=None):
                     user["id"], qid, q["version_id"], assignment_id, mode, inst["seed"], inst["fingerprint"],
                     json.dumps(inst["public"], ensure_ascii=False), db.now())
     return {"id": aid, "mode": mode, "assignment_id": assignment_id,
-            "question": {"id": qid, "title": q["title"], "chapter": q["chapter"]}, "instance": inst["public"]}
+            "question": {"id": qid, "uid": q["uid"], "title": q["title"], "chapter": q["chapter"]}, "instance": inst["public"]}
 
 
 def _load_assignment_for_student(conn, user, aid):
@@ -105,7 +105,7 @@ def next_question(req):
 def _load_attempt(req, for_answer=False):
     user = security.require_user(req)
     aid = to_int(req.params["id"])
-    a = db.one(req.db, """SELECT a.*, q.title, c.name AS chapter, v.template FROM attempts a
+    a = db.one(req.db, """SELECT a.*, q.uid, q.title, c.name AS chapter, v.template FROM attempts a
                           JOIN questions q ON q.id = a.question_id LEFT JOIN chapters c ON c.id = q.chapter_id
                           JOIN question_versions v ON v.id = a.version_id WHERE a.id = ?""", aid)
     if not a:
@@ -207,7 +207,7 @@ def reveal(req):
 def get_attempt(req):
     _user, a = _load_attempt(req)
     return json_response({"attempt": {
-        "id": a["id"], "user_id": a["user_id"], "question_id": a["question_id"], "title": a["title"],
+        "id": a["id"], "user_id": a["user_id"], "question_id": a["question_id"], "uid": a["uid"], "title": a["title"],
         "chapter": a["chapter"], "mode": a["mode"], "assignment_id": a["assignment_id"],
         "created_at": a["created_at"], "answered_at": a["answered_at"], "score": a["score"], "tries": a["tries"],
         "history": json.loads(a["history"]) if a["history"] else [],

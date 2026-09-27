@@ -105,7 +105,7 @@ async function questionsTab(cls, period) {
     h('thead', {}, h('tr', {}, h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', { class: 'num' }, 'Élèves'),
       h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussies'), h('th', { class: 'num' }, 'Abandonnées'), h('th', {}, 'Score moyen'))),
     h('tbody', {}, questions.map((q) => h('tr', { class: 'clickable', onclick: () => navigate(`/questions/${q.id}`) },
-      h('td', {}, q.title), h('td', { class: 'small' }, q.chapter || '—'), h('td', { class: 'num' }, q.students),
+      h('td', {}, q.uid ? h('span', { class: 'uid' }, q.uid) : null, q.title), h('td', { class: 'small' }, q.chapter || '—'), h('td', { class: 'num' }, q.students),
       h('td', { class: 'num' }, q.answered), h('td', { class: 'num' }, q.correct), h('td', { class: 'num', title: 'servies sans réponse' }, q.unanswered),
       h('td', { style: { minWidth: '9rem' } }, meter(q.avg_score)))))));
 }
@@ -156,7 +156,7 @@ export async function studentPage({ params, query }) {
     d.attempts.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
       h('thead', {}, h('tr', {}, h('th', {}, 'Servie le'), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Mode'), h('th', {}, 'Durée'), h('th', { class: 'num' }, 'Essais'), h('th', {}, 'Score'))),
       h('tbody', {}, d.attempts.map((a) => h('tr', { class: 'clickable', onclick: () => navigate(`/tentative/${a.id}`) },
-        h('td', { class: 'small' }, fmtDateTime(a.created_at)), h('td', {}, a.title), h('td', { class: 'small' }, a.chapter || '—'),
+        h('td', { class: 'small' }, fmtDateTime(a.created_at)), h('td', {}, a.uid ? h('span', { class: 'uid' }, a.uid) : null, a.title), h('td', { class: 'small' }, a.chapter || '—'),
         h('td', { class: 'small' }, MODE_LABEL[a.mode], a.assignment ? ` — ${a.assignment}` : ''),
         h('td', { class: 'small num' }, duration(a.created_at, a.answered_at)),
         h('td', { class: 'num' }, a.tries || '—'),

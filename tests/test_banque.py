@@ -32,7 +32,7 @@ def reference_answers(template, seed):
 class BankTest(unittest.TestCase):
     def test_files_format(self):
         self.assertGreaterEqual(len(BANK_FILES), 5)
-        titles = []
+        titles, uids = [], []
         for path in BANK_FILES:
             with self.subTest(os.path.basename(path)):
                 with open(path, encoding="utf-8") as f:
@@ -40,11 +40,14 @@ class BankTest(unittest.TestCase):
                 self.assertEqual(data.get("format"), "questionnapp/questions")
                 self.assertTrue(data.get("title"))
                 for q in data["questions"]:
-                    for key in ("title", "chapter", "skills", "difficulty", "template"):
+                    for key in ("uid", "title", "chapter", "skills", "difficulty", "template"):
                         self.assertIn(key, q, q.get("title"))
                     self.assertTrue(q["skills"], q["title"])
                     titles.append(q["title"])
+                    uids.append(q["uid"])
+                    self.assertRegex(q["uid"], r"^[A-Z0-9_-]{1,40}$")
         self.assertEqual(len(titles), len(set(titles)), "titres en double dans la banque")
+        self.assertEqual(len(uids), len(set(uids)), "identifiants en double dans la banque")
 
     def test_every_question_passes_selftest(self):
         for filename, q in all_questions():

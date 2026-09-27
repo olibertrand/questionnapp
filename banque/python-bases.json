@@ -5,6 +5,7 @@
   "description": "Variables, types, conditions, boucles, entrées/sorties.",
   "questions": [
     {
+      "uid": "BASES-01",
       "title": "Suivre l'évolution de variables",
       "chapter": "Python : les bases",
       "difficulty": 1,
@@ -35,6 +36,7 @@
       }
     },
     {
+      "uid": "BASES-02",
       "title": "Boucle for et range",
       "chapter": "Python : les bases",
       "difficulty": 2,
@@ -60,6 +62,7 @@
       }
     },
     {
+      "uid": "BASES-03",
       "title": "Type d'une expression",
       "chapter": "Python : les bases",
       "difficulty": 1,
@@ -80,6 +83,7 @@
       }
     },
     {
+      "uid": "BASES-04",
       "title": "Instructions conditionnelles",
       "chapter": "Python : les bases",
       "difficulty": 1,
@@ -101,6 +105,7 @@
       }
     },
     {
+      "uid": "BASES-05",
       "title": "Saisie et conversion (input)",
       "chapter": "Python : les bases",
       "difficulty": 2,

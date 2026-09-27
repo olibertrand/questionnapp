@@ -159,7 +159,7 @@ def by_question(req):
     ids = [s["id"] for s in _class_students(req.db, cid)]
     psql, pargs = _period_sql(req)
     rows = db.all_(req.db, f"""
-        SELECT q.id, q.title, c.name AS chapter,
+        SELECT q.id, q.uid, q.title, c.name AS chapter,
                count(a.score) AS answered, count(DISTINCT CASE WHEN a.score IS NOT NULL THEN a.user_id END) AS students,
                avg(a.score) AS avg_score, sum(CASE WHEN a.score >= 1 THEN 1 ELSE 0 END) AS correct,
                sum(CASE WHEN a.id IS NOT NULL AND a.score IS NULL THEN 1 ELSE 0 END) AS unanswered
@@ -199,7 +199,7 @@ def student_detail(req):
     logins = db.all_(conn, "SELECT at, ip FROM logins WHERE user_id = ? ORDER BY at DESC LIMIT 100", sid)
     psql, pargs = _period_sql(req, "a.created_at")
     attempts = db.all_(conn, f"""
-        SELECT a.id, a.question_id, q.title, c.name AS chapter, a.mode, a.score, a.tries, a.created_at, a.answered_at,
+        SELECT a.id, a.question_id, q.uid, q.title, c.name AS chapter, a.mode, a.score, a.tries, a.created_at, a.answered_at,
                s.title AS assignment
         FROM attempts a JOIN questions q ON q.id = a.question_id LEFT JOIN chapters c ON c.id = q.chapter_id
         LEFT JOIN assignments s ON s.id = a.assignment_id

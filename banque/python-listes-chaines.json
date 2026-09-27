@@ -5,6 +5,7 @@
   "description": "Indices et tranches, parcours, listes en compréhension, fonctions sur les listes.",
   "questions": [
     {
+      "uid": "LISTES-01",
       "title": "Indices et tranches",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,
@@ -30,6 +31,7 @@
       }
     },
     {
+      "uid": "LISTES-02",
       "title": "Écrire une fonction : compter les occurrences",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,
@@ -55,6 +57,7 @@
       }
     },
     {
+      "uid": "LISTES-03",
       "title": "Compréhension de liste",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,
@@ -76,6 +79,7 @@
       }
     },
     {
+      "uid": "LISTES-04",
       "title": "Parcours d'une chaîne",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,

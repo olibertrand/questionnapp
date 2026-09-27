@@ -62,8 +62,37 @@ def _new_version(conn, qid, template):
     return vid
 
 
+UID_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+
+
+def clean_uid(uid):
+    if uid in (None, ""):
+        return None
+    if not isinstance(uid, str) or not UID_RE.match(uid.strip()):
+        raise HttpError(400, f"Identifiant de question invalide : {uid!r} (lettres, chiffres, - et _)")
+    return uid.strip().upper()
+
+
+def find_existing(conn, item):
+    """Question déjà présente pour un élément importé : même identifiant, sinon même titre
+    (parmi les questions non archivées). Renvoie {id, archived, template} ou None."""
+    uid = clean_uid(item.get("uid"))
+    row = None
+    if uid:
+        row = db.one(conn, """SELECT q.id, q.archived, v.template FROM questions q
+                              LEFT JOIN question_versions v ON v.id = q.version_id WHERE q.uid = ?""", uid)
+    if not row and item.get("title"):
+        row = db.one(conn, """SELECT q.id, q.archived, v.template FROM questions q
+                              LEFT JOIN question_versions v ON v.id = q.version_id
+                              WHERE q.title = ? AND q.archived = 0 ORDER BY q.id LIMIT 1""", item["title"])
+    if row:
+        row["template"] = json.loads(row["template"]) if row["template"] else None
+    return row
+
+
 def save_question(conn, user, data, qid=None, validate=True):
     title = require_str(data, "title", 200)
+    uid = clean_uid(data.get("uid"))
     template = data.get("template")
     difficulty = to_int(data.get("difficulty", 2), "difficulté")
     if difficulty not in (1, 2, 3):
@@ -73,15 +102,21 @@ def save_question(conn, user, data, qid=None, validate=True):
     with db.Tx(conn):
         chapter_id = _chapter_id(conn, data)
         now = db.now()
+        if uid and db.one(conn, "SELECT 1 FROM questions WHERE uid = ? AND id IS NOT ?", uid, qid):
+            raise HttpError(409, f"L'identifiant {uid} est déjà utilisé par une autre question")
         if qid is None:
-            qid = db.insert(conn, """INSERT INTO questions(title, chapter_id, difficulty, author_id, created_at, updated_at)
-                                     VALUES (?, ?, ?, ?, ?, ?)""", title, chapter_id, difficulty, user["id"], now, now)
+            qid = db.insert(conn, """INSERT INTO questions(uid, title, chapter_id, difficulty, author_id, created_at, updated_at)
+                                     VALUES (?, ?, ?, ?, ?, ?, ?)""", uid, title, chapter_id, difficulty, user["id"], now, now)
+            if not uid:
+                conn.execute("UPDATE questions SET uid = ? WHERE id = ?", (f"Q-{qid:04d}", qid))
             _new_version(conn, qid, template)
         else:
             current = db.one(conn, """SELECT v.template FROM questions q JOIN question_versions v ON v.id = q.version_id
                                       WHERE q.id = ?""", qid)
             conn.execute("UPDATE questions SET title = ?, chapter_id = ?, difficulty = ?, updated_at = ? WHERE id = ?",
                          (title, chapter_id, difficulty, now, qid))
+            if uid:
+                conn.execute("UPDATE questions SET uid = ? WHERE id = ?", (uid, qid))
             if not current or json.loads(current["template"]) != template:
                 _new_version(conn, qid, template)
         if "skills" in data:
@@ -93,7 +128,7 @@ def save_question(conn, user, data, qid=None, validate=True):
 
 def question_row(conn, qid):
     q = db.one(conn, """
-        SELECT q.id, q.title, q.chapter_id, c.name AS chapter, q.difficulty, q.archived, q.created_at,
+        SELECT q.id, q.uid, q.title, q.chapter_id, c.name AS chapter, q.difficulty, q.archived, q.created_at,
                q.updated_at, q.version_id, v.template, coalesce(nullif(u.display_name, ''), u.username) AS author
         FROM questions q LEFT JOIN chapters c ON c.id = q.chapter_id
         LEFT JOIN question_versions v ON v.id = q.version_id
@@ -121,18 +156,18 @@ def list_questions(req):
         where.append("q.id IN (SELECT question_id FROM class_questions WHERE class_id = ?)")
         args.append(req.int_arg("class_id"))
     if req.arg("q"):
-        where.append("(q.title LIKE ? OR q.id IN (SELECT qs.question_id FROM question_skills qs "
+        where.append("(q.title LIKE ? OR q.uid LIKE ? OR q.id IN (SELECT qs.question_id FROM question_skills qs "
                      "JOIN skills s ON s.id = qs.skill_id WHERE s.name LIKE ?))")
-        args += [f"%{req.arg('q')}%"] * 2
+        args += [f"%{req.arg('q')}%"] * 3
     rows = db.all_(req.db, f"""
-        SELECT q.id, q.title, q.chapter_id, c.name AS chapter, q.difficulty, q.archived, q.updated_at,
+        SELECT q.id, q.uid, q.title, q.chapter_id, c.name AS chapter, q.difficulty, q.archived, q.updated_at,
                (SELECT group_concat(s.name, ' | ') FROM question_skills qs JOIN skills s ON s.id = qs.skill_id
                 WHERE qs.question_id = q.id) AS skills,
                (SELECT group_concat(cq.class_id) FROM class_questions cq WHERE cq.question_id = q.id) AS class_ids,
                (SELECT count(*) FROM attempts a WHERE a.question_id = q.id AND a.score IS NOT NULL) AS attempts,
                (SELECT avg(a.score) FROM attempts a WHERE a.question_id = q.id AND a.score IS NOT NULL) AS avg_score
         FROM questions q LEFT JOIN chapters c ON c.id = q.chapter_id
-        WHERE {' AND '.join(where)} ORDER BY c.position, c.name, q.title""", *args)
+        WHERE {' AND '.join(where)} ORDER BY c.position, c.name, q.uid, q.title""", *args)
     for r in rows:
         r["skills"] = r["skills"].split(" | ") if r["skills"] else []
         r["class_ids"] = [int(x) for x in r["class_ids"].split(",")] if r["class_ids"] else []
@@ -148,7 +183,7 @@ def export(req):
     out = []
     for qid in ids:
         q = question_row(req.db, qid)
-        out.append({"title": q["title"], "chapter": q["chapter"], "difficulty": q["difficulty"],
+        out.append({"uid": q["uid"], "title": q["title"], "chapter": q["chapter"], "difficulty": q["difficulty"],
                     "skills": q["skills"], "template": q["template"]})
     return json_response({"format": "questionnapp/questions", "version": 1, "questions": out})
 
@@ -182,22 +217,39 @@ def selftest_many(templates, workers=4):
         return {k: v for k, v in pool.map(one, templates) if v is not None}
 
 
-def _import_items(conn, user, items, class_ids, validate=True, skip_existing=False):
-    """Importe une liste de questions. Avec `validate`, chaque modèle passe l'auto-test du moteur :
-    une question qui ne se génère pas est refusée ; une question importée mais suspecte
-    (correction refusée, tests laxistes, peu de variété) est signalée dans `warnings`."""
-    existing = {r["title"] for r in db.all_(conn, "SELECT title FROM questions WHERE archived = 0")} if skip_existing else set()
-    created, skipped, errors, warnings = [], [], [], []
-    reports = selftest_many([it.get("template") for it in items if isinstance(it, dict) and it.get("title") not in existing]) \
-        if validate else {}
+def _import_items(conn, user, items, class_ids, validate=True):
+    """Importe une liste de questions. Une question déjà présente (même identifiant, sinon même
+    titre) n'est jamais réimportée : elle est comptée dans `skipped` (ou restaurée si elle avait
+    été archivée). Avec `validate`, chaque modèle passe l'auto-test du moteur : une question qui
+    ne se génère pas est refusée ; une question importée mais suspecte est signalée dans `warnings`."""
+    created, skipped, restored, errors, warnings = [], [], [], [], []
+    fresh = []
     for i, item in enumerate(items):
-        if not isinstance(item, dict):
-            errors.append(f"question {i + 1} : format invalide")
+        if not isinstance(item, dict) or not item.get("title"):
+            errors.append(f"question {i + 1} : format invalide (titre manquant)")
             continue
-        title = item.get("title") or "?"
-        if title in existing:
+        try:
+            existing = find_existing(conn, item)
+        except HttpError as exc:
+            errors.append(f"question {i + 1} ({item.get('title')}) : {exc.message}")
+            continue
+        if existing:
+            if existing["archived"]:
+                conn.execute("UPDATE questions SET archived = 0 WHERE id = ?", (existing["id"],))
+                restored.append(item["title"])
+            else:
+                skipped.append(item["title"])
+            continue
+        fresh.append(item)
+    reports = selftest_many([it.get("template") for it in fresh]) if validate else {}
+    seen = set()
+    for item in fresh:
+        title = item["title"]
+        key = clean_uid(item.get("uid")) or title
+        if key in seen:  # doublon à l'intérieur du fichier lui-même
             skipped.append(title)
             continue
+        seen.add(key)
         try:
             template = item.get("template")
             if validate:
@@ -207,7 +259,7 @@ def _import_items(conn, user, items, class_ids, validate=True, skip_existing=Fal
                 generation_failed = [e for e in report["errors"] if "référence" not in e["error"]]
                 if generation_failed or not report["samples"]:
                     raise HttpError(422, "; ".join(_selftest_messages(report)[:3]) or "génération impossible")
-            payload = {"title": item.get("title"), "difficulty": item.get("difficulty", 2),
+            payload = {"uid": item.get("uid"), "title": title, "difficulty": item.get("difficulty", 2),
                        "skills": item.get("skills") or [], "template": template,
                        "chapter_name": item.get("chapter") or None, "class_ids": class_ids}
             qid = save_question(conn, user, payload, validate=False)
@@ -215,8 +267,8 @@ def _import_items(conn, user, items, class_ids, validate=True, skip_existing=Fal
             if validate and report["status"] != "ok":
                 warnings.append({"id": qid, "title": title, "messages": _selftest_messages(report)})
         except HttpError as exc:
-            errors.append(f"question {i + 1} ({title}) : {exc.message}")
-    return {"created": created, "skipped": skipped, "errors": errors, "warnings": warnings}
+            errors.append(f"« {title} » : {exc.message}")
+    return {"created": created, "skipped": skipped, "restored": restored, "errors": errors, "warnings": warnings}
 
 
 @router.post("/api/questions/import")
@@ -330,11 +382,82 @@ def delete(req):
     security.require_staff(req)
     qid = to_int(req.params["id"])
     question_row(req.db, qid)
-    if db.one(req.db, "SELECT 1 FROM attempts WHERE question_id = ? LIMIT 1", qid):
-        req.db.execute("UPDATE questions SET archived = 1 WHERE id = ?", (qid,))
-        return json_response({"archived": True})
-    req.db.execute("DELETE FROM questions WHERE id = ?", (qid,))
-    return json_response({"deleted": True})
+    r = delete_questions(req.db, [qid])
+    return json_response({"archived": bool(r["archived"]), "deleted": bool(r["deleted"])})
+
+
+def delete_questions(conn, ids, purge=False):
+    """Supprime les questions ; celles auxquelles des élèves ont répondu sont archivées
+    (statistiques conservées), sauf avec `purge` qui efface aussi les réponses."""
+    deleted, archived = 0, 0
+    with db.Tx(conn):
+        for qid in ids:
+            if not db.one(conn, "SELECT id FROM questions WHERE id = ?", qid):
+                continue
+            if not purge and db.one(conn, "SELECT 1 FROM attempts WHERE question_id = ? LIMIT 1", qid):
+                conn.execute("UPDATE questions SET archived = 1 WHERE id = ?", (qid,))
+                conn.execute("DELETE FROM class_questions WHERE question_id = ?", (qid,))
+                archived += 1
+            else:
+                conn.execute("DELETE FROM attempts WHERE question_id = ?", (qid,))
+                conn.execute("DELETE FROM questions WHERE id = ?", (qid,))
+                deleted += 1
+    return {"deleted": deleted, "archived": archived}
+
+
+@router.post("/api/questions/bulk-delete")
+def bulk_delete(req):
+    user = security.require_staff(req)
+    data = req.json
+    purge = bool(data.get("purge"))
+    if purge and not security.is_admin(user):
+        raise HttpError(403, "Seul un administrateur peut effacer les réponses des élèves")
+    return json_response(delete_questions(req.db, int_list(data, "ids"), purge))
+
+
+def _duplicate_groups(conn):
+    """Questions actives de même titre : [(à garder, [doublons])]. On garde celle qui a le plus de
+    réponses d'élèves, puis celle qui a un identifiant de banque, puis la plus ancienne."""
+    rows = db.all_(conn, """SELECT q.id, q.uid, q.title,
+                                   (SELECT count(*) FROM attempts a WHERE a.question_id = q.id) AS n
+                            FROM questions q WHERE q.archived = 0 ORDER BY q.title, q.id""")
+    groups = {}
+    for r in rows:
+        groups.setdefault(r["title"], []).append(r)
+    out = []
+    for title, qs in groups.items():
+        if len(qs) < 2:
+            continue
+        qs.sort(key=lambda r: (-r["n"], (r["uid"] or "Q-").startswith("Q-"), r["id"]))
+        out.append((qs[0], qs[1:]))
+    return out
+
+
+@router.get("/api/questions/duplicates")
+def list_duplicates(req):
+    security.require_staff(req)
+    return json_response({"groups": [{"keep": k, "remove": r} for k, r in _duplicate_groups(req.db)]})
+
+
+@router.post("/api/questions/remove-duplicates")
+def remove_duplicates(req):
+    """Supprime les doublons (même titre) en gardant une question par titre ; les affectations
+    aux classes et aux séances des doublons sont reportées sur la question gardée."""
+    security.require_staff(req)
+    conn = req.db
+    groups = _duplicate_groups(conn)
+    with db.Tx(conn):
+        for keep, dups in groups:
+            for d in dups:
+                conn.execute("""INSERT OR IGNORE INTO class_questions(class_id, question_id)
+                                SELECT class_id, ? FROM class_questions WHERE question_id = ?""", (keep["id"], d["id"]))
+                conn.execute("""INSERT OR IGNORE INTO assignment_questions(assignment_id, question_id, position)
+                                SELECT assignment_id, ?, position FROM assignment_questions WHERE question_id = ?""",
+                             (keep["id"], d["id"]))
+                conn.execute("DELETE FROM assignment_questions WHERE question_id = ?", (d["id"],))
+    result = delete_questions(conn, [d["id"] for _, dups in groups for d in dups])
+    result["groups"] = len(groups)
+    return json_response(result)
 
 
 @router.post("/api/questions/bulk-classes")

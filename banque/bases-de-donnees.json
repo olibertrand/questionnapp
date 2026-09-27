@@ -5,6 +5,7 @@
   "description": "Modèle relationnel et requêtes SQL (sélection, agrégation, jointures).",
   "questions": [
     {
+      "uid": "BDD-01",
       "title": "SQL : sélection avec condition",
       "chapter": "Bases de données",
       "difficulty": 2,
@@ -30,6 +31,7 @@
       }
     },
     {
+      "uid": "BDD-02",
       "title": "SQL : agrégation et regroupement",
       "chapter": "Bases de données",
       "difficulty": 3,
@@ -52,6 +54,7 @@
       }
     },
     {
+      "uid": "BDD-03",
       "title": "SQL : jointure",
       "chapter": "Bases de données",
       "difficulty": 3,
@@ -73,6 +76,7 @@
       }
     },
     {
+      "uid": "BDD-04",
       "title": "Vocabulaire des bases de données",
       "chapter": "Bases de données",
       "difficulty": 1,

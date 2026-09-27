@@ -151,8 +151,8 @@ export function questionChecklist(questions, selected, { groupBy = 'chapter' } =
   const filter = h('input', { type: 'search', placeholder: 'Filtrer par titre ou compétence…', style: { marginBottom: '.4rem' } });
   const box = h('div', { class: 'checklist', style: { maxHeight: '30rem' } }, Object.entries(groups).map(([g, qs]) => [
     h('div', { class: 'group' }, g),
-    qs.map((q) => h('label', { class: 'inline', 'data-s': `${q.title} ${(q.skills || []).join(' ')}`.toLowerCase() },
-      h('input', { type: 'checkbox', value: q.id, checked: selected.has(q.id) }), q.title,
+    qs.map((q) => h('label', { class: 'inline', 'data-s': `${q.uid || ''} ${q.title} ${(q.skills || []).join(' ')}`.toLowerCase() },
+      h('input', { type: 'checkbox', value: q.id, checked: selected.has(q.id) }), q.uid ? h('span', { class: 'uid' }, q.uid) : null, q.title,
       q.skills && q.skills.length ? h('span', { class: 'muted small' }, ` — ${q.skills.join(', ')}`) : null)),
   ]));
   filter.addEventListener('input', () => box.querySelectorAll('label').forEach((l) => { l.style.display = l.dataset.s.includes(filter.value.toLowerCase()) ? '' : 'none'; }));
@@ -250,7 +250,7 @@ export async function assignmentPage({ params }) {
     h('h2', {}, 'Avancement des élèves'),
     h('p', { class: 'small muted' }, 'Pour chaque question : meilleur score obtenu (nombre d\'essais).'),
     h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Élève'), qCols.map((q, i) => h('th', { title: q.title }, `Q${i + 1}`)), h('th', {}, 'Traitées'), h('th', {}, 'Score'))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Élève'), qCols.map((q, i) => h('th', { title: q.title }, q.uid || `Q${i + 1}`)), h('th', {}, 'Traitées'), h('th', {}, 'Score'))),
       h('tbody', {}, a.students.map((s) => {
         const byQ = Object.fromEntries(s.progress.questions.map((p) => [p.question_id, p]));
         return h('tr', {},
@@ -262,5 +262,5 @@ export async function assignmentPage({ params }) {
           h('td', {}, `${s.progress.done}/${s.progress.total}`), h('td', { style: { minWidth: '8rem' } }, meter(s.progress.score)));
       })))),
     h('h2', {}, 'Questions'),
-    h('ol', {}, qCols.map((q) => h('li', {}, h('a', { href: `#/questions/${q.id}` }, q.title), q.chapter ? h('span', { class: 'muted small' }, ` — ${q.chapter}`) : null))));
+    h('ol', {}, qCols.map((q) => h('li', {}, q.uid ? h('span', { class: 'uid' }, q.uid) : null, h('a', { href: `#/questions/${q.id}` }, q.title), q.chapter ? h('span', { class: 'muted small' }, ` — ${q.chapter}`) : null))));
 }

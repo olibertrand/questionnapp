@@ -20,6 +20,8 @@ avec des valeurs différentes. La correction est automatique.
   1er essai, 75 % au 2e, 50 % au 3e ; bouton « Voir la solution ».
 - Éditeur avec **aperçu en direct**, test de ses propres réponses, indicateur de variété,
   erreurs localisées (ligne du générateur), modèles de départ, import/export JSON.
+- Chaque question a un **identifiant** lisible et unique (`DICO-07`, `Q-0042`) ; un import ne
+  réimporte jamais une question déjà présente. Suppression en bloc et suppression des doublons.
 - Une question appartient à un chapitre, travaille des compétences et peut être affectée à
   0, 1 ou plusieurs classes. Chaque modification est versionnée.
 - **Banques de questions** : répertoire [`banque/`](banque/LISEZMOI.md), un fichier JSON par
@@ -87,6 +89,12 @@ Le dossier [`claude-projet/`](claude-projet/LISEZMOI.md) permet de monter un pro
 (claude.ai) qui transforme un cours et ses exercices en questions : notions du chapitre et
 prérequis mobilisés dans les exercices. Claude teste ses questions avec le moteur de l'app,
 puis on importe le fichier JSON obtenu ; l'import refait un auto-test de chaque question.
+
+### Repartir d'une banque de questions vide
+
+```sh
+python3 scripts/vider_questions.py   # serveur arrêté ; garde comptes et classes, demande confirmation
+```
 
 ## Tests
 

@@ -5,6 +5,7 @@
   "description": "Tris, recherche dichotomique, complexité, fonctions classiques.",
   "questions": [
     {
+      "uid": "ALGO-01",
       "title": "Tri par sélection : état intermédiaire",
       "chapter": "Algorithmique",
       "difficulty": 2,
@@ -31,6 +32,7 @@
       }
     },
     {
+      "uid": "ALGO-02",
       "title": "Recherche dichotomique : indices consultés",
       "chapter": "Algorithmique",
       "difficulty": 2,
@@ -61,6 +63,7 @@
       }
     },
     {
+      "uid": "ALGO-03",
       "title": "Complexité d'un algorithme",
       "chapter": "Algorithmique",
       "difficulty": 2,
@@ -82,6 +85,7 @@
       }
     },
     {
+      "uid": "ALGO-04",
       "title": "Écrire une fonction : maximum ou minimum",
       "chapter": "Algorithmique",
       "difficulty": 2,

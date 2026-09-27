@@ -80,6 +80,9 @@ class Router:
 
         def deco(func):
             self.routes.append((method, regex, func))
+            # les routes sans paramètre passent avant les routes paramétrées
+            # (/api/questions/duplicates avant /api/questions/:id)
+            self.routes.sort(key=lambda r: r[1].groups > 0)
             return func
         return deco
 

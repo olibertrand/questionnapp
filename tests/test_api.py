@@ -244,6 +244,44 @@ class ApiTest(unittest.TestCase):
         self.assertIn("## Chapitre : Dictionnaires", ref)
         self.assertIn("Dictionnaires : accès", ref)
 
+        # identifiants et import sans doublon (même fichier importé deux fois)
+        with open(os.path.join(ROOT, "banque", "poo.json"), encoding="utf-8") as f:
+            poo = json.load(f)
+        r1 = prof.ok("POST", "/api/questions/import", poo)
+        self.assertEqual(len(r1["created"]), len(poo["questions"]))
+        r2 = prof.ok("POST", "/api/questions/import", poo)
+        self.assertEqual(r2["created"], [])
+        self.assertEqual(len(r2["skipped"]), len(poo["questions"]))
+        q_poo = prof.ok("GET", f"/api/questions/{r1['created'][0]}")["question"]
+        self.assertEqual(q_poo["uid"], "POO-01")
+        self.assertEqual(prof.ok("GET", "/api/questions?q=POO-02")["questions"][0]["uid"], "POO-02")
+        # une question créée dans l'app reçoit un identifiant Q-xxxx
+        new_id = prof.ok("POST", "/api/questions", {"title": "Doublon", "template": TEMPLATE})["id"]
+        self.assertEqual(prof.ok("GET", f"/api/questions/{new_id}")["question"]["uid"], f"Q-{new_id:04d}")
+        # identifiant déjà pris : refusé
+        self.assertEqual(prof.call("PUT", f"/api/questions/{new_id}", {"title": "Doublon", "uid": "POO-01", "template": TEMPLATE})[0], 409)
+        # doublons de titre : on en garde un, les affectations sont reportées
+        dup_id = prof.ok("POST", "/api/questions", {"title": "Doublon", "template": TEMPLATE, "class_ids": [cid]})["id"]
+        groups = prof.ok("GET", "/api/questions/duplicates")["groups"]
+        self.assertEqual([g["keep"]["id"] for g in groups], [new_id])
+        prof.ok("POST", "/api/questions/remove-duplicates")
+        self.assertEqual(prof.ok("GET", "/api/questions/duplicates")["groups"], [])
+        self.assertEqual(prof.call("GET", f"/api/questions/{dup_id}")[0], 404)
+        self.assertIn(cid, prof.ok("GET", f"/api/questions/{new_id}")["question"]["class_ids"])
+        # suppression en bloc ; « purge » réservée à l'admin
+        r = prof.ok("POST", "/api/questions/bulk-delete", {"ids": r1["created"]})
+        self.assertEqual(r["deleted"], len(r1["created"]))
+        self.assertEqual(prof.call("POST", "/api/questions/bulk-delete", {"ids": [new_id], "purge": True})[0], 403)
+        # réimport après archivage : la question est restaurée, pas dupliquée
+        with open(os.path.join(ROOT, "banque", "python-dictionnaires.json"), encoding="utf-8") as f:
+            dico_file = json.load(f)
+        answered = prof.ok("GET", "/api/questions?q=DICO-01")["questions"][0]
+        eleve.ok("POST", "/api/practice/next", {"mode": "free", "question_id": answered["id"]})
+        self.assertEqual(prof.ok("POST", "/api/questions/bulk-delete", {"ids": [answered["id"]]})["archived"], 1)
+        r = prof.ok("POST", "/api/questions/import", {**dico_file, "questions": dico_file["questions"][:1]})
+        self.assertEqual(r["created"], [])
+        self.assertEqual(len(r["restored"]), 1)
+
         eleve.ok("POST", "/api/auth/logout")
         self.assertEqual(eleve.call("GET", "/api/me/dashboard")[0], 401)
 

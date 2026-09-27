@@ -25,7 +25,7 @@ def _set_questions(conn, aid, class_id, qids):
 
 
 def assignment_questions(conn, aid):
-    return db.all_(conn, """SELECT q.id, q.title, c.name AS chapter FROM assignment_questions aq
+    return db.all_(conn, """SELECT q.id, q.uid, q.title, c.name AS chapter FROM assignment_questions aq
                             JOIN questions q ON q.id = aq.question_id LEFT JOIN chapters c ON c.id = q.chapter_id
                             WHERE aq.assignment_id = ? ORDER BY aq.position""", aid)
 

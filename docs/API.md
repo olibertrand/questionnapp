@@ -57,9 +57,12 @@ question invalide, avec en plus `where` et `line`).
 | POST | `/questions/selftest` | `{template}` → rapport d'auto-test du moteur + `messages` |
 | GET | `/questions/referential` | Markdown : chapitres, compétences et questions existantes (pour un projet Claude) |
 | POST | `/questions/try` | `{template, seed, answers}` → réponse brute du moteur (`check`) |
+| POST | `/questions/bulk-delete` | `{ids, purge?}` : supprime (ou archive si des élèves ont répondu) ; `purge` (admin) efface aussi les réponses |
+| GET | `/questions/duplicates` | questions actives de même titre : `{groups: [{keep, remove}]}` |
+| POST | `/questions/remove-duplicates` | garde une question par titre et reporte les affectations des doublons |
 | POST | `/questions/bulk-classes` | `{question_ids, class_ids, add: bool}` |
 | GET | `/questions/export?ids=1,2` | `{format: "questionnapp/questions", version: 1, questions: [...]}` |
-| POST | `/questions/import` | même format (+ `class_ids`) → `{created, skipped, errors, warnings}` : chaque question passe l'auto-test ; refusée si elle ne se génère pas, signalée dans `warnings` si elle est douteuse |
+| POST | `/questions/import` | même format (+ `class_ids`) → `{created, skipped, restored, errors, warnings}` : une question déjà présente (même `uid`, sinon même titre) n'est pas réimportée (`skipped`) ou est restaurée si elle était archivée ; chaque nouvelle question passe l'auto-test ; refusée si elle ne se génère pas, signalée dans `warnings` si elle est douteuse |
 
 ## Banques de questions (fichiers du répertoire `banque/`)
 | Méthode | Route | |

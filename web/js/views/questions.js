@@ -1,8 +1,12 @@
 import { api, qs } from '../api.js';
 import { codeArea, confirmBox, errorBox, h, modal, mount, pct, toast } from '../dom.js';
-import { navigate, render } from '../app.js';
+import { navigate, render, state } from '../app.js';
 import { md } from '../markdown.js';
 import { questionView } from '../player.js';
+
+export function uidBadge(uid) {
+  return uid ? h('span', { class: 'uid', title: 'Identifiant de la question' }, uid) : null;
+}
 
 // ---------------------------------------------------------------------------
 // Liste
@@ -26,6 +30,8 @@ export async function listPage({ query }) {
   const bulk = h('div', { class: 'row' },
     h('button', { onclick: () => bulkClasses(classes, selected()) }, 'Affecter la sélection à des classes…'),
     h('button', { onclick: () => exportQuestions(selected()) }, 'Exporter (JSON)'),
+    h('button', { class: 'danger', onclick: () => bulkDelete(selected()) }, 'Supprimer la sélection…'),
+    h('button', { onclick: duplicatesModal }, 'Supprimer les doublons…'),
     h('label', { class: 'btn', style: { cursor: 'pointer' } }, 'Importer (JSON)',
       h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: (e) => importFile(e.target.files[0]) })),
     h('button', { onclick: () => chaptersModal(chapters) }, 'Chapitres…'),
@@ -37,6 +43,7 @@ export async function listPage({ query }) {
     checks.push(cb);
     return h('tr', {},
       h('td', {}, cb),
+      h('td', {}, uidBadge(q.uid)),
       h('td', {}, h('a', { href: `#/questions/${q.id}`, title: 'Modifier' }, q.title), q.archived ? h('span', { class: 'pill bad', style: { marginLeft: '.3rem' } }, 'archivée') : null,
         h('div', { class: 'small muted' }, q.skills.join(' · '))),
       h('td', {}, q.chapter || h('span', { class: 'muted' }, '—')),
@@ -44,7 +51,7 @@ export async function listPage({ query }) {
       h('td', { class: 'num' }, q.attempts), h('td', { class: 'num' }, pct(q.avg_score)),
       h('td', { class: 'num' }, h('button', { class: 'small', onclick: () => previewQuestion(q.id) }, 'Aperçu')));
   });
-  const all = h('input', { type: 'checkbox', 'aria-label': 'Tout sélectionner', onchange: (e) => checks.forEach((c) => { c.checked = e.target.checked; }) });
+  const all = h('input', { type: 'checkbox', 'aria-label': 'Tout sélectionner', title: 'Tout sélectionner', onchange: (e) => checks.forEach((c) => { c.checked = e.target.checked; }) });
 
   return h('div', {},
     h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, 'Banque de questions'),
@@ -55,7 +62,7 @@ export async function listPage({ query }) {
       h('label', { class: 'inline small' }, h('input', { type: 'checkbox', checked: query.archives === '1', onchange: (e) => setQuery('archives', e.target.checked ? '1' : '') }), 'archivées')),
     bulk,
     questions.length ? h('div', { class: 'table-wrap', style: { marginTop: '1rem' } }, h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Classes'), h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussite'), h('th', {}, ''))),
+      h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'N°'), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Classes'), h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussite'), h('th', {}, ''))),
       h('tbody', {}, rows)))
       : h('div', { class: 'empty', style: { marginTop: '1rem' } },
         h('p', {}, 'La banque de questions est vide.'),
@@ -65,7 +72,7 @@ export async function listPage({ query }) {
 }
 
 // Aperçu d'une question telle que la verra un élève (données tirées au hasard, réponse testable).
-export function previewModal(title, template) {
+export function previewModal(title, template, uid) {
   const box = h('div', {}, h('p', { class: 'muted' }, 'Génération…'));
   const show = async () => {
     const r = await api.post('/questions/preview', { template }).catch((e) => ({ ok: false, error: e.message }));
@@ -85,12 +92,12 @@ export function previewModal(title, template) {
       res.solution ? h('details', { class: 'help' }, h('summary', {}, 'Correction'), md(res.solution)) : null);
   };
   show();
-  return modal(title, box);
+  return modal(uid ? `${uid} · ${title}` : title, box);
 }
 
 async function previewQuestion(id) {
   const { question } = await api.get(`/questions/${id}`);
-  previewModal(question.title, question.template);
+  previewModal(question.title, question.template, question.uid);
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +105,7 @@ async function previewQuestion(id) {
 // ---------------------------------------------------------------------------
 
 const BANK_STATUS = {
+  archived: ['pill', 'archivée (sera restaurée)'],
   new: ['pill accent', 'nouvelle'],
   imported: ['pill good', 'déjà importée'],
   modified: ['pill bad', 'modifiée dans le fichier'],
@@ -129,7 +137,7 @@ export async function bankPage({ params }) {
   const groups = {};
   bank.questions.forEach((q) => (groups[q.chapter || 'Sans chapitre'] ||= []).push(q));
   const rows = Object.entries(groups).map(([ch, qs]) => [
-    h('tr', {}, h('td', { colspan: 5, class: 'small', style: { fontWeight: 600, background: 'var(--surface-2)' } }, ch)),
+    h('tr', {}, h('td', { colspan: 6, class: 'small', style: { fontWeight: 600, background: 'var(--surface-2)' } }, ch)),
     qs.map((q) => {
       const cb = h('input', { type: 'checkbox', value: q.title, checked: q.status !== 'imported', disabled: q.status === 'imported', 'aria-label': 'Sélectionner' });
       cb.dataset.status = q.status;
@@ -137,11 +145,12 @@ export async function bankPage({ params }) {
       const [cls, label] = BANK_STATUS[q.status];
       return h('tr', {},
         h('td', {}, cb),
+        h('td', {}, uidBadge(q.uid)),
         h('td', {}, q.status !== 'new' ? h('a', { href: `#/questions/${q.question_id}` }, q.title) : q.title,
           h('div', { class: 'small muted' }, (q.skills || []).join(' · '))),
         h('td', { class: 'small' }, ['', 'facile', 'moyen', 'difficile'][q.difficulty || 2]),
         h('td', {}, h('span', { class: cls }, label)),
-        h('td', { class: 'num' }, h('button', { class: 'small', onclick: () => previewModal(q.title, q.template) }, 'Aperçu')));
+        h('td', { class: 'num' }, h('button', { class: 'small', onclick: () => previewModal(q.title, q.template, q.uid) }, 'Aperçu')));
     }),
   ]);
   const boxes = classes.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id }), c.name));
@@ -149,7 +158,7 @@ export async function bankPage({ params }) {
   const btn = h('button', { class: 'primary' }, 'Importer / mettre à jour la sélection');
   btn.addEventListener('click', async () => {
     const sel = checks.filter((c) => c.checked && !c.disabled);
-    const titles = sel.filter((c) => c.dataset.status === 'new').map((c) => c.value);
+    const titles = sel.filter((c) => c.dataset.status === 'new' || c.dataset.status === 'archived').map((c) => c.value);
     const update = sel.filter((c) => c.dataset.status === 'modified').map((c) => c.value);
     if (!titles.length && !update.length) return mount(out, h('div', { class: 'alert error' }, 'Aucune question sélectionnée.'));
     btn.disabled = true;
@@ -171,10 +180,50 @@ export async function bankPage({ params }) {
       h('button', { class: 'small link', onclick: () => setAll(true) }, 'tout cocher'),
       h('button', { class: 'small link', onclick: () => setAll(false) }, 'tout décocher')),
     h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Question'), h('th', {}, 'Difficulté'), h('th', {}, 'État'), h('th', {}, ''))),
+      h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'N°'), h('th', {}, 'Question'), h('th', {}, 'Difficulté'), h('th', {}, 'État'), h('th', {}, ''))),
       h('tbody', {}, rows))),
     classes.length ? h('div', { class: 'field', style: { marginTop: '1rem' } }, h('label', {}, 'Affecter aussi aux classes (facultatif)'), h('div', { class: 'row' }, boxes)) : null,
     out, h('div', { style: { marginTop: '.6rem' } }, btn));
+}
+
+function bulkDelete(ids) {
+  if (!ids.length) return toast('Cochez les questions à supprimer.', 'error');
+  const isAdmin = state.user.role === 'admin';
+  const purge = h('input', { type: 'checkbox' });
+  const btn = h('button', { class: 'primary danger' }, `Supprimer ${ids.length} question(s)`);
+  btn.addEventListener('click', async () => {
+    if (purge.checked && !confirmBox('Effacer définitivement ces questions ET toutes les réponses des élèves qui s\'y rapportent ?')) return;
+    btn.disabled = true;
+    const r = await api.post('/questions/bulk-delete', { ids, purge: purge.checked });
+    close();
+    toast(`${r.deleted} supprimée(s)` + (r.archived ? `, ${r.archived} archivée(s) (des élèves y avaient répondu)` : '') + '.');
+    render();
+  });
+  const close = modal('Supprimer des questions', h('div', {},
+    h('p', {}, `${ids.length} question(s) sélectionnée(s).`),
+    h('p', { class: 'small muted' }, 'Une question à laquelle des élèves ont déjà répondu est archivée plutôt que supprimée : elle n\'est plus proposée, mais les statistiques sont conservées.'),
+    isAdmin ? h('label', { class: 'inline' }, purge, 'Supprimer définitivement, y compris les réponses des élèves') : null,
+    h('div', { style: { marginTop: '1rem' } }, btn)));
+}
+
+async function duplicatesModal() {
+  const { groups } = await api.get('/questions/duplicates');
+  if (!groups.length) return modal('Doublons', h('p', {}, 'Aucune question en double (même titre). 👍'));
+  const n = groups.reduce((acc, g) => acc + g.remove.length, 0);
+  const btn = h('button', { class: 'primary' }, `Supprimer ${n} doublon(s)`);
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    const r = await api.post('/questions/remove-duplicates');
+    close();
+    toast(`${r.deleted + r.archived} doublon(s) retiré(s).`);
+    render();
+  });
+  const close = modal('Questions en double', h('div', {},
+    h('p', { class: 'small muted' }, 'Pour chaque titre, on garde la question qui a le plus de réponses d\'élèves (sinon celle de la banque, sinon la plus ancienne). Ses affectations aux classes et aux séances reprennent celles des doublons.'),
+    h('table', { class: 'data' }, h('thead', {}, h('tr', {}, h('th', {}, 'Question'), h('th', {}, 'Gardée'), h('th', {}, 'Retirées'))),
+      h('tbody', {}, groups.map((g) => h('tr', {}, h('td', {}, g.keep.title), h('td', {}, uidBadge(g.keep.uid)),
+        h('td', {}, g.remove.map((d) => uidBadge(d.uid))))))),
+    h('div', { style: { marginTop: '1rem' } }, btn)));
 }
 
 function bulkClasses(classes, ids) {
@@ -222,7 +271,10 @@ async function importFile(file) {
 function importReport(r) {
   modal("Résultat de l'import", h('div', {},
     h('div', { class: 'alert info' }, `${r.created.length} question(s) importée(s)` + (r.updated && r.updated.length ? `, ${r.updated.length} mise(s) à jour` : '')
-      + (r.skipped && r.skipped.length ? `, ${r.skipped.length} déjà présente(s)` : '') + '.'),
+      + (r.restored && r.restored.length ? `, ${r.restored.length} restaurée(s)` : '') + '.'),
+    r.skipped && r.skipped.length ? h('details', { class: 'help' },
+      h('summary', {}, `${r.skipped.length} question(s) déjà présente(s), non réimportée(s)`),
+      h('ul', { class: 'small' }, r.skipped.map((t) => h('li', {}, t)))) : null,
     r.warnings && r.warnings.length ? [h('h3', {}, 'À vérifier'),
       h('p', { class: 'small muted' }, "Ces questions ont été importées mais l'auto-test a relevé des points à contrôler. Ouvrez-les dans l'éditeur pour les corriger."),
       h('ul', {}, r.warnings.map((w) => h('li', {}, h('a', { href: `#/questions/${w.id}` }, w.title), h('ul', { class: 'small' }, w.messages.map((m) => h('li', {}, m))))))] : null,
@@ -361,6 +413,7 @@ export async function editorPage({ params }) {
 
   // --- métadonnées
   const title = h('input', { type: 'text', value: model.title, placeholder: 'ex. Boucle for et range' });
+  const uidInput = h('input', { type: 'text', value: existing ? existing.uid || '' : '', placeholder: 'ex. DICO-21', style: { textTransform: 'uppercase' } });
   const chapterSel = h('select', {}, h('option', { value: '' }, '— aucun —'),
     chapters.map((c) => h('option', { value: c.id, selected: c.id === model.chapter_id }, c.name)),
     h('option', { value: '__new' }, '+ Nouveau chapitre…'));
@@ -522,7 +575,7 @@ export async function editorPage({ params }) {
   async function save() {
     err.replaceChildren();
     const payload = {
-      title: title.value, difficulty: Number(difficulty.value), template: t,
+      title: title.value, uid: uidInput.value.trim() || undefined, difficulty: Number(difficulty.value), template: t,
       skills: skillsInput.value.split(/[;\n]/).map((s) => s.trim()).filter(Boolean),
       class_ids: classBoxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value)),
     };
@@ -593,12 +646,13 @@ export async function editorPage({ params }) {
   setTimeout(() => doPreview(true), 0);
   return h('div', {},
     h('p', {}, h('a', { href: '#/questions' }, '← Banque de questions')),
-    h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, isNew ? 'Nouvelle question' : 'Modifier la question'), actions),
+    h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, isNew ? 'Nouvelle question' : ['Modifier la question ', uidBadge(existing.uid)]), actions),
     err,
     h('div', { class: 'split', style: { marginTop: '1rem' } },
       h('div', {},
         h('div', { class: 'card' },
-          labelled('Titre', title),
+          h('div', { class: 'fields-2', style: { gridTemplateColumns: '9rem 1fr' } },
+            labelled('Identifiant', uidInput, isNew ? 'Automatique si vide' : null), labelled('Titre', title)),
           h('div', { class: 'fields-2' }, h('div', { class: 'field' }, h('label', {}, 'Chapitre'), chapterSel, newChapter), labelled('Difficulté', difficulty)),
           labelled('Compétences travaillées (séparées par « ; »)', h('div', {}, skillsInput, skillsList), 'Elles servent aux statistiques par compétence et au mode automatique.'),
           classes.length ? labelled('Classes', h('div', { class: 'row' }, classBoxes)) : null),

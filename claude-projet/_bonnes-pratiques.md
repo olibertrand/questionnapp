@@ -69,7 +69,10 @@
   présents dans le référentiel de l'enseignant quand ils conviennent.
 - `difficulty` : 1 application directe, 2 raisonnement en plusieurs étapes, 3 synthèse ou
   écriture de code non guidée.
-- `title` : court et unique, il identifie la question dans la banque (« Dictionnaires : parcours »).
+- `uid` : identifiant unique de la question, en majuscules, de la forme `PREFIXE-NN` (par exemple
+  `DICO-21` pour une question sur les dictionnaires). Continuer la numérotation du référentiel ou du
+  fichier de banque existant ; pour un nouveau thème, choisir un préfixe court (`POO`, `REC`…).
+- `title` : court et unique (« Dictionnaires : parcours »).
 
 ### Pièges techniques
 - Seules les fonctions aléatoires fournies (ou le module `random`) sont autorisées : pas d'heure,

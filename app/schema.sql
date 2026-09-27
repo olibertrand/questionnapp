@@ -57,6 +57,7 @@ CREATE TABLE IF NOT EXISTS skills (
 
 CREATE TABLE IF NOT EXISTS questions (
     id          INTEGER PRIMARY KEY,
+    uid         TEXT,                      -- identifiant lisible et unique (DICO-07, Q-0042) ; index unique créé par db.init
     title       TEXT NOT NULL,
     chapter_id  INTEGER REFERENCES chapters(id) ON DELETE SET NULL,
     difficulty  INTEGER NOT NULL DEFAULT 2 CHECK (difficulty BETWEEN 1 AND 3),

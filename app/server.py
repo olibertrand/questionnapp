@@ -103,6 +103,8 @@ def bootstrap():
     conn = db.connect()
     try:
         db.init(conn)
+        from .api.banks import assign_missing_uids
+        assign_missing_uids(conn)
         if not db.one(conn, "SELECT id FROM users LIMIT 1"):
             password = os.environ.get("QUESTIONNAPP_ADMIN_PASSWORD") or secrets.token_urlsafe(9)
             conn.execute("INSERT INTO users(username, password_hash, display_name, role, created_at) "

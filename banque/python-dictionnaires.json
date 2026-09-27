@@ -5,6 +5,7 @@
   "description": "Accès et modification, keys/values/items, recherche de max/min, calculs cumulatifs, données imbriquées (dictionnaires de dictionnaires, de listes, listes de dictionnaires).",
   "questions": [
     {
+      "uid": "DICO-01",
       "title": "Dictionnaires : accès et modification",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -30,6 +31,7 @@
       }
     },
     {
+      "uid": "DICO-02",
       "title": "Dictionnaires : parcours",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -55,6 +57,7 @@
       }
     },
     {
+      "uid": "DICO-03",
       "title": "Écrire une fonction : compter avec un dictionnaire",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -81,6 +84,7 @@
       }
     },
     {
+      "uid": "DICO-04",
       "title": "keys(), values() et items() : que vaut l'expression ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -106,6 +110,7 @@
       }
     },
     {
+      "uid": "DICO-05",
       "title": "Parcourir avec .items()",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -132,6 +137,7 @@
       }
     },
     {
+      "uid": "DICO-06",
       "title": "Quelle boucle convient ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -159,6 +165,7 @@
       }
     },
     {
+      "uid": "DICO-07",
       "title": "Recherche d'un maximum ou d'un minimum : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -184,6 +191,7 @@
       }
     },
     {
+      "uid": "DICO-08",
       "title": "Écrire une fonction : clé de la plus grande ou de la plus petite valeur",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -217,6 +225,7 @@
       }
     },
     {
+      "uid": "DICO-09",
       "title": "Total : parcourir les clés ou les valeurs ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -253,6 +262,7 @@
       }
     },
     {
+      "uid": "DICO-10",
       "title": "Écrire une fonction : calcul cumulatif sur un dictionnaire",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -284,6 +294,7 @@
       }
     },
     {
+      "uid": "DICO-11",
       "title": "Écrire une fonction : prix d'un panier",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -312,6 +323,7 @@
       }
     },
     {
+      "uid": "DICO-12",
       "title": "Dictionnaire de dictionnaires : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -337,6 +349,7 @@
       }
     },
     {
+      "uid": "DICO-13",
       "title": "Dictionnaire de listes : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -362,6 +375,7 @@
       }
     },
     {
+      "uid": "DICO-14",
       "title": "Liste de dictionnaires : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -388,6 +402,7 @@
       }
     },
     {
+      "uid": "DICO-15",
       "title": "Données imbriquées : quelle expression ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -414,6 +429,7 @@
       }
     },
     {
+      "uid": "DICO-16",
       "title": "Écrire une fonction : parcourir une liste de dictionnaires",
       "chapter": "Python : dictionnaires",
       "difficulty": 3,
@@ -447,6 +463,7 @@
       }
     },
     {
+      "uid": "DICO-17",
       "title": "Écrire une fonction : dictionnaire de listes",
       "chapter": "Python : dictionnaires",
       "difficulty": 3,
@@ -475,6 +492,7 @@
       }
     },
     {
+      "uid": "DICO-18",
       "title": "Écrire une fonction : dictionnaire de dictionnaires",
       "chapter": "Python : dictionnaires",
       "difficulty": 3,
@@ -508,6 +526,7 @@
       }
     },
     {
+      "uid": "DICO-19",
       "title": "Dictionnaire de dictionnaires : écrire l'instruction d'affichage",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -542,6 +561,7 @@
       }
     },
     {
+      "uid": "DICO-20",
       "title": "Dictionnaire de listes : écrire l'instruction d'affichage",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,

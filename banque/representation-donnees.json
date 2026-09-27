@@ -5,6 +5,7 @@
   "description": "Bases 2 et 16, complément à deux, logique booléenne.",
   "questions": [
     {
+      "uid": "REPR-01",
       "title": "Conversions entre bases",
       "chapter": "Représentation des données et architecture",
       "difficulty": 1,
@@ -32,6 +33,7 @@
       }
     },
     {
+      "uid": "REPR-02",
       "title": "Complément à deux",
       "chapter": "Représentation des données et architecture",
       "difficulty": 2,
@@ -53,6 +55,7 @@
       }
     },
     {
+      "uid": "REPR-03",
       "title": "Expressions booléennes",
       "chapter": "Représentation des données et architecture",
       "difficulty": 1,

@@ -21,7 +21,10 @@ Le modèle est stocké en JSON (`question_versions.template`) :
 ```
 
 Clés facultatives : `hints` (liste d'indices, voir § 3 bis) et `max_tries` (nombre d'essais).
-Les métadonnées (titre, chapitre, compétences, difficulté, classes) sont gérées à part, dans la base.
+Les métadonnées (identifiant, titre, chapitre, compétences, difficulté, classes) sont gérées à part,
+dans la base. L'**identifiant** (`uid`, ex. `DICO-07`) est unique : c'est lui qui permet de reconnaître
+une question lors d'un import (une question déjà présente n'est jamais réimportée). Une question créée
+dans l'application sans identifiant reçoit `Q-` suivi de son numéro (`Q-0042`).
 
 ### 1. Le générateur (`code`)
 
@@ -259,7 +262,10 @@ demande la solution. Score enregistré : score du dernier essai × 100 % (1er es
   présents dans le référentiel de l'enseignant quand ils conviennent.
 - `difficulty` : 1 application directe, 2 raisonnement en plusieurs étapes, 3 synthèse ou
   écriture de code non guidée.
-- `title` : court et unique, il identifie la question dans la banque (« Dictionnaires : parcours »).
+- `uid` : identifiant unique de la question, en majuscules, de la forme `PREFIXE-NN` (par exemple
+  `DICO-21` pour une question sur les dictionnaires). Continuer la numérotation du référentiel ou du
+  fichier de banque existant ; pour un nouveau thème, choisir un préfixe court (`POO`, `REC`…).
+- `title` : court et unique (« Dictionnaires : parcours »).
 
 ### Pièges techniques
 - Seules les fonctions aléatoires fournies (ou le module `random`) sont autorisées : pas d'heure,
@@ -282,6 +288,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
   "title": "Exemples",
   "questions": [
     {
+      "uid": "ALGO-01",
       "title": "Tri par sélection : état intermédiaire",
       "chapter": "Algorithmique",
       "difficulty": 2,
@@ -308,6 +315,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "ALGO-02",
       "title": "Recherche dichotomique : indices consultés",
       "chapter": "Algorithmique",
       "difficulty": 2,
@@ -338,6 +346,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "ALGO-03",
       "title": "Complexité d'un algorithme",
       "chapter": "Algorithmique",
       "difficulty": 2,
@@ -359,6 +368,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "ALGO-04",
       "title": "Écrire une fonction : maximum ou minimum",
       "chapter": "Algorithmique",
       "difficulty": 2,
@@ -387,6 +397,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BDD-01",
       "title": "SQL : sélection avec condition",
       "chapter": "Bases de données",
       "difficulty": 2,
@@ -412,6 +423,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BDD-02",
       "title": "SQL : agrégation et regroupement",
       "chapter": "Bases de données",
       "difficulty": 3,
@@ -434,6 +446,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BDD-03",
       "title": "SQL : jointure",
       "chapter": "Bases de données",
       "difficulty": 3,
@@ -455,6 +468,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BDD-04",
       "title": "Vocabulaire des bases de données",
       "chapter": "Bases de données",
       "difficulty": 1,
@@ -475,6 +489,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "POO-01",
       "title": "Objets : qu'affiche ce programme ?",
       "chapter": "Programmation orientée objet",
       "difficulty": 2,
@@ -501,6 +516,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "POO-02",
       "title": "Écrire une classe",
       "chapter": "Programmation orientée objet",
       "difficulty": 3,
@@ -523,6 +539,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BASES-01",
       "title": "Suivre l'évolution de variables",
       "chapter": "Python : les bases",
       "difficulty": 1,
@@ -553,6 +570,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BASES-02",
       "title": "Boucle for et range",
       "chapter": "Python : les bases",
       "difficulty": 2,
@@ -578,6 +596,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BASES-03",
       "title": "Type d'une expression",
       "chapter": "Python : les bases",
       "difficulty": 1,
@@ -598,6 +617,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BASES-04",
       "title": "Instructions conditionnelles",
       "chapter": "Python : les bases",
       "difficulty": 1,
@@ -619,6 +639,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "BASES-05",
       "title": "Saisie et conversion (input)",
       "chapter": "Python : les bases",
       "difficulty": 2,
@@ -640,6 +661,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-01",
       "title": "Dictionnaires : accès et modification",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -665,6 +687,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-02",
       "title": "Dictionnaires : parcours",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -690,6 +713,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-03",
       "title": "Écrire une fonction : compter avec un dictionnaire",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -716,6 +740,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-04",
       "title": "keys(), values() et items() : que vaut l'expression ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -741,6 +766,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-05",
       "title": "Parcourir avec .items()",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -767,6 +793,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-06",
       "title": "Quelle boucle convient ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -794,6 +821,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-07",
       "title": "Recherche d'un maximum ou d'un minimum : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -819,6 +847,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-08",
       "title": "Écrire une fonction : clé de la plus grande ou de la plus petite valeur",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -852,6 +881,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-09",
       "title": "Total : parcourir les clés ou les valeurs ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -888,6 +918,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-10",
       "title": "Écrire une fonction : calcul cumulatif sur un dictionnaire",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -919,6 +950,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-11",
       "title": "Écrire une fonction : prix d'un panier",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -947,6 +979,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-12",
       "title": "Dictionnaire de dictionnaires : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -972,6 +1005,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-13",
       "title": "Dictionnaire de listes : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 1,
@@ -997,6 +1031,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-14",
       "title": "Liste de dictionnaires : qu'affiche ce programme ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -1023,6 +1058,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-15",
       "title": "Données imbriquées : quelle expression ?",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -1049,6 +1085,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-16",
       "title": "Écrire une fonction : parcourir une liste de dictionnaires",
       "chapter": "Python : dictionnaires",
       "difficulty": 3,
@@ -1082,6 +1119,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-17",
       "title": "Écrire une fonction : dictionnaire de listes",
       "chapter": "Python : dictionnaires",
       "difficulty": 3,
@@ -1110,6 +1148,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-18",
       "title": "Écrire une fonction : dictionnaire de dictionnaires",
       "chapter": "Python : dictionnaires",
       "difficulty": 3,
@@ -1143,6 +1182,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-19",
       "title": "Dictionnaire de dictionnaires : écrire l'instruction d'affichage",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -1177,6 +1217,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "DICO-20",
       "title": "Dictionnaire de listes : écrire l'instruction d'affichage",
       "chapter": "Python : dictionnaires",
       "difficulty": 2,
@@ -1211,6 +1252,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "LISTES-01",
       "title": "Indices et tranches",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,
@@ -1236,6 +1278,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "LISTES-02",
       "title": "Écrire une fonction : compter les occurrences",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,
@@ -1261,6 +1304,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "LISTES-03",
       "title": "Compréhension de liste",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,
@@ -1282,6 +1326,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "LISTES-04",
       "title": "Parcours d'une chaîne",
       "chapter": "Python : listes et chaînes",
       "difficulty": 2,
@@ -1304,6 +1349,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "REPR-01",
       "title": "Conversions entre bases",
       "chapter": "Représentation des données et architecture",
       "difficulty": 1,
@@ -1331,6 +1377,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "REPR-02",
       "title": "Complément à deux",
       "chapter": "Représentation des données et architecture",
       "difficulty": 2,
@@ -1352,6 +1399,7 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "REPR-03",
       "title": "Expressions booléennes",
       "chapter": "Représentation des données et architecture",
       "difficulty": 1,

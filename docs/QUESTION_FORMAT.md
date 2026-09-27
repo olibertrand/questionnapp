@@ -17,7 +17,10 @@ Le modèle est stocké en JSON (`question_versions.template`) :
 ```
 
 Clés facultatives : `hints` (liste d'indices, voir § 3 bis) et `max_tries` (nombre d'essais).
-Les métadonnées (titre, chapitre, compétences, difficulté, classes) sont gérées à part, dans la base.
+Les métadonnées (identifiant, titre, chapitre, compétences, difficulté, classes) sont gérées à part,
+dans la base. L'**identifiant** (`uid`, ex. `DICO-07`) est unique : c'est lui qui permet de reconnaître
+une question lors d'un import (une question déjà présente n'est jamais réimportée). Une question créée
+dans l'application sans identifiant reçoit `Q-` suivi de son numéro (`Q-0042`).
 
 ## 1. Le générateur (`code`)
 

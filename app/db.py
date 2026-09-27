@@ -36,6 +36,7 @@ def connect(path=None):
 MIGRATIONS = [
     ("attempts", "tries", "INTEGER NOT NULL DEFAULT 0"),
     ("attempts", "history", "TEXT"),
+    ("questions", "uid", "TEXT"),
 ]
 
 
@@ -48,6 +49,9 @@ def init(conn):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
             if (table, column) == ("attempts", "tries"):
                 conn.execute("UPDATE attempts SET tries = 1 WHERE score IS NOT NULL")
+    # identifiants des questions créées avant leur introduction (les questions de la banque
+    # reçoivent ensuite leur identifiant officiel, voir banks.assign_missing_uids)
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_questions_uid ON questions(uid)")
 
 
 class Tx:
