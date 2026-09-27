@@ -225,6 +225,7 @@ details.help summary { cursor: pointer; font-weight: 600; }
 details.help dt { font-family: var(--mono); font-size: .85rem; margin-top: .3rem; }
 details.help dd { margin: 0 0 0 1rem; font-size: .85rem; color: var(--text-2); }
 
+.app-footer { text-align: center; color: var(--muted); font-size: .75rem; padding: 0 1rem 1.5rem; }
 .login-wrap { max-width: 380px; margin: 10vh auto; }
 .hljs { background: transparent !important; padding: 0 !important; }
 @media (max-width: 700px) {

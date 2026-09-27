@@ -75,6 +75,15 @@ async function logout() {
   render();
 }
 
+let versionInfo = null;
+function versionFooter() {
+  const el = h('footer', { class: 'app-footer' });
+  const fill = (v) => { el.textContent = v && v.commit ? `QuestionnApp · version ${v.commit}${v.branch ? ` (${v.branch})` : ''}` : 'QuestionnApp'; };
+  if (versionInfo) fill(versionInfo);
+  else api.get('/version').then((v) => { versionInfo = v; fill(v); }).catch(() => fill(null));
+  return el;
+}
+
 let renderToken = 0;
 export async function render() {
   const app = document.getElementById('app');
@@ -90,7 +99,7 @@ export async function render() {
         h('a', { href: '#/compte', title: 'Mon compte' }, state.user.display_name),
         h('span', { class: 'pill' }, ROLE_LABEL[state.user.role]),
         h('button', { class: 'small', onclick: logout }, 'Déconnexion'))),
-    main);
+    main, versionFooter());
   if (!m) return mount(main, h('div', { class: 'empty' }, 'Page introuvable. ', h('a', { href: '#/' }, "Retour à l'accueil")));
   if (m.staffOnly && !isStaff()) return mount(main, h('div', { class: 'alert error' }, 'Accès réservé aux professeurs.'));
   const token = ++renderToken;

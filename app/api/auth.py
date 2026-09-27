@@ -38,6 +38,12 @@ def logout(req):
     return resp
 
 
+@router.get("/api/version")
+def app_version(req):
+    from .. import version
+    return json_response(version.info())
+
+
 @router.get("/api/auth/me")
 def me(req):
     if not req.user:

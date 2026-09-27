@@ -12,7 +12,7 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from . import api  # noqa: F401  (enregistre les routes)
-from . import config, db, security
+from . import config, db, security, version
 from .web import HttpError, Request, Response, json_response, router
 
 MAX_BODY = 2 * 1024 * 1024
@@ -78,7 +78,7 @@ class Handler(BaseHTTPRequestHandler):
             ctype += "; charset=utf-8"
         with open(full, "rb") as f:
             body = f.read()
-        return Response(body, content_type=ctype, headers={"Cache-Control": "no-cache"})
+        return Response(body, content_type=ctype, headers={"Cache-Control": "no-store"})
 
     def _dispatch(self):
         parsed = urllib.parse.urlsplit(self.path)
@@ -124,7 +124,9 @@ def main():
     bootstrap()
     httpd = ThreadingHTTPServer((config.HOST, config.PORT), Handler)
     httpd.daemon_threads = True
+    v = version.info()
     print(f"QuestionnApp sur http://{config.HOST}:{config.PORT}  (base : {config.DB_PATH})", flush=True)
+    print(f"Version : {v['commit'] or 'inconnue'}" + (f" (branche {v['branch']})" if v["branch"] else ""), flush=True)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
