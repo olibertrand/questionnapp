@@ -167,6 +167,8 @@ button.link { border: none; background: none; color: var(--accent-ink); padding:
 .verdict { font-weight: 700; display: inline-flex; align-items: center; gap: .4rem; }
 .verdict.ok { color: var(--good-ink); }
 .verdict.ko { color: var(--bad-ink); }
+.hint-box { margin-top: .5rem; }
+.hint-box .md, .hint-box .md p { display: inline; margin: 0; }
 .solution { border-top: 1px solid var(--border); margin-top: 1rem; padding-top: .6rem; }
 .qnav { display: flex; flex-direction: column; gap: .3rem; }
 .qnav a { display: flex; justify-content: space-between; gap: .5rem; padding: .4rem .6rem; border-radius: 6px; text-decoration: none; color: var(--text); border: 1px solid var(--border); }

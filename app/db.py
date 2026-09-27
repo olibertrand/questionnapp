@@ -32,9 +32,22 @@ def connect(path=None):
     return conn
 
 
+# Colonnes ajoutées après la première version : (table, colonne, définition)
+MIGRATIONS = [
+    ("attempts", "tries", "INTEGER NOT NULL DEFAULT 0"),
+    ("attempts", "history", "TEXT"),
+]
+
+
 def init(conn):
     with open(os.path.join(os.path.dirname(__file__), "schema.sql"), encoding="utf-8") as f:
         conn.executescript(f.read())
+    for table, column, definition in MIGRATIONS:
+        existing = {r["name"] for r in conn.execute(f"PRAGMA table_info({table})")}
+        if column not in existing:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+            if (table, column) == ("attempts", "tries"):
+                conn.execute("UPDATE attempts SET tries = 1 WHERE score IS NOT NULL")
 
 
 class Tx:

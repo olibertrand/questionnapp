@@ -128,14 +128,17 @@ def main():
                 served = day + datetime.timedelta(minutes=k * 4)
                 answered = served + datetime.timedelta(seconds=rng.randint(20, 240))
                 unanswered = rng.random() < 0.05
+                tries = 1
+                history = None if unanswered else json.dumps([{"answers": answers, "score": result["score"], "at": iso(answered)}])
                 conn.execute("""INSERT INTO attempts(user_id, question_id, version_id, assignment_id, mode, seed, fingerprint,
-                                instance, answers, result, score, created_at, answered_at)
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                                instance, answers, result, score, tries, history, created_at, answered_at)
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                              (uid, qid, versions[qid], aid, mode, inst["seed"], inst["fingerprint"],
                               json.dumps(inst["public"], ensure_ascii=False),
                               None if unanswered else json.dumps(answers, ensure_ascii=False),
                               None if unanswered else json.dumps(result, ensure_ascii=False),
-                              None if unanswered else result["score"], iso(served), None if unanswered else iso(answered)))
+                              None if unanswered else result["score"], 0 if unanswered else tries, history,
+                              iso(served), None if unanswered else iso(answered)))
                 n_attempts += 1
     conn.execute("COMMIT")
     print(f"{len(students)} élèves, {n_attempts} réponses simulées")

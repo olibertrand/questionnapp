@@ -16,6 +16,7 @@ Le modèle est stocké en JSON (`question_versions.template`) :
 }
 ```
 
+Clés facultatives : `hints` (liste d'indices, voir § 3 bis) et `max_tries` (nombre d'essais).
 Les métadonnées (titre, chapitre, compétences, difficulté, classes) sont gérées à part, dans la base.
 
 ## 1. Le générateur (`code`)
@@ -152,6 +153,25 @@ La requête de l'élève est exécutée sur une base neuve ; on compare les lign
 comptent pas. En cas d'erreur, l'élève voit un indice (nombre de lignes / colonnes attendu)
 et un aperçu de son résultat.
 
+## 3 bis. Essais et indices
+
+L'élève peut se corriger : après une réponse fausse, il voit quels champs sont justes ou faux
+et les commentaires de correction (tests de code qui échouent, nombre de lignes attendu en
+SQL…), **mais pas la solution**. Les champs justes sont verrouillés.
+
+| clé | défaut | rôle |
+|---|---|---|
+| `max_tries` | 3 (1 pour un QCM à deux options) | nombre d'essais avant que la solution ne s'affiche |
+| `hints` | [] | liste d'indices (Markdown, `{{ }}` autorisés) : le 1er après la 1re erreur, le 2e après la 2e… |
+
+Sans `hints`, un conseil générique adapté au type des champs faux est affiché. Un bon indice
+s'appuie sur les données du tirage (« `range({{ a }}, {{ b }})` s'arrête avant {{ b }} ») et
+oriente vers la méthode sans donner la réponse ; le dernier peut être plus précis.
+
+La question se termine sur une bonne réponse, quand les essais sont épuisés, ou si l'élève
+demande la solution. Score enregistré : score du dernier essai × 100 % (1er essai), 75 % (2e),
+50 % (3e), 25 % ensuite. Une réponse vide n'est pas comptée comme un essai.
+
 ## 4. Variété et « jamais deux fois la même question »
 
 * L'empreinte d'une instance est le SHA-256 (16 premiers caractères hexadécimaux) du JSON
@@ -178,7 +198,7 @@ echo '{"action":"generate","template":{...},"seed":42,"avoid":[]}' | \
 | `generate` | `template`, `seed`, `avoid` (empreintes), `max_tries` | `{seed, fingerprint, public: {statement, fields}, fresh}` |
 | `preview` | `template`, `seed` | idem + `expected` (réponses affichables), `solution`, `variety`, `deterministic` |
 | `selftest` | `template`, `samples` | `{status: ok \| warning \| error, samples, distinct, errors, warnings}` : génération sur plusieurs graines, variété, réponse de référence acceptée, tests de code non triviaux |
-| `check` | `template`, `seed`, `answers` | `{score, correct, fields: [{score, correct, feedback, expected}], solution, fingerprint}` |
+| `check` | `template`, `seed`, `answers` | `{score, correct, fields: [{score, correct, feedback, expected}], solution, hints, max_tries, fingerprint}` |
 
 Erreur : `{"ok": false, "error": "...", "where": "code" | "statement" | "fields[0].answer"…, "line": 3}`.
 

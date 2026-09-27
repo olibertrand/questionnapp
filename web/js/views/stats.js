@@ -2,6 +2,7 @@ import { api, qs } from '../api.js';
 import { errorBox, fmtDateTime, fmtDay, h, meter, pct, relTime } from '../dom.js';
 import { navigate } from '../app.js';
 import { barChart, heatmap, rampLegend } from '../charts.js';
+import { scorePill } from './student.js';
 
 const MODE_LABEL = { assignment: 'Séance', chapter: 'Chapitre', adaptive: 'Automatique', free: 'Libre' };
 const name = (s) => s.display_name || s.username;
@@ -153,12 +154,13 @@ export async function studentPage({ params, query }) {
     h('h2', {}, 'Questions traitées'),
     h('p', { class: 'small muted' }, "Cliquez sur une ligne pour voir l'énoncé exact reçu par l'élève, ses réponses et la correction."),
     d.attempts.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Servie le'), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Mode'), h('th', {}, 'Durée'), h('th', {}, 'Score'))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Servie le'), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Mode'), h('th', {}, 'Durée'), h('th', { class: 'num' }, 'Essais'), h('th', {}, 'Score'))),
       h('tbody', {}, d.attempts.map((a) => h('tr', { class: 'clickable', onclick: () => navigate(`/tentative/${a.id}`) },
         h('td', { class: 'small' }, fmtDateTime(a.created_at)), h('td', {}, a.title), h('td', { class: 'small' }, a.chapter || '—'),
         h('td', { class: 'small' }, MODE_LABEL[a.mode], a.assignment ? ` — ${a.assignment}` : ''),
         h('td', { class: 'small num' }, duration(a.created_at, a.answered_at)),
-        h('td', {}, a.score === null ? h('span', { class: 'pill' }, 'sans réponse') : h('span', { class: 'pill ' + (a.score >= 1 ? 'good' : 'bad') }, pct(a.score))))))))
+        h('td', { class: 'num' }, a.tries || '—'),
+        h('td', {}, a.score === null ? h('span', { class: 'pill' }, a.tries ? 'non terminé' : 'sans réponse') : scorePill(a.score)))))))
       : h('div', { class: 'empty' }, 'Aucune question traitée.'));
 }
 

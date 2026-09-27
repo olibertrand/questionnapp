@@ -246,13 +246,50 @@ def _build(template, seed):
                 public_fields.append(pub)
                 private_fields.append(priv)
             solution = render(template.get("solution", ""), ns, "solution")
-            public = {"statement": statement, "fields": public_fields}
-            return public, {"fields": private_fields, "solution": solution}, ns
+            hints = [render(str(hnt), ns, f"hints[{i}]") for i, hnt in enumerate(template.get("hints") or [])
+                     if str(hnt).strip()]
+            public = {"statement": statement, "fields": public_fields,
+                      "max_tries": max_tries(template, public_fields)}
+            return public, {"fields": private_fields, "solution": solution, "hints": hints}, ns
         except Retry as r:
             last_retry = r
             continue
     raise TemplateError(f"impossible de satisfaire les contraintes (require/reject) après {MAX_RETRIES} essais",
                         "code") from last_retry
+
+
+DEFAULT_MAX_TRIES = 3
+
+# Indices génériques, utilisés quand le modèle n'en propose pas (un par type de champ).
+DEFAULT_HINTS = {
+    "number": "Reprenez l'énoncé pas à pas : notez dans un tableau la valeur de chaque variable après chaque "
+              "instruction, sans sauter d'étape.",
+    "text": "Relisez le format de réponse demandé, puis reprenez l'exécution ligne par ligne en notant les "
+            "valeurs des variables (attention aux bornes des boucles et aux indices qui commencent à 0).",
+    "choice": "Éliminez d'abord les propositions dont vous êtes sûr·e qu'elles sont fausses, puis revenez à la "
+              "définition vue en cours pour départager les autres.",
+    "code": "Lisez le premier test qui échoue : il indique les arguments utilisés. Exécutez votre code à la main "
+            "sur ce cas précis et comparez avec le résultat attendu.",
+    "sql": "Construisez la requête dans l'ordre : quelles colonnes afficher (SELECT), dans quelle(s) table(s) "
+           "(FROM, JOIN), quelles lignes garder (WHERE), puis regroupements et tri.",
+}
+
+
+def max_tries(template, public_fields):
+    """Nombre d'essais : `max_tries` du modèle, sinon 3 ; un seul pour un QCM à deux options
+    (un deuxième essai donnerait la réponse)."""
+    if template.get("max_tries"):
+        return max(1, min(int(template["max_tries"]), 10))
+    if all(f["type"] == "choice" and len(f["options"]) <= 2 and not f.get("multiple") for f in public_fields):
+        return 1
+    return DEFAULT_MAX_TRIES
+
+
+def hints_for(template, priv, failed_types):
+    """Indices du modèle, ou à défaut un indice générique par type de champ faux."""
+    if priv["hints"]:
+        return priv["hints"]
+    return list(dict.fromkeys(DEFAULT_HINTS[t] for t in failed_types if t in DEFAULT_HINTS))
 
 
 def fingerprint(public):
@@ -311,7 +348,7 @@ def preview(template, seed, samples=30):
         pass
     return {
         "seed": seed, "fingerprint": fingerprint(public), "public": public, "expected": expected,
-        "solution": priv["solution"], "variety": {"samples": samples, "distinct": len(seen)},
+        "solution": priv["solution"], "hints": priv["hints"], "variety": {"samples": samples, "distinct": len(seen)},
         "deterministic": deterministic,
     }
 
@@ -674,7 +711,9 @@ def check(template, seed, answers):
             "expected": expected_display(f, pub, prv),
         })
     score = round(total / len(fields_out), 3) if fields_out else 0.0
+    failed = [f["type"] for f, fo in zip(template["fields"], fields_out) if not fo["correct"]]
     return {"score": score, "correct": score >= 1.0, "fields": fields_out, "solution": priv["solution"],
+            "hints": hints_for(template, priv, failed), "max_tries": public["max_tries"],
             "fingerprint": fingerprint(public)}
 
 

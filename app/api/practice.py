@@ -118,25 +118,86 @@ def _load_attempt(req, for_answer=False):
     return user, a
 
 
+def try_factor(tries):
+    """Coefficient appliqué au score selon l'essai : 100 %, 75 %, 50 %, puis 25 %."""
+    return max(0.25, 1 - 0.25 * (max(tries, 1) - 1))
+
+
+def _is_blank(value):
+    return value is None or value == [] or (isinstance(value, str) and not value.strip())
+
+
+def _public_feedback(result):
+    """Retour d'un essai intermédiaire : juste / faux et commentaires, sans la solution."""
+    return {"score": result["score"], "correct": result["correct"],
+            "fields": [{"score": f["score"], "correct": f["correct"], "feedback": f["feedback"]} for f in result["fields"]]}
+
+
+def _finalize(req, a, answers, result, raw_score, tries, history, gave_up=False):
+    score = round(raw_score * try_factor(tries), 3)
+    # score = score retenu (pondéré par l'essai) ; raw_score = réussite du dernier essai
+    result = dict(result, score=score, raw_score=raw_score, tries=tries, gave_up=gave_up)
+    cur = req.db.execute("UPDATE attempts SET answers = ?, result = ?, score = ?, tries = ?, history = ?, answered_at = ? "
+                         "WHERE id = ? AND score IS NULL",
+                         (json.dumps(answers, ensure_ascii=False), json.dumps(result, ensure_ascii=False), score,
+                          tries, json.dumps(history, ensure_ascii=False), db.now(), a["id"]))
+    if cur.rowcount == 0:
+        raise HttpError(409, "Question déjà corrigée")
+    return result
+
+
 @router.post("/api/attempts/:id/answer")
 def answer(req):
+    """Un essai. Tant qu'il reste des essais et que tout n'est pas juste, on renvoie seulement
+    ce qui est juste ou faux, les commentaires (tests de code, indices SQL) et un indice ;
+    la solution n'est donnée qu'à la fin."""
     user, a = _load_attempt(req, for_answer=True)
     if a["score"] is not None:
         raise HttpError(409, "Question déjà corrigée : demandez-en une nouvelle")
     answers = req.json.get("answers") if isinstance(req.json, dict) else None
     if not isinstance(answers, list) or len(json.dumps(answers)) > 100_000:
         raise HttpError(400, "Réponses invalides")
+    instance = json.loads(a["instance"])
+    if len(answers) < len(instance["fields"]) or any(_is_blank(x) for x in answers[:len(instance["fields"])]):
+        raise HttpError(400, "Répondez à toutes les questions avant de valider (un essai n'est pas décompté).")
     result = engine_client.call_or_raise({"action": "check", "template": json.loads(a["template"]),
                                           "seed": a["seed"], "answers": answers}, status=500)
-    now = db.now()
-    # mise à jour conditionnelle : évite une double correction concurrente
-    cur = req.db.execute("UPDATE attempts SET answers = ?, result = ?, score = ?, answered_at = ? "
-                         "WHERE id = ? AND score IS NULL",
-                         (json.dumps(answers, ensure_ascii=False), json.dumps(result, ensure_ascii=False),
-                          result["score"], now, a["id"]))
-    if cur.rowcount == 0:
+    tries = (a["tries"] or 0) + 1
+    history = (json.loads(a["history"]) if a["history"] else []) + [
+        {"answers": answers, "score": result["score"], "at": db.now()}]
+    limit = instance.get("max_tries") or result.get("max_tries") or 1
+    out = {"tries": tries, "max_tries": limit}
+    if result["correct"] or tries >= limit:
+        out["final"] = True
+        out["result"] = _finalize(req, a, answers, result, result["score"], tries, history)
+    else:
+        cur = req.db.execute("UPDATE attempts SET tries = ?, history = ? WHERE id = ? AND score IS NULL AND tries = ?",
+                             (tries, json.dumps(history, ensure_ascii=False), a["id"], a["tries"] or 0))
+        if cur.rowcount == 0:
+            raise HttpError(409, "Essai déjà enregistré, rechargez la page")
+        out["final"] = False
+        out["result"] = _public_feedback(result)
+        out["hints"] = result["hints"][:tries]  # un indice de plus à chaque essai
+    if a["assignment_id"] and out["final"]:
+        out["progress"] = progress(req.db, a["assignment_id"], user["id"])
+    return json_response(out)
+
+
+@router.post("/api/attempts/:id/reveal")
+def reveal(req):
+    """L'élève renonce : on affiche la solution ; le score est celui du dernier essai (pondéré)."""
+    user, a = _load_attempt(req, for_answer=True)
+    if a["score"] is not None:
         raise HttpError(409, "Question déjà corrigée")
-    out = {"result": result}
+    history = json.loads(a["history"]) if a["history"] else []
+    answers = req.json.get("answers") if isinstance(req.json, dict) else None
+    if not isinstance(answers, list):
+        answers = history[-1]["answers"] if history else []
+    result = engine_client.call_or_raise({"action": "check", "template": json.loads(a["template"]),
+                                          "seed": a["seed"], "answers": answers}, status=500)
+    last = history[-1]["score"] if history else 0.0
+    out = {"final": True, "tries": a["tries"] or 0,
+           "result": _finalize(req, a, answers, result, last, a["tries"] or 1, history, gave_up=True)}
     if a["assignment_id"]:
         out["progress"] = progress(req.db, a["assignment_id"], user["id"])
     return json_response(out)
@@ -148,7 +209,8 @@ def get_attempt(req):
     return json_response({"attempt": {
         "id": a["id"], "user_id": a["user_id"], "question_id": a["question_id"], "title": a["title"],
         "chapter": a["chapter"], "mode": a["mode"], "assignment_id": a["assignment_id"],
-        "created_at": a["created_at"], "answered_at": a["answered_at"], "score": a["score"],
+        "created_at": a["created_at"], "answered_at": a["answered_at"], "score": a["score"], "tries": a["tries"],
+        "history": json.loads(a["history"]) if a["history"] else [],
         "instance": json.loads(a["instance"]), "answers": json.loads(a["answers"]) if a["answers"] else None,
         "result": json.loads(a["result"]) if a["result"] else None}})
 

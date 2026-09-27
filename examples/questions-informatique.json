@@ -25,7 +25,11 @@
             "answer": "vy"
           }
         ],
-        "solution": "À la fin : `{{ x }} = {{ vx }}` et `{{ y }} = {{ vy }}`. Pensez à noter les valeurs ligne par ligne dans un tableau."
+        "solution": "À la fin : `{{ x }} = {{ vx }}` et `{{ y }} = {{ vy }}`. Pensez à noter les valeurs ligne par ligne dans un tableau.",
+        "hints": [
+          "Faites un tableau avec une colonne pour `{{ x }}` et une pour `{{ y }}`, et remplissez une ligne par instruction.",
+          "Dans `{{ ops[0] }}`, la partie droite est calculée avec les valeurs **d'avant** l'instruction, puis rangée dans la variable de gauche."
+        ]
       }
     },
     {
@@ -46,7 +50,11 @@
             "answer": "int(out)"
           }
         ],
-        "solution": "`i` prend successivement les valeurs {{ vals }} (la borne {{ stop }} est exclue). Le programme affiche **{{ out }}**."
+        "solution": "`i` prend successivement les valeurs {{ vals }} (la borne {{ stop }} est exclue). Le programme affiche **{{ out }}**.",
+        "hints": [
+          "`i` commence à {{ vals[0] }}, avance de {{ step }} en {{ step }} et s'arrête **avant** {{ stop }} : écrivez la liste des valeurs prises par `i`.",
+          "Les valeurs de `i` sont {{ vals[:3] }}… : il reste à les combiner une par une avec `{{ acc }}`."
+        ]
       }
     },
     {
@@ -129,7 +137,11 @@
             "ignore_spaces": true
           }
         ],
-        "solution": "`{{ expr }}` vaut `{{ repr(res) }}`. Rappel : les indices commencent à 0, la borne de fin d'une tranche est exclue."
+        "solution": "`{{ expr }}` vaut `{{ repr(res) }}`. Rappel : les indices commencent à 0, la borne de fin d'une tranche est exclue.",
+        "hints": [
+          "Les indices commencent à 0 : `{{ nom }}[0]` vaut {{ T[0] }}. Numérotez les éléments avant de répondre.",
+          "Dans une tranche `[début:fin:pas]`, l'élément d'indice `fin` n'est **pas** inclus ; un indice négatif compte à partir de la fin (`-1` est le dernier)."
+        ]
       }
     },
     {
@@ -219,7 +231,11 @@
             "ignore_spaces": true
           }
         ],
-        "solution": "Après {{ k }} passage(s) : `{{ S }}`."
+        "solution": "Après {{ k }} passage(s) : `{{ S }}`.",
+        "hints": [
+          "Au 1er passage, on cherche le minimum de toute la liste ({{ min(T) }}) et on l'échange avec le **premier** élément.",
+          "Au passage suivant, on ignore la partie déjà triée au début de la liste et on recommence sur le reste."
+        ]
       }
     },
     {
@@ -245,7 +261,11 @@
             "answer": "T.index(x) if x in T else -1"
           }
         ],
-        "solution": "`m` prend les valeurs {{ vus }}. {{ 'La valeur est trouvée à l’indice ' + str(T.index(x)) if x in T else 'La valeur est absente : la fonction renvoie -1' }}."
+        "solution": "`m` prend les valeurs {{ vus }}. {{ 'La valeur est trouvée à l’indice ' + str(T.index(x)) if x in T else 'La valeur est absente : la fonction renvoie -1' }}.",
+        "hints": [
+          "Au départ, `g = 0` et `d = {{ n - 1 }}`, donc le premier `m` vaut `({{ 0 }} + {{ n - 1 }}) // 2 = {{ (n - 1) // 2 }}`.",
+          "Après chaque comparaison, une seule des deux bornes change : `g = m + 1` si `T[m] < x`, `d = m - 1` sinon."
+        ]
       }
     },
     {
@@ -317,7 +337,11 @@
             "ignore_case": true
           }
         ],
-        "solution": "{{ n }} = {{ group(tobase(n, 2, 8)) }} en binaire = {{ tobase(n, 16) }} en hexadécimal."
+        "solution": "{{ n }} = {{ group(tobase(n, 2, 8)) }} en binaire = {{ tobase(n, 16) }} en hexadécimal.",
+        "hints": [
+          "Pour passer du décimal au binaire, divisez par 2 successivement et lisez les restes **de bas en haut** ; en hexadécimal, les chiffres vont de 0 à F (F = 15).",
+          "Pour revenir en décimal, chaque chiffre est multiplié par une puissance de la base : 1, 2, 4, 8, 16… en binaire, 1, 16, 256… en hexadécimal."
+        ]
       }
     },
     {
@@ -380,7 +404,11 @@
             "answer": "q_ref"
           }
         ],
-        "solution": "```sql\n{{ q_ref }}\n```"
+        "solution": "```sql\n{{ q_ref }}\n```",
+        "hints": [
+          "On ne veut que la colonne `prenom` : `SELECT prenom FROM Eleve`, puis on filtre les lignes avec `WHERE`.",
+          "Plusieurs conditions se combinent avec `AND` ; une chaîne de caractères s'écrit entre apostrophes : `'{{ ville }}'`."
+        ]
       }
     },
     {
@@ -464,7 +492,11 @@
             "answer": "out"
           }
         ],
-        "solution": "Après les modifications, le dictionnaire vaut `{{ evaluate(src.rsplit(chr(10), 1)[0], nom) }}` : le programme affiche `{{ out }}`."
+        "solution": "Après les modifications, le dictionnaire vaut `{{ evaluate(src.rsplit(chr(10), 1)[0], nom) }}` : le programme affiche `{{ out }}`.",
+        "hints": [
+          "Réécrivez le dictionnaire après chaque ligne. `del` supprime la clé **et** sa valeur ; affecter une clé absente la crée.",
+          "`len` compte le nombre de **clés** du dictionnaire."
+        ]
       }
     },
     {
@@ -486,7 +518,10 @@
             "multiline": true
           }
         ],
-        "solution": "Le parcours d'un dictionnaire se fait sur ses **clés**, dans l'ordre d'insertion ; `.items()` donne les couples (clé, valeur). Affichage :\n\n{{ code_block(out, 'text') }}"
+        "solution": "Le parcours d'un dictionnaire se fait sur ses **clés**, dans l'ordre d'insertion ; `.items()` donne les couples (clé, valeur). Affichage :\n\n{{ code_block(out, 'text') }}",
+        "hints": [
+          "`for cle in {{ nom }}` parcourt les **clés** dans l'ordre où elles ont été insérées ; la valeur associée s'obtient avec `{{ nom }}[cle]`."
+        ]
       }
     },
     {
@@ -534,7 +569,11 @@
             "answer": "int(out)"
           }
         ],
-        "solution": "`{{ o2 }} = {{ o1 }}` ne crée pas de nouvel objet : les deux noms désignent **le même** objet. Le programme affiche **{{ out }}**."
+        "solution": "`{{ o2 }} = {{ o1 }}` ne crée pas de nouvel objet : les deux noms désignent **le même** objet. Le programme affiche **{{ out }}**.",
+        "hints": [
+          "Combien d'objets `{{ cls }}` sont créés ? Regardez combien de fois on écrit `{{ cls }}(...)`.",
+          "`{{ o2 }} = {{ o1 }}` ne copie pas l'objet : `{{ o2 }}` et `{{ o1 }}` désignent le même objet, donc une modification via l'un se voit via l'autre."
+        ]
       }
     },
     {

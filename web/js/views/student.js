@@ -74,9 +74,35 @@ function tile(v, label) {
   return h('div', { class: 'stat-tile' }, h('div', { class: 'v' }, v), h('div', { class: 'l' }, label));
 }
 
-function scorePill(score) {
-  if (score === null || score === undefined) return h('span', { class: 'pill' }, 'non répondu');
-  return h('span', { class: 'pill ' + (score >= 1 ? 'good' : 'bad') }, (score >= 1 ? '✓ ' : '✗ ') + pct(score));
+export function scorePill(score) {
+  if (score === null || score === undefined) return h('span', { class: 'pill' }, 'non terminé');
+  if (score >= 1) return h('span', { class: 'pill good' }, '✓ ' + pct(score));
+  if (score > 0) return h('span', { class: 'pill accent' }, '◐ ' + pct(score));
+  return h('span', { class: 'pill bad' }, '✗ ' + pct(score));
+}
+
+function answerText(field, value) {
+  if (value === null || value === undefined || value === '') return '—';
+  if (field.type === 'choice') {
+    const idx = Array.isArray(value) ? value : [value];
+    return idx.map((i) => field.options[i]).join(' ; ');
+  }
+  return String(value);
+}
+
+function triesHistory(a) {
+  if (!a.history || !a.history.length) return null;
+  const multiline = a.instance.fields.some((f) => f.type === 'code' || f.type === 'sql' || f.multiline);
+  return h('div', { style: { marginTop: '1.5rem' } },
+    h('h3', {}, `Essais (${a.history.length})`),
+    h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Essai'), h('th', {}, 'Heure'), h('th', {}, 'Score brut'), h('th', {}, 'Réponses'))),
+      h('tbody', {}, a.history.map((t, k) => h('tr', {},
+        h('td', {}, k + 1), h('td', { class: 'small' }, fmtDateTime(t.at)), h('td', {}, scorePill(t.score)),
+        h('td', {}, a.instance.fields.map((f, i) => multiline
+          ? h('pre', { style: { margin: '.2rem 0' } }, answerText(f, t.answers[i]))
+          : h('div', {}, h('code', {}, answerText(f, t.answers[i])))))))))),
+    a.result && a.result.gave_up ? h('p', { class: 'small muted' }, "L'élève a ensuite demandé la solution.") : null);
 }
 
 function attemptsTable(rows) {
@@ -157,7 +183,12 @@ export async function playPage({ query }) {
     onSubmit: async (answers) => {
       const r = await api.post(`/attempts/${at.id}/answer`, { answers });
       if (r.progress) renderSide(r.progress);
-      return r.result;
+      return r;
+    },
+    onReveal: async (answers) => {
+      const r = await api.post(`/attempts/${at.id}/reveal`, { answers });
+      if (r.progress) renderSide(r.progress);
+      return r;
     },
     after,
   });
@@ -180,7 +211,8 @@ export async function attemptPage({ params }) {
         a.answered_at ? ` · répondue ${fmtDateTime(a.answered_at)}` : ''),
       h('hr'),
       a.result ? questionView(a.instance, { answers: a.answers, result: a.result })
-        : [questionView(a.instance, {}), h('div', { class: 'alert info' }, "Cette question n'a pas reçu de réponse.")]));
+        : [questionView(a.instance, {}), h('div', { class: 'alert info' }, a.tries ? 'Question non terminée.' : "Cette question n'a pas reçu de réponse.")],
+      triesHistory(a)));
 }
 
 export async function historyPage() {

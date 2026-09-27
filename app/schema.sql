@@ -120,9 +120,11 @@ CREATE TABLE IF NOT EXISTS attempts (
     instance      TEXT NOT NULL,           -- JSON : énoncé et champs tels que vus par l'élève
     answers       TEXT,                    -- JSON
     result        TEXT,                    -- JSON : correction détaillée
-    score         REAL,                    -- 0..1, NULL tant que non répondu
+    score         REAL,                    -- 0..1 (pondéré par le nombre d'essais), NULL tant que non terminé
+    tries         INTEGER NOT NULL DEFAULT 0, -- nombre d'essais utilisés
+    history       TEXT,                    -- JSON : [{answers, score, at}] pour chaque essai
     created_at    TEXT NOT NULL,
-    answered_at   TEXT
+    answered_at   TEXT                     -- date de fin (bonne réponse, essais épuisés ou solution demandée)
 );
 CREATE INDEX IF NOT EXISTS idx_attempts_user ON attempts(user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_attempts_question ON attempts(question_id, user_id);

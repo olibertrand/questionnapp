@@ -337,6 +337,17 @@ export async function editorPage({ params }) {
   solution.value = t.solution || '';
   solution.addEventListener('input', () => { t.solution = solution.value; schedulePreview(); });
   const fieldsBox = h('div');
+  const hintsArea = h('textarea', { rows: 4, class: 'code', style: { whiteSpace: 'pre-wrap', minHeight: '5rem' }, 'aria-label': 'Indices',
+    placeholder: "Indice 1 (après la 1re erreur)\n---\nIndice 2 (après la 2e erreur)" });
+  hintsArea.value = (t.hints || []).join('\n---\n');
+  hintsArea.addEventListener('input', () => {
+    const hints = hintsArea.value.split(/^---\s*$/m).map((x) => x.trim()).filter(Boolean);
+    if (hints.length) t.hints = hints; else delete t.hints;
+    schedulePreview();
+  });
+  const triesSel = h('select', { style: { width: 'auto' } }, h('option', { value: '' }, 'automatique (3, ou 1 pour un vrai/faux)'),
+    [1, 2, 3, 4, 5].map((n) => h('option', { value: n, selected: t.max_tries === n }, `${n} essai${n > 1 ? 's' : ''}`)));
+  triesSel.addEventListener('change', () => { if (triesSel.value) t.max_tries = Number(triesSel.value); else delete t.max_tries; schedulePreview(); });
 
   const renderFields = () => {
     fieldsBox.replaceChildren(...t.fields.map((f, i) => fieldEditor(f, i)),
@@ -455,7 +466,9 @@ export async function editorPage({ params }) {
       } }),
       h('details', { class: 'help' }, h('summary', {}, 'Réponses attendues'),
         res.expected.map((e, i) => h('div', {}, h('strong', {}, `Réponse ${i + 1} : `), e ? md(e) : h('span', { class: 'muted' }, 'vérifiée par les tests')))),
-      res.solution ? h('details', { class: 'help' }, h('summary', {}, 'Correction'), md(res.solution)) : null);
+      res.solution ? h('details', { class: 'help' }, h('summary', {}, 'Correction'), md(res.solution)) : null,
+      res.hints && res.hints.length ? h('details', { class: 'help' }, h('summary', {}, `Indices (${res.hints.length})`),
+        res.hints.map((x, i) => h('div', {}, h('strong', {}, `Indice ${i + 1} : `), md(x)))) : null);
   }
 
   // --- enregistrement
@@ -494,6 +507,7 @@ export async function editorPage({ params }) {
   function editorReplace() {
     Object.assign(t, model.template);
     code.value = t.code; statement.value = t.statement; solution.value = t.solution || '';
+    hintsArea.value = (t.hints || []).join('\n---\n'); triesSel.value = t.max_tries || '';
     renderFields();
     doPreview(true);
   }
@@ -549,7 +563,11 @@ export async function editorPage({ params }) {
           h('h3', {}, '2. Énoncé (Markdown)'), statement,
           h('div', { class: 'hint' }, '**gras**, `code`, blocs ```python, tableaux | a | b |, et {{ expression }} pour insérer une valeur.'),
           h('h3', {}, '3. Réponses attendues'), fieldsBox,
-          h('h3', {}, '4. Correction affichée après réponse (facultatif)'), solution)),
+          h('h3', {}, '4. Correction affichée à la fin (facultatif)'), solution,
+          h('h3', {}, '5. Indices et nombre d\'essais'),
+          h('p', { class: 'small muted', style: { marginTop: 0 } }, "Après une erreur, l'élève peut se corriger : la solution n'est montrée qu'à la fin. Un indice de plus est donné à chaque erreur (Markdown, {{ }} autorisés ; séparer les indices par une ligne ---). Sans indice, un conseil générique adapté au type de question est affiché. Score : 100 % au 1er essai, 75 % au 2e, 50 % au 3e."),
+          hintsArea,
+          h('div', { class: 'row', style: { marginTop: '.6rem' } }, h('label', { style: { margin: 0 } }, "Nombre d'essais"), triesSel))),
       h('div', { class: 'card sticky' },
         h('div', { class: 'row between' }, h('h3', { style: { margin: 0 } }, 'Aperçu élève'),
           h('div', { class: 'row' }, h('label', { class: 'inline small' }, autoPreview, 'auto'),

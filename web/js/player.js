@@ -74,58 +74,116 @@ export function questionView(instance, options = {}) {
     fieldBoxes.push(box);
     root.append(box);
   });
+  const hintBox = h('div');
   const actions = h('div', { class: 'row' });
   const resultBox = h('div');
-  root.append(actions, resultBox);
+  root.append(hintBox, actions, resultBox);
+  const clearFeedback = () => {
+    root.querySelectorAll('.feedback').forEach((el) => el.remove());
+    root.querySelectorAll('.option.correct, .option.wrong').forEach((el) => el.classList.remove('correct', 'wrong'));
+  };
+  const markChoice = (i, fr) => {
+    // on ne colore que les options choisies par l'élève (la bonne réponse est donnée en texte à la fin)
+    root.querySelectorAll(`input[name="${name}-${i}"]`).forEach((x) => {
+      if (x.checked) x.closest('.option').classList.add(fr.correct ? 'correct' : 'wrong');
+    });
+  };
+  const lockField = (i) => fieldBoxes[i].querySelectorAll('input, textarea').forEach((el) => { el.disabled = true; });
 
   const showResult = (result) => {
+    clearFeedback();
+    hintBox.replaceChildren();
     root.querySelectorAll('input, textarea').forEach((el) => { el.disabled = true; });
     result.fields.forEach((fr, i) => {
-      const f = instance.fields[i];
-      if (f.type === 'choice') {
-        // on ne colore que les options choisies par l'élève (la bonne réponse est donnée en texte)
-        root.querySelectorAll(`input[name="${name}-${i}"]`).forEach((x) => {
-          if (x.checked) x.closest('.option').classList.add(fr.correct ? 'correct' : 'wrong');
-        });
-      }
+      if (instance.fields[i].type === 'choice') markChoice(i, fr);
       const fb = h('div', { class: 'feedback ' + (fr.correct ? 'ok' : 'ko') }, verdict(fr.score),
         fr.feedback ? md(fr.feedback) : null,
         !fr.correct && fr.expected ? h('div', {}, h('div', { class: 'small muted' }, 'Réponse attendue :'), md(fr.expected)) : null);
       fieldBoxes[i].append(fb);
     });
-    mount(resultBox, 
+    const tries = result.tries || 1;
+    const raw = result.raw_score ?? result.score;
+    let detail = null;
+    if (result.gave_up) detail = `solution demandée après ${tries} essai${tries > 1 ? 's' : ''}`;
+    else if (tries > 1 && raw >= 1) detail = `réussi au ${tries}e essai`;
+    else if (tries > 1) detail = `${tries} essais`;
+    mount(resultBox,
       h('div', { class: 'row', style: { marginTop: '1rem' } },
-        h('strong', {}, 'Score : '), verdict(result.score)),
+        h('strong', {}, 'Résultat : '), verdict(raw),
+        detail ? h('span', { class: 'muted small' }, `— ${detail}, score retenu ${Math.round(result.score * 100)} %`) : null),
       result.solution ? h('div', { class: 'solution' }, h('h3', {}, 'Correction'), md(result.solution)) : null,
       options.after || null);
+  };
+
+  // essai intermédiaire : ce qui est juste est verrouillé, le reste peut être corrigé
+  const showAttempt = (res) => {
+    clearFeedback();
+    res.result.fields.forEach((fr, i) => {
+      if (instance.fields[i].type === 'choice') markChoice(i, fr);
+      if (fr.correct) lockField(i);
+      fieldBoxes[i].append(h('div', { class: 'feedback ' + (fr.correct ? 'ok' : 'ko') }, verdict(fr.score),
+        fr.feedback ? md(fr.feedback) : null));
+    });
+    const left = res.max_tries - res.tries;
+    mount(hintBox,
+      h('div', { class: 'alert warn', style: { marginTop: '1rem' } },
+        h('strong', {}, 'Pas encore tout à fait. '),
+        `Corrigez ce qui est faux : il vous reste ${left} essai${left > 1 ? 's' : ''}.`,
+        (res.hints || []).map((hint, k) => h('div', { class: 'hint-box' }, h('strong', {}, `💡 Indice ${k + 1} : `), md(hint)))));
   };
 
   if (options.answers) instance.fields.forEach((f, i) => fillAnswer(root, f, i, name, options.answers[i]));
   if (options.result) {
     showResult(options.result);
   } else if (options.onSubmit) {
-    const btn = h('button', { class: 'primary', type: 'button' }, options.submitLabel || 'Valider');
+    const maxTries = instance.max_tries || 1;
+    const label = (n) => (n > 1 ? `Valider (essai ${n}/${maxTries})` : options.submitLabel || 'Valider');
+    const btn = h('button', { class: 'primary', type: 'button' }, label(1));
+    const giveUp = h('button', { type: 'button', style: { display: 'none' } }, 'Voir la solution');
     const err = h('span', { class: 'error-line' });
+    let tries = 0;
+    const handle = (res) => {
+      // compatibilité : l'aperçu du professeur renvoie directement la correction finale
+      if (res.final === undefined) res = { final: true, result: res };
+      if (res.final) {
+        actions.remove();
+        showResult(res.result);
+      } else {
+        tries = res.tries;
+        showAttempt(res);
+        btn.disabled = false;
+        btn.textContent = label(tries + 1);
+        giveUp.style.display = options.onReveal ? '' : 'none';
+      }
+    };
     btn.addEventListener('click', async () => {
       const answers = instance.fields.map((f, i) => readAnswer(root, f, i, name));
       btn.disabled = true;
       btn.textContent = 'Correction…';
       err.textContent = '';
       try {
-        const result = await options.onSubmit(answers);
-        actions.remove();
-        showResult(result);
+        handle(await options.onSubmit(answers));
       } catch (e) {
         err.textContent = e.message;
         btn.disabled = false;
-        btn.textContent = options.submitLabel || 'Valider';
+        btn.textContent = label(tries + 1);
       }
+    });
+    giveUp.addEventListener('click', async () => {
+      if (!window.confirm('Afficher la solution ? La question sera terminée avec le score de votre dernier essai.')) return;
+      giveUp.disabled = true;
+      try {
+        handle(await options.onReveal(instance.fields.map((f, i) => readAnswer(root, f, i, name))));
+      } catch (e) { err.textContent = e.message; giveUp.disabled = false; }
     });
     // Entrée dans un champ simple = valider
     root.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && e.target.tagName === 'INPUT' && e.target.type === 'text') { e.preventDefault(); btn.click(); }
     });
-    actions.append(btn, err);
+    actions.append(btn, giveUp, err);
+    if (maxTries > 1 && options.onReveal) {
+      actions.append(h('span', { class: 'small muted' }, `${maxTries} essais possibles`));
+    }
   }
   return root;
 }

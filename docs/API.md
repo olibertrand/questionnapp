@@ -77,8 +77,9 @@ question invalide, avec en plus `where` et `line`).
 | GET | `/me/assignments/:id` | une séance et l'avancement |
 | GET | `/me/history?limit=` | réponses passées |
 | POST | `/practice/next` | `{mode: "assignment", assignment_id, question_id?}` · `{mode: "chapter", chapter_id}` · `{mode: "adaptive", chapter_id?}` · `{mode: "free", question_id}` → `{attempt: {id, question, instance: {statement, fields}, context}}` ou `{done: true, progress}` |
-| POST | `/attempts/:id/answer` | `{answers: [...]}` → `{result: {score, correct, fields, solution}, progress?}` (une seule correction par tentative) |
-| GET | `/attempts/:id` | énoncé vu, réponses, correction (élève propriétaire ou prof) |
+| POST | `/attempts/:id/answer` | un essai : `{answers: [...]}` → `{final, tries, max_tries, result, hints?, progress?}`. Tant que `final` est faux, `result` ne contient que `score`, `correct` et `fields: [{score, correct, feedback}]` (ni `expected` ni `solution`) et `hints` les indices débloqués. Final : correction complète, `score` pondéré par l'essai, `raw_score`, `tries`. Réponse vide → 400 sans consommer d'essai |
+| POST | `/attempts/:id/reveal` | l'élève demande la solution : termine la question (`gave_up: true`, score du dernier essai pondéré) |
+| GET | `/attempts/:id` | énoncé vu, réponses, correction, `tries` et `history` (chaque essai) — élève propriétaire ou prof |
 
 ## Statistiques (professeurs)
 | Route | Contenu |

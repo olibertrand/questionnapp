@@ -199,7 +199,7 @@ def student_detail(req):
     logins = db.all_(conn, "SELECT at, ip FROM logins WHERE user_id = ? ORDER BY at DESC LIMIT 100", sid)
     psql, pargs = _period_sql(req, "a.created_at")
     attempts = db.all_(conn, f"""
-        SELECT a.id, a.question_id, q.title, c.name AS chapter, a.mode, a.score, a.created_at, a.answered_at,
+        SELECT a.id, a.question_id, q.title, c.name AS chapter, a.mode, a.score, a.tries, a.created_at, a.answered_at,
                s.title AS assignment
         FROM attempts a JOIN questions q ON q.id = a.question_id LEFT JOIN chapters c ON c.id = q.chapter_id
         LEFT JOIN assignments s ON s.id = a.assignment_id
@@ -231,18 +231,18 @@ def export_csv(req):
         SELECT u.username, u.display_name, q.id AS question_id, q.title, c.name AS chapter,
                (SELECT group_concat(s.name, ' | ') FROM question_skills qs JOIN skills s ON s.id = qs.skill_id
                 WHERE qs.question_id = q.id) AS skills,
-               a.mode, s2.title AS assignment, a.created_at, a.answered_at, a.score, a.answers
+               a.mode, s2.title AS assignment, a.created_at, a.answered_at, a.tries, a.score, a.answers
         FROM attempts a JOIN users u ON u.id = a.user_id JOIN questions q ON q.id = a.question_id
         LEFT JOIN chapters c ON c.id = q.chapter_id LEFT JOIN assignments s2 ON s2.id = a.assignment_id
         WHERE a.user_id IN ({_in(ids)}) {psql} ORDER BY a.created_at""", *ids, *pargs)
     buf = io.StringIO()
     w = csv.writer(buf, delimiter=";")
     w.writerow(["identifiant", "nom", "question_id", "question", "chapitre", "competences", "mode", "seance",
-                "servie_le", "repondue_le", "score", "reponses"])
+                "servie_le", "terminee_le", "essais", "score", "reponses"])
     for r in rows:
         answers = json.loads(r["answers"]) if r["answers"] else None
         w.writerow([r["username"], r["display_name"], r["question_id"], r["title"], r["chapter"] or "",
-                    r["skills"] or "", r["mode"], r["assignment"] or "", r["created_at"], r["answered_at"] or "",
+                    r["skills"] or "", r["mode"], r["assignment"] or "", r["created_at"], r["answered_at"] or "", r["tries"] or 0,
                     "" if r["score"] is None else str(r["score"]).replace(".", ","),
                     json.dumps(answers, ensure_ascii=False) if answers is not None else ""])
     return Response("﻿" + buf.getvalue(), content_type="text/csv; charset=utf-8",

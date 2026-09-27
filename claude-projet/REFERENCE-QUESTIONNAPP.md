@@ -20,6 +20,7 @@ Le modèle est stocké en JSON (`question_versions.template`) :
 }
 ```
 
+Clés facultatives : `hints` (liste d'indices, voir § 3 bis) et `max_tries` (nombre d'essais).
 Les métadonnées (titre, chapitre, compétences, difficulté, classes) sont gérées à part, dans la base.
 
 ### 1. Le générateur (`code`)
@@ -156,6 +157,25 @@ La requête de l'élève est exécutée sur une base neuve ; on compare les lign
 comptent pas. En cas d'erreur, l'élève voit un indice (nombre de lignes / colonnes attendu)
 et un aperçu de son résultat.
 
+### 3 bis. Essais et indices
+
+L'élève peut se corriger : après une réponse fausse, il voit quels champs sont justes ou faux
+et les commentaires de correction (tests de code qui échouent, nombre de lignes attendu en
+SQL…), **mais pas la solution**. Les champs justes sont verrouillés.
+
+| clé | défaut | rôle |
+|---|---|---|
+| `max_tries` | 3 (1 pour un QCM à deux options) | nombre d'essais avant que la solution ne s'affiche |
+| `hints` | [] | liste d'indices (Markdown, `{{ }}` autorisés) : le 1er après la 1re erreur, le 2e après la 2e… |
+
+Sans `hints`, un conseil générique adapté au type des champs faux est affiché. Un bon indice
+s'appuie sur les données du tirage (« `range({{ a }}, {{ b }})` s'arrête avant {{ b }} ») et
+oriente vers la méthode sans donner la réponse ; le dernier peut être plus précis.
+
+La question se termine sur une bonne réponse, quand les essais sont épuisés, ou si l'élève
+demande la solution. Score enregistré : score du dernier essai × 100 % (1er essai), 75 % (2e),
+50 % (3e), 25 % ensuite. Une réponse vide n'est pas comptée comme un essai.
+
 ### 4. Variété et « jamais deux fois la même question »
 
 * L'empreinte d'une instance est le SHA-256 (16 premiers caractères hexadécimaux) du JSON
@@ -212,6 +232,17 @@ et un aperçu de son résultat.
 - `forbid` permet d'interdire les raccourcis qui vident l'exercice de son sens (`sum`, `max`,
   `sorted`, `sort`, `count`, `Counter`…).
 
+### Indices (clé `hints`)
+- L'élève dispose de plusieurs essais (3 par défaut) ; après chaque erreur il reçoit l'indice
+  suivant, sans la solution. Écrire **2 indices** par question, du plus général au plus précis.
+- Un bon indice s'appuie sur les données du tirage (`{{ }}`) et rappelle la méthode ou le piège
+  classique (« `range({{ a }}, {{ b }})` s'arrête **avant** {{ b }} », « `{{ o2 }} = {{ o1 }}` ne copie
+  pas l'objet »), sans jamais donner la réponse.
+- Pour une question de code, les tests qui échouent servent déjà d'indice : les `hints` peuvent
+  rappeler la méthode (initialiser un accumulateur, cas de la liste vide…).
+- `max_tries` n'est à préciser que pour changer le défaut (par exemple 1 pour un QCM où un second
+  essai reviendrait à donner la réponse).
+
 ### Métadonnées
 - `chapter` : le chapitre **de la notion évaluée**, pas celui du cours d'où vient l'idée. Une
   question sur les dictionnaires reste dans le chapitre des dictionnaires même si elle a été
@@ -266,7 +297,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "answer": "vy"
           }
         ],
-        "solution": "À la fin : `{{ x }} = {{ vx }}` et `{{ y }} = {{ vy }}`. Pensez à noter les valeurs ligne par ligne dans un tableau."
+        "solution": "À la fin : `{{ x }} = {{ vx }}` et `{{ y }} = {{ vy }}`. Pensez à noter les valeurs ligne par ligne dans un tableau.",
+        "hints": [
+          "Faites un tableau avec une colonne pour `{{ x }}` et une pour `{{ y }}`, et remplissez une ligne par instruction.",
+          "Dans `{{ ops[0] }}`, la partie droite est calculée avec les valeurs **d'avant** l'instruction, puis rangée dans la variable de gauche."
+        ]
       }
     },
     {
@@ -287,7 +322,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "answer": "int(out)"
           }
         ],
-        "solution": "`i` prend successivement les valeurs {{ vals }} (la borne {{ stop }} est exclue). Le programme affiche **{{ out }}**."
+        "solution": "`i` prend successivement les valeurs {{ vals }} (la borne {{ stop }} est exclue). Le programme affiche **{{ out }}**.",
+        "hints": [
+          "`i` commence à {{ vals[0] }}, avance de {{ step }} en {{ step }} et s'arrête **avant** {{ stop }} : écrivez la liste des valeurs prises par `i`.",
+          "Les valeurs de `i` sont {{ vals[:3] }}… : il reste à les combiner une par une avec `{{ acc }}`."
+        ]
       }
     },
     {
@@ -370,7 +409,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "ignore_spaces": true
           }
         ],
-        "solution": "`{{ expr }}` vaut `{{ repr(res) }}`. Rappel : les indices commencent à 0, la borne de fin d'une tranche est exclue."
+        "solution": "`{{ expr }}` vaut `{{ repr(res) }}`. Rappel : les indices commencent à 0, la borne de fin d'une tranche est exclue.",
+        "hints": [
+          "Les indices commencent à 0 : `{{ nom }}[0]` vaut {{ T[0] }}. Numérotez les éléments avant de répondre.",
+          "Dans une tranche `[début:fin:pas]`, l'élément d'indice `fin` n'est **pas** inclus ; un indice négatif compte à partir de la fin (`-1` est le dernier)."
+        ]
       }
     },
     {
@@ -460,7 +503,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "ignore_spaces": true
           }
         ],
-        "solution": "Après {{ k }} passage(s) : `{{ S }}`."
+        "solution": "Après {{ k }} passage(s) : `{{ S }}`.",
+        "hints": [
+          "Au 1er passage, on cherche le minimum de toute la liste ({{ min(T) }}) et on l'échange avec le **premier** élément.",
+          "Au passage suivant, on ignore la partie déjà triée au début de la liste et on recommence sur le reste."
+        ]
       }
     },
     {
@@ -486,7 +533,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "answer": "T.index(x) if x in T else -1"
           }
         ],
-        "solution": "`m` prend les valeurs {{ vus }}. {{ 'La valeur est trouvée à l’indice ' + str(T.index(x)) if x in T else 'La valeur est absente : la fonction renvoie -1' }}."
+        "solution": "`m` prend les valeurs {{ vus }}. {{ 'La valeur est trouvée à l’indice ' + str(T.index(x)) if x in T else 'La valeur est absente : la fonction renvoie -1' }}.",
+        "hints": [
+          "Au départ, `g = 0` et `d = {{ n - 1 }}`, donc le premier `m` vaut `({{ 0 }} + {{ n - 1 }}) // 2 = {{ (n - 1) // 2 }}`.",
+          "Après chaque comparaison, une seule des deux bornes change : `g = m + 1` si `T[m] < x`, `d = m - 1` sinon."
+        ]
       }
     },
     {
@@ -558,7 +609,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "ignore_case": true
           }
         ],
-        "solution": "{{ n }} = {{ group(tobase(n, 2, 8)) }} en binaire = {{ tobase(n, 16) }} en hexadécimal."
+        "solution": "{{ n }} = {{ group(tobase(n, 2, 8)) }} en binaire = {{ tobase(n, 16) }} en hexadécimal.",
+        "hints": [
+          "Pour passer du décimal au binaire, divisez par 2 successivement et lisez les restes **de bas en haut** ; en hexadécimal, les chiffres vont de 0 à F (F = 15).",
+          "Pour revenir en décimal, chaque chiffre est multiplié par une puissance de la base : 1, 2, 4, 8, 16… en binaire, 1, 16, 256… en hexadécimal."
+        ]
       }
     },
     {
@@ -621,7 +676,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "answer": "q_ref"
           }
         ],
-        "solution": "```sql\n{{ q_ref }}\n```"
+        "solution": "```sql\n{{ q_ref }}\n```",
+        "hints": [
+          "On ne veut que la colonne `prenom` : `SELECT prenom FROM Eleve`, puis on filtre les lignes avec `WHERE`.",
+          "Plusieurs conditions se combinent avec `AND` ; une chaîne de caractères s'écrit entre apostrophes : `'{{ ville }}'`."
+        ]
       }
     },
     {
@@ -705,7 +764,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "answer": "out"
           }
         ],
-        "solution": "Après les modifications, le dictionnaire vaut `{{ evaluate(src.rsplit(chr(10), 1)[0], nom) }}` : le programme affiche `{{ out }}`."
+        "solution": "Après les modifications, le dictionnaire vaut `{{ evaluate(src.rsplit(chr(10), 1)[0], nom) }}` : le programme affiche `{{ out }}`.",
+        "hints": [
+          "Réécrivez le dictionnaire après chaque ligne. `del` supprime la clé **et** sa valeur ; affecter une clé absente la crée.",
+          "`len` compte le nombre de **clés** du dictionnaire."
+        ]
       }
     },
     {
@@ -727,7 +790,10 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "multiline": true
           }
         ],
-        "solution": "Le parcours d'un dictionnaire se fait sur ses **clés**, dans l'ordre d'insertion ; `.items()` donne les couples (clé, valeur). Affichage :\n\n{{ code_block(out, 'text') }}"
+        "solution": "Le parcours d'un dictionnaire se fait sur ses **clés**, dans l'ordre d'insertion ; `.items()` donne les couples (clé, valeur). Affichage :\n\n{{ code_block(out, 'text') }}",
+        "hints": [
+          "`for cle in {{ nom }}` parcourt les **clés** dans l'ordre où elles ont été insérées ; la valeur associée s'obtient avec `{{ nom }}[cle]`."
+        ]
       }
     },
     {
@@ -775,7 +841,11 @@ Le fichier à produire a exactement cette structure (`format`, `version`, puis l
             "answer": "int(out)"
           }
         ],
-        "solution": "`{{ o2 }} = {{ o1 }}` ne crée pas de nouvel objet : les deux noms désignent **le même** objet. Le programme affiche **{{ out }}**."
+        "solution": "`{{ o2 }} = {{ o1 }}` ne crée pas de nouvel objet : les deux noms désignent **le même** objet. Le programme affiche **{{ out }}**.",
+        "hints": [
+          "Combien d'objets `{{ cls }}` sont créés ? Regardez combien de fois on écrit `{{ cls }}(...)`.",
+          "`{{ o2 }} = {{ o1 }}` ne copie pas l'objet : `{{ o2 }}` et `{{ o1 }}` désignent le même objet, donc une modification via l'un se voit via l'autre."
+        ]
       }
     },
     {

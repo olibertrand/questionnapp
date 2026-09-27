@@ -43,6 +43,17 @@
 - `forbid` permet d'interdire les raccourcis qui vident l'exercice de son sens (`sum`, `max`,
   `sorted`, `sort`, `count`, `Counter`…).
 
+### Indices (clé `hints`)
+- L'élève dispose de plusieurs essais (3 par défaut) ; après chaque erreur il reçoit l'indice
+  suivant, sans la solution. Écrire **2 indices** par question, du plus général au plus précis.
+- Un bon indice s'appuie sur les données du tirage (`{{ }}`) et rappelle la méthode ou le piège
+  classique (« `range({{ a }}, {{ b }})` s'arrête **avant** {{ b }} », « `{{ o2 }} = {{ o1 }}` ne copie
+  pas l'objet »), sans jamais donner la réponse.
+- Pour une question de code, les tests qui échouent servent déjà d'indice : les `hints` peuvent
+  rappeler la méthode (initialiser un accumulateur, cas de la liste vide…).
+- `max_tries` n'est à préciser que pour changer le défaut (par exemple 1 pour un QCM où un second
+  essai reviendrait à donner la réponse).
+
 ### Métadonnées
 - `chapter` : le chapitre **de la notion évaluée**, pas celui du cours d'où vient l'idée. Une
   question sur les dictionnaires reste dans le chapitre des dictionnaires même si elle a été

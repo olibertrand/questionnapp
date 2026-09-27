@@ -14,6 +14,10 @@ avec des valeurs différentes. La correction est automatique.
 - Types de réponses : **nombre**, **texte / sortie de programme**, **QCM** (simple ou multiple,
   options générées), **code Python** vérifié par des tests cachés aléatoires (avec interdiction
   de certaines fonctions), **requête SQL** comparée à une requête de référence.
+- **Plusieurs essais avec indices** : après une erreur, l'élève voit ce qui est juste ou faux
+  (et, pour le code, les tests qui échouent) mais pas la solution ; un indice de plus à chaque
+  erreur, écrit par le prof avec les données du tirage ou générique à défaut. Score : 100 % au
+  1er essai, 75 % au 2e, 50 % au 3e ; bouton « Voir la solution ».
 - Éditeur avec **aperçu en direct**, test de ses propres réponses, indicateur de variété,
   erreurs localisées (ligne du générateur), modèles de départ, import/export JSON.
 - Une question appartient à un chapitre, travaille des compétences et peut être affectée à

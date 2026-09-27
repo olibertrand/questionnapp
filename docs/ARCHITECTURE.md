@@ -41,8 +41,11 @@ professeurs d'informatique de les écrire sans rien apprendre de nouveau.
    à éviter. Il enregistre la tentative (graine, empreinte, énoncé tel que vu, **version** du
    modèle) et n'envoie au navigateur que la partie publique : **jamais les réponses**.
 2. `POST /attempts/:id/answer` : le serveur relance le moteur avec la même graine et la même
-   version du modèle ; le moteur régénère l'instance à l'identique et corrige. Le résultat est
-   stocké (une seule correction par tentative ; pour réessayer, l'élève demande de nouvelles données).
+   version du modèle ; le moteur régénère l'instance à l'identique et corrige. Tant qu'il reste
+   des essais et que la réponse n'est pas juste, le serveur ne renvoie que « juste / faux », les
+   commentaires et un indice (jamais la solution) et enregistre l'essai dans `history`. Sur une
+   bonne réponse, au dernier essai ou sur `reveal`, la tentative est terminée : score pondéré par
+   le nombre d'essais, correction complète. Pour recommencer, l'élève demande de nouvelles données.
 3. Modifier une question crée une nouvelle version : les tentatives passées restent
    consultables et cohérentes.
 

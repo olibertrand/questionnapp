@@ -132,7 +132,30 @@ class ApiTest(unittest.TestCase):
             if mode == "chapter":
                 body["chapter_id"] = q["chapter_id"]
             at2 = eleve.ok("POST", "/api/practice/next", body)["attempt"]
-            eleve.ok("POST", f"/api/attempts/{at2['id']}/answer", {"answers": ["-1"]})
+            self.assertEqual(at2["instance"]["max_tries"], 3)
+            # réponse vide : refusée sans consommer d'essai
+            self.assertEqual(eleve.call("POST", f"/api/attempts/{at2['id']}/answer", {"answers": [""]})[0], 400)
+            r1 = eleve.ok("POST", f"/api/attempts/{at2['id']}/answer", {"answers": ["-1"]})
+            self.assertFalse(r1["final"])
+            self.assertEqual(r1["tries"], 1)
+            self.assertEqual(len(r1["hints"]), 1)
+            self.assertNotIn("solution", r1["result"])
+            self.assertNotIn("expected", json.dumps(r1))
+            if mode == "adaptive":
+                # 2e essai juste : score pondéré à 75 %
+                n = [int(x) for x in at2["instance"]["statement"].split() if x.isdigit()]
+                r2 = eleve.ok("POST", f"/api/attempts/{at2['id']}/answer", {"answers": [str(n[0] * n[1])]})
+                self.assertTrue(r2["final"])
+                self.assertEqual(r2["result"]["score"], 0.75)
+                self.assertIn("solution", r2["result"])
+            else:
+                # l'élève demande la solution
+                r2 = eleve.ok("POST", f"/api/attempts/{at2['id']}/reveal", {})
+                self.assertTrue(r2["final"])
+                self.assertTrue(r2["result"]["gave_up"])
+                self.assertEqual(r2["result"]["score"], 0)
+                self.assertIsNotNone(r2["result"]["fields"][0]["expected"])
+            self.assertEqual(eleve.call("POST", f"/api/attempts/{at2['id']}/answer", {"answers": ["1"]})[0], 409)
 
         # un autre élève ne peut pas répondre à la place du premier
         e2 = Client(self.base)
