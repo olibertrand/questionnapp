@@ -1,0 +1,77 @@
+{
+  "format": "questionnapp/questions",
+  "version": 1,
+  "title": "Représentation des données et architecture",
+  "description": "Bases 2 et 16, complément à deux, logique booléenne.",
+  "questions": [
+    {
+      "title": "Conversions entre bases",
+      "chapter": "Représentation des données et architecture",
+      "difficulty": 1,
+      "skills": [
+        "Écriture binaire",
+        "Écriture hexadécimale"
+      ],
+      "template": {
+        "code": "n = randint(20, 255)\nsens = choice([\"d2b\", \"b2d\", \"d2h\", \"h2d\"])\nif sens == \"d2b\":\n    q, rep, cible = f\"l'entier {n}\", tobase(n, 2), \"en binaire\"\nelif sens == \"b2d\":\n    q, rep, cible = f\"le nombre binaire {group(tobase(n, 2, 8))}\", str(n), \"en décimal\"\nelif sens == \"d2h\":\n    q, rep, cible = f\"l'entier {n}\", tobase(n, 16), \"en hexadécimal\"\nelse:\n    q, rep, cible = f\"le nombre hexadécimal {tobase(n, 16)}\", str(n), \"en décimal\"",
+        "statement": "Écrire {{ q }} {{ cible }} (sans préfixe `0b` ni `0x`).",
+        "fields": [
+          {
+            "type": "text",
+            "label": "",
+            "answer": "[rep, rep.lstrip('0') or '0', rep.zfill(8)]",
+            "ignore_spaces": true,
+            "ignore_case": true
+          }
+        ],
+        "solution": "{{ n }} = {{ group(tobase(n, 2, 8)) }} en binaire = {{ tobase(n, 16) }} en hexadécimal.",
+        "hints": [
+          "Pour passer du décimal au binaire, divisez par 2 successivement et lisez les restes **de bas en haut** ; en hexadécimal, les chiffres vont de 0 à F (F = 15).",
+          "Pour revenir en décimal, chaque chiffre est multiplié par une puissance de la base : 1, 2, 4, 8, 16… en binaire, 1, 16, 256… en hexadécimal."
+        ]
+      }
+    },
+    {
+      "title": "Complément à deux",
+      "chapter": "Représentation des données et architecture",
+      "difficulty": 2,
+      "skills": [
+        "Entiers relatifs en binaire"
+      ],
+      "template": {
+        "code": "bits = 8\nn = randnz(-128, 127)\nsens = choice([\"vers\", \"depuis\"])\nb = twos(n, bits)",
+        "statement": "{{ (\"Donner l'écriture en complément à deux sur 8 bits de l'entier \" + str(n) + \".\") if sens == \"vers\" else (\"Quel entier relatif est codé par \" + group(b) + \" en complément à deux sur 8 bits ?\") }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "",
+            "answer": "b if sens == 'vers' else str(n)",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "{{ n }} s'écrit {{ group(b) }} en complément à deux sur 8 bits."
+      }
+    },
+    {
+      "title": "Expressions booléennes",
+      "chapter": "Représentation des données et architecture",
+      "difficulty": 1,
+      "skills": [
+        "Logique booléenne"
+      ],
+      "template": {
+        "code": "a, b, c = coin(), coin(), coin()\nforme = choice([\"(a and not b) or c\", \"not (a or b) and c\", \"(a or b) and not (b and c)\", \"a != (b or c)\", \"not a or (b and c)\"])\nval = eval(forme, {\"a\": a, \"b\": b, \"c\": c})",
+        "statement": "On a `a = {{ a }}`, `b = {{ b }}` et `c = {{ c }}`. Que vaut `{{ forme }}` ?",
+        "fields": [
+          {
+            "type": "choice",
+            "label": "",
+            "options": "[('True', val), ('False', not val)]",
+            "shuffle": false
+          }
+        ],
+        "solution": "`{{ forme }}` vaut `{{ val }}`."
+      }
+    }
+  ]
+}

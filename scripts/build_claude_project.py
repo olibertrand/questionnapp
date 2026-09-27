@@ -26,7 +26,11 @@ def build_reference():
     fmt = fmt.split("## 5. Protocole du moteur")[0].rstrip()
     fmt = fmt.replace("# Format des questions", "## Format des questions", 1)
     fmt = "\n".join(("#" + l) if l.startswith("## ") and not l.startswith("## Format") else l for l in fmt.splitlines())
-    examples = json.loads(read("examples", "questions-informatique.json"))
+    bank = sorted(f for f in os.listdir(os.path.join(ROOT, "banque")) if f.endswith(".json"))
+    questions = []
+    for name in bank:
+        questions += json.loads(read("banque", name))["questions"]
+    examples = {"format": "questionnapp/questions", "version": 1, "title": "Exemples", "questions": questions}
     practices = read("claude-projet", "_bonnes-pratiques.md").strip()
     parts = [
         "# Référence QuestionnApp pour la création de questions",
@@ -39,9 +43,9 @@ def build_reference():
         "",
         "## Fichier d'import et questions d'exemple",
         "",
-        "Le fichier à produire a exactement cette structure (`format`, `version`, puis la liste `questions`). "
+        "Le fichier à produire a exactement cette structure (`format`, `version`, `title` et `description` de la banque, puis la liste `questions`). "
         "Chaque question : `title`, `chapter`, `difficulty` (1 facile, 2 moyen, 3 difficile), `skills` (liste), "
-        f"`template`. Voici les {len(examples['questions'])} questions d'exemple de l'application, toutes testées : "
+        f"`template`. Voici les {len(questions)} questions de la banque fournie avec l'application, toutes testées : "
         "elles montrent les bons usages de chaque type de champ.",
         "",
         "```json",

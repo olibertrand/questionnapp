@@ -60,8 +60,13 @@ question invalide, avec en plus `where` et `line`).
 | POST | `/questions/bulk-classes` | `{question_ids, class_ids, add: bool}` |
 | GET | `/questions/export?ids=1,2` | `{format: "questionnapp/questions", version: 1, questions: [...]}` |
 | POST | `/questions/import` | même format (+ `class_ids`) → `{created, skipped, errors, warnings}` : chaque question passe l'auto-test ; refusée si elle ne se génère pas, signalée dans `warnings` si elle est douteuse |
-| GET | `/questions/examples` | banque d'exemples fournie, avec `imported` (déjà présente ?) et le modèle pour l'aperçu |
-| POST | `/questions/import-examples` | `{class_ids, titles?}` : importe les exemples (tous ou ceux listés), sans doublon de titre |
+
+## Banques de questions (fichiers du répertoire `banque/`)
+| Méthode | Route | |
+|---|---|---|
+| GET | `/banks` | `{dir, banks: [{id, title, description, count, new, imported, modified}]}` (ou `error` si le fichier est illisible) |
+| GET | `/banks/:id` | `{bank: {id, title, description, questions: [{..., status: new \| imported \| modified, question_id}]}}` |
+| POST | `/banks/:id/import` | `{titles, update, class_ids}` : importe les questions nouvelles `titles` et met à jour (nouvelle version) les questions `update` modifiées dans le fichier ; chaque question passe l'auto-test → `{created, updated, skipped, errors, warnings}` |
 
 ## Séances
 | Méthode | Route | |

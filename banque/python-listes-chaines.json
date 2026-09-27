@@ -1,0 +1,101 @@
+{
+  "format": "questionnapp/questions",
+  "version": 1,
+  "title": "Python : listes et chaînes",
+  "description": "Indices et tranches, parcours, listes en compréhension, fonctions sur les listes.",
+  "questions": [
+    {
+      "title": "Indices et tranches",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Listes : indices et tranches"
+      ],
+      "template": {
+        "code": "nom = choice(NOMS_LISTES)\nT = randlist(randint(6, 9), 1, 50, distinct=True)\nn = len(T)\ni = randint(1, n - 3)\nj = randint(i + 1, n - 1)\nkind = choice([\"tranche\", \"négatif\", \"pas\"])\nif kind == \"tranche\":\n    expr = f\"{nom}[{i}:{j}]\"\nelif kind == \"négatif\":\n    expr = f\"{nom}[-{randint(1, n - 1)}]\"\nelse:\n    expr = f\"{nom}[{choice(['', str(i)])}::{choice([2, 3, -1])}]\"\nres = eval(expr, {nom: T})",
+        "statement": "On définit `{{ nom }} = {{ T }}`.\n\nQue vaut `{{ expr }}` ? (écrire la valeur comme Python l'afficherait)",
+        "fields": [
+          {
+            "type": "text",
+            "label": "",
+            "answer": "repr(res)",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "`{{ expr }}` vaut `{{ repr(res) }}`. Rappel : les indices commencent à 0, la borne de fin d'une tranche est exclue.",
+        "hints": [
+          "Les indices commencent à 0 : `{{ nom }}[0]` vaut {{ T[0] }}. Numérotez les éléments avant de répondre.",
+          "Dans une tranche `[début:fin:pas]`, l'élément d'indice `fin` n'est **pas** inclus ; un indice négatif compte à partir de la fin (`-1` est le dernier)."
+        ]
+      }
+    },
+    {
+      "title": "Écrire une fonction : compter les occurrences",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Écrire une fonction",
+        "Parcours de liste"
+      ],
+      "template": {
+        "code": "fname = choice([\"compte\", \"occurrences\", \"nb_occ\", \"nombre\", \"frequence\"])\nx0 = randint(1, 9)\ndef ref(L, x):\n    return sum(1 for e in L if e == x)\ncases = []\nfor _ in range(6):\n    L = randlist(randint(0, 10), 0, 5)\n    x = randint(0, 5)\n    cases.append(((L, x), ref(L, x)))",
+        "statement": "Écrire une fonction `{{ fname }}(L, x)` qui renvoie le nombre de fois où la valeur `x` apparaît dans la liste `L`.\n\nLa méthode `count` est **interdite**.\n\nExemple : `{{ fname }}([{{ x0 }}, 2, {{ x0 }}, 3], {{ x0 }})` renvoie `{{ 2 if x0 != 2 else 3 }}`.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "forbid": [
+              "count"
+            ],
+            "starter": "def {{ fname }}(L, x):\n    ",
+            "tests": "fn = student.get(fname)\ncheck(callable(fn), f'la fonction {fname} doit être définie')\nif callable(fn):\n    for (L, x), attendu in cases:\n        check_equal(fn(list(L), x), attendu, f'{fname}({L}, {x}) doit renvoyer {attendu}')"
+          }
+        ],
+        "solution": "```python\ndef {{ fname }}(L, x):\n    n = 0\n    for e in L:\n        if e == x:\n            n = n + 1\n    return n\n```"
+      }
+    },
+    {
+      "title": "Compréhension de liste",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Listes en compréhension"
+      ],
+      "template": {
+        "code": "a, b = sorted(sample(range(0, 12), 2))\nk = randint(2, 4)\nf = choice([\"x * x\", f\"x * {k}\", f\"x + {k}\", f\"x // {k}\"])\ncond = choice([f\"x % {k} == 0\", \"x % 2 == 1\", f\"x > {a + 1}\", None])\nexpr = f\"[{f} for x in range({a}, {b + 3})\" + (f\" if {cond}\" if cond else \"\") + \"]\"\nres = eval(expr)\nrequire(0 < len(res) <= 8)",
+        "statement": "Que vaut la liste `{{ expr }}` ?",
+        "fields": [
+          {
+            "type": "text",
+            "label": "",
+            "answer": "repr(res)",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "On obtient `{{ res }}`."
+      }
+    },
+    {
+      "title": "Parcours d'une chaîne",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Chaînes de caractères",
+        "Boucle for"
+      ],
+      "template": {
+        "code": "mot = choice([\"informatique\", \"algorithme\", \"programmation\", \"ordinateur\", \"variable\", \"processeur\", \"boucle\", \"fonction\"])\nv = choice([\"aeiouy\", \"aeiou\"])\nkind = choice([\"voyelles\", \"inverse\", \"positions\"])\nif kind == \"voyelles\":\n    src = f\"mot = '{mot}'\\nn = 0\\nfor c in mot:\\n    if c in '{v}':\\n        n = n + 1\\nprint(n)\"\nelif kind == \"inverse\":\n    src = f\"mot = '{mot}'\\nr = ''\\nfor c in mot:\\n    r = c + r\\nprint(r)\"\nelse:\n    src = f\"mot = '{mot}'\\nfor i in range(len(mot)):\\n    if mot[i] == '{choice(sorted(set(mot)))}':\\n        print(i)\"\nout = run(src)",
+        "statement": "Qu'affiche ce programme ? (s'il affiche plusieurs lignes, mettre une valeur par ligne)\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "",
+            "answer": "out",
+            "multiline": true
+          }
+        ],
+        "solution": "Le programme affiche :\n\n{{ code_block(out, 'text') }}"
+      }
+    }
+  ]
+}

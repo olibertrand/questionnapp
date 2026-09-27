@@ -1,0 +1,113 @@
+{
+  "format": "questionnapp/questions",
+  "version": 1,
+  "title": "Algorithmique",
+  "description": "Tris, recherche dichotomique, complexité, fonctions classiques.",
+  "questions": [
+    {
+      "title": "Tri par sélection : état intermédiaire",
+      "chapter": "Algorithmique",
+      "difficulty": 2,
+      "skills": [
+        "Algorithmes de tri",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "T = randlist(randint(6, 8), 1, 40, distinct=True)\nk = randint(1, 3)\nS = list(T)\nfor i in range(k):\n    m = min(range(i, len(S)), key=lambda j: S[j])\n    S[i], S[m] = S[m], S[i]\nrequire(S != sorted(T))",
+        "statement": "On applique le **tri par sélection** (on cherche le minimum de la partie non triée et on l'échange avec le premier élément de cette partie) à la liste :\n\n`{{ T }}`\n\nQuelle est la liste après **{{ k }}** passage(s) de la boucle principale ?",
+        "fields": [
+          {
+            "type": "text",
+            "label": "",
+            "answer": "repr(S)",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "Après {{ k }} passage(s) : `{{ S }}`.",
+        "hints": [
+          "Au 1er passage, on cherche le minimum de toute la liste ({{ min(T) }}) et on l'échange avec le **premier** élément.",
+          "Au passage suivant, on ignore la partie déjà triée au début de la liste et on recommence sur le reste."
+        ]
+      }
+    },
+    {
+      "title": "Recherche dichotomique : indices consultés",
+      "chapter": "Algorithmique",
+      "difficulty": 2,
+      "skills": [
+        "Recherche dichotomique"
+      ],
+      "template": {
+        "code": "n = randint(9, 15)\nT = sorted(randlist(n, 1, 99, distinct=True))\nx = choice(T + [randint(1, 99)])\ng, d, vus = 0, n - 1, []\nwhile g <= d:\n    m = (g + d) // 2\n    vus.append(m)\n    if T[m] == x:\n        break\n    elif T[m] < x:\n        g = m + 1\n    else:\n        d = m - 1\nsrc = dedent('''\ndef dicho(T, x):\n    g, d = 0, len(T) - 1\n    while g <= d:\n        m = (g + d) // 2\n        if T[m] == x:\n            return m\n        elif T[m] < x:\n            g = m + 1\n        else:\n            d = m - 1\n    return -1\n''')",
+        "statement": "{{ code_block(src) }}\n\nOn appelle `dicho(T, {{ x }})` avec `T = {{ T }}`.\n\nDonner, dans l'ordre, les valeurs successives prises par `m`, séparées par des virgules.",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Valeurs de m",
+            "answer": "','.join(map(str, vus))",
+            "ignore_spaces": true
+          },
+          {
+            "type": "number",
+            "label": "Valeur renvoyée",
+            "answer": "T.index(x) if x in T else -1"
+          }
+        ],
+        "solution": "`m` prend les valeurs {{ vus }}. {{ 'La valeur est trouvée à l’indice ' + str(T.index(x)) if x in T else 'La valeur est absente : la fonction renvoie -1' }}.",
+        "hints": [
+          "Au départ, `g = 0` et `d = {{ n - 1 }}`, donc le premier `m` vaut `({{ 0 }} + {{ n - 1 }}) // 2 = {{ (n - 1) // 2 }}`.",
+          "Après chaque comparaison, une seule des deux bornes change : `g = m + 1` si `T[m] < x`, `d = m - 1` sinon."
+        ]
+      }
+    },
+    {
+      "title": "Complexité d'un algorithme",
+      "chapter": "Algorithmique",
+      "difficulty": 2,
+      "skills": [
+        "Complexité"
+      ],
+      "template": {
+        "code": "f = choice(NOMS_FONCTIONS)\ncas = [\n    (\"O(n)\", f\"def {f}(L):\\n    s = 0\\n    for x in L:\\n        s = s + x\\n    return s\"),\n    (\"O(n²)\", f\"def {f}(L):\\n    n = 0\\n    for x in L:\\n        for y in L:\\n            if x < y:\\n                n = n + 1\\n    return n\"),\n    (\"O(log n)\", f\"def {f}(n):\\n    k = 0\\n    while n > 1:\\n        n = n // 2\\n        k = k + 1\\n    return k\"),\n    (\"O(1)\", f\"def {f}(L):\\n    return L[0] + L[-1]\"),\n    (\"O(n²)\", f\"def {f}(L):\\n    for i in range(len(L)):\\n        for j in range(i):\\n            print(L[i], L[j])\"),\n    (\"O(n)\", f\"def {f}(n):\\n    i = 0\\n    while i < {randint(2, 5)} * n:\\n        i = i + 1\\n    return i\"),\n]\nrep, src = choice(cas)",
+        "statement": "Quelle est la complexité en temps de cette fonction, en fonction de la taille `n` de son entrée ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "choice",
+            "label": "",
+            "options": "[(c, c == rep) for c in ['O(1)', 'O(log n)', 'O(n)', 'O(n²)']]",
+            "shuffle": false
+          }
+        ],
+        "solution": "La complexité est **{{ rep }}**."
+      }
+    },
+    {
+      "title": "Écrire une fonction : maximum ou minimum",
+      "chapter": "Algorithmique",
+      "difficulty": 2,
+      "skills": [
+        "Écrire une fonction",
+        "Parcours de liste"
+      ],
+      "template": {
+        "code": "kind = choice([\"max\", \"min\"])\nfname = choice([\"maximum\", \"plus_grand\", \"le_max\"] if kind == \"max\" else [\"minimum\", \"plus_petit\", \"le_min\"])\nref = max if kind == \"max\" else min\ncases = []\nfor _ in range(6):\n    L = randlist(randint(1, 10), -50, 50)\n    cases.append(((L,), ref(L)))",
+        "statement": "Écrire une fonction `{{ fname }}(L)` qui renvoie le plus {{ \"grand\" if kind == \"max\" else \"petit\" }} élément d'une liste **non vide** d'entiers.\n\nLes fonctions `max`, `min` et `sorted` et la méthode `sort` sont interdites.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "",
+            "forbid": [
+              "max",
+              "min",
+              "sorted",
+              "sort"
+            ],
+            "starter": "def {{ fname }}(L):\n    ",
+            "tests": "fn = student.get(fname)\ncheck(callable(fn), f'la fonction {fname} doit être définie')\nif callable(fn):\n    for (L,), attendu in cases:\n        check_equal(fn(list(L)), attendu, f'{fname}({L}) doit renvoyer {attendu}')"
+          }
+        ],
+        "solution": "```python\ndef {{ fname }}(L):\n    m = L[0]\n    for x in L:\n        if x {{ \">\" if kind == \"max\" else \"<\" }} m:\n            m = x\n    return m\n```"
+      }
+    }
+  ]
+}

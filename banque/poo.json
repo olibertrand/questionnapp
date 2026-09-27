@@ -1,0 +1,56 @@
+{
+  "format": "questionnapp/questions",
+  "version": 1,
+  "title": "Programmation orientée objet",
+  "description": "Classes, attributs, méthodes, objets et références.",
+  "questions": [
+    {
+      "title": "Objets : qu'affiche ce programme ?",
+      "chapter": "Programmation orientée objet",
+      "difficulty": 2,
+      "skills": [
+        "POO : classes et attributs",
+        "POO : méthodes",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "cls, attr = choice([(\"Compte\", \"solde\"), (\"Personnage\", \"vie\"), (\"Reservoir\", \"niveau\"), (\"Joueur\", \"score\")])\ndepart = randint(10, 50)\na, b = randint(2, 9), randint(2, 9)\nm1, m2 = {\"Compte\": (\"deposer\", \"retirer\"), \"Personnage\": (\"soigner\", \"blesser\"),\n          \"Reservoir\": (\"remplir\", \"vider\"), \"Joueur\": (\"gagner\", \"perdre\")}[cls]\no1, o2 = sample([\"x\", \"y\", \"p\", \"q\", \"obj\", \"u\", \"v\"], 2)\nsrc = dedent(f'''\nclass {cls}:\n    def __init__(self, {attr}):\n        self.{attr} = {attr}\n\n    def {m1}(self, n):\n        self.{attr} = self.{attr} + n\n\n    def {m2}(self, n):\n        if n <= self.{attr}:\n            self.{attr} = self.{attr} - n\n\n{o1} = {cls}({depart})\n{o2} = {o1}\n{o1}.{m1}({a})\n{o2}.{m2}({choice([b, depart + 100])})\nprint({o1}.{attr})\n''')\nout = run(src)",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Affichage",
+            "answer": "int(out)"
+          }
+        ],
+        "solution": "`{{ o2 }} = {{ o1 }}` ne crée pas de nouvel objet : les deux noms désignent **le même** objet. Le programme affiche **{{ out }}**.",
+        "hints": [
+          "Combien d'objets `{{ cls }}` sont créés ? Regardez combien de fois on écrit `{{ cls }}(...)`.",
+          "`{{ o2 }} = {{ o1 }}` ne copie pas l'objet : `{{ o2 }}` et `{{ o1 }}` désignent le même objet, donc une modification via l'un se voit via l'autre."
+        ]
+      }
+    },
+    {
+      "title": "Écrire une classe",
+      "chapter": "Programmation orientée objet",
+      "difficulty": 3,
+      "skills": [
+        "POO : écrire une classe",
+        "POO : méthodes"
+      ],
+      "template": {
+        "code": "cls = choice([\"Rectangle\", \"Compteur\", \"Temperature\"])\nk = randint(2, 5)\nif cls == \"Rectangle\":\n    consigne = (\"une classe `Rectangle` dont le constructeur prend `largeur` et `hauteur`, avec une méthode \"\n                \"`aire()` qui renvoie l'aire et une méthode `agrandir(k)` qui multiplie les deux dimensions par `k`.\")\n    tests = dedent('''\n    for (l, h) in dims:\n        r = Rectangle(l, h)\n        check_equal(r.aire(), l * h, f\"Rectangle({l}, {h}).aire() doit valoir {l * h}\")\n        r.agrandir(k)\n        check_equal(r.aire(), l * h * k * k, f\"après agrandir({k}), l'aire doit valoir {l * h * k * k}\")\n    ''')\n    ref = (\"class Rectangle:\\n    def __init__(self, largeur, hauteur):\\n        self.largeur = largeur\\n        self.hauteur = hauteur\\n\\n\"\n           \"    def aire(self):\\n        return self.largeur * self.hauteur\\n\\n\"\n           \"    def agrandir(self, k):\\n        self.largeur = self.largeur * k\\n        self.hauteur = self.hauteur * k\\n\")\nelif cls == \"Compteur\":\n    consigne = (f\"une classe `Compteur` dont le constructeur ne prend aucun paramètre (valeur initiale 0), avec une méthode \"\n                f\"`incrementer()` qui augmente la valeur de {k}, une méthode `valeur()` qui la renvoie et une méthode `raz()` qui la remet à 0.\")\n    tests = dedent('''\n    for (n, _) in dims:\n        c = Compteur()\n        check_equal(c.valeur(), 0, \"un nouveau compteur vaut 0\")\n        for _ in range(n):\n            c.incrementer()\n        check_equal(c.valeur(), n * k, f\"après {n} appels à incrementer(), valeur() doit renvoyer {n * k}\")\n        c.raz()\n        check_equal(c.valeur(), 0, \"après raz(), valeur() doit renvoyer 0\")\n    ''')\n    ref = (f\"class Compteur:\\n    def __init__(self):\\n        self.n = 0\\n\\n    def incrementer(self):\\n        self.n = self.n + {k}\\n\\n\"\n           \"    def valeur(self):\\n        return self.n\\n\\n    def raz(self):\\n        self.n = 0\\n\")\nelse:\n    consigne = (\"une classe `Temperature` dont le constructeur prend une température en degrés Celsius `celsius`, avec une méthode \"\n                \"`fahrenheit()` qui renvoie sa valeur en degrés Fahrenheit (F = C × 9 / 5 + 32) et une méthode `est_negative()` qui renvoie un booléen.\")\n    tests = dedent('''\n    for (c, _) in dims:\n        t = Temperature(c - 20)\n        check_equal(t.fahrenheit(), (c - 20) * 9 / 5 + 32, f\"Temperature({c - 20}).fahrenheit()\")\n        check_equal(t.est_negative(), c - 20 < 0, f\"Temperature({c - 20}).est_negative()\")\n    ''')\n    ref = (\"class Temperature:\\n    def __init__(self, celsius):\\n        self.celsius = celsius\\n\\n\"\n           \"    def fahrenheit(self):\\n        return self.celsius * 9 / 5 + 32\\n\\n\"\n           \"    def est_negative(self):\\n        return self.celsius < 0\\n\")\ndims = [(randint(1, 12), randint(1, 12)) for _ in range(4)]\ntests = \"check(\" + repr(cls) + \" in student, 'la classe \" + cls + \" doit être définie')\\nif \" + repr(cls) + \" in student:\\n\" + indent(tests.strip(), 4)",
+        "statement": "Écrire {{ consigne }}",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre classe",
+            "tests": "exec(tests)",
+            "reference": "{{ ref }}"
+          }
+        ],
+        "solution": "```python\n{{ ref }}\n```"
+      }
+    }
+  ]
+}

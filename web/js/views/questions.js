@@ -29,7 +29,7 @@ export async function listPage({ query }) {
     h('label', { class: 'btn', style: { cursor: 'pointer' } }, 'Importer (JSON)',
       h('input', { type: 'file', accept: '.json,application/json', style: { display: 'none' }, onchange: (e) => importFile(e.target.files[0]) })),
     h('button', { onclick: () => chaptersModal(chapters) }, 'Chapitres…'),
-    h('button', { onclick: () => examplesModal(classes) }, 'Questions d\'exemple…'),
+    h('a', { class: 'btn', href: '#/banques' }, '📚 Banques de questions'),
     h('button', { onclick: downloadReferential, title: 'Chapitres, compétences et questions existantes, à fournir à Claude pour créer de nouvelles questions' }, 'Référentiel pour Claude'));
 
   const rows = questions.map((q) => {
@@ -60,7 +60,7 @@ export async function listPage({ query }) {
       : h('div', { class: 'empty', style: { marginTop: '1rem' } },
         h('p', {}, 'La banque de questions est vide.'),
         h('div', { class: 'row', style: { justifyContent: 'center' } },
-          h('button', { class: 'primary', onclick: () => examplesModal(classes) }, 'Parcourir les questions d\'exemple'),
+          h('a', { class: 'btn primary', href: '#/banques' }, '📚 Parcourir les banques de questions'),
           h('a', { class: 'btn', href: '#/questions/nouvelle' }, 'Créer ma première question'))));
 }
 
@@ -93,44 +93,88 @@ async function previewQuestion(id) {
   previewModal(question.title, question.template);
 }
 
-async function examplesModal(classes) {
-  const { questions } = await api.get('/questions/examples');
-  const groups = {};
-  questions.forEach((q) => (groups[q.chapter] ||= []).push(q));
+// ---------------------------------------------------------------------------
+// Banques de questions (fichiers JSON du répertoire banque/)
+// ---------------------------------------------------------------------------
+
+const BANK_STATUS = {
+  new: ['pill accent', 'nouvelle'],
+  imported: ['pill good', 'déjà importée'],
+  modified: ['pill bad', 'modifiée dans le fichier'],
+};
+
+export async function banksPage() {
+  const { dir, banks } = await api.get('/banks');
+  return h('div', {},
+    h('p', {}, h('a', { href: '#/questions' }, '← Banque de questions de l\'application')),
+    h('h1', {}, 'Banques de questions'),
+    h('p', { class: 'muted' }, 'Chaque fichier JSON du répertoire ', h('code', {}, dir),
+      " est une banque thématique. Déposez-y de nouveaux fichiers (par exemple ceux produits par votre projet Claude) : ils apparaissent ici. Importez les questions qui vous intéressent ; celles modifiées dans le fichier depuis l'import peuvent être mises à jour."),
+    banks.length ? h('div', { class: 'grid' }, banks.map((b) => h('div', { class: 'card' },
+      h('h3', {}, b.error ? b.title : h('a', { href: `#/banques/${encodeURIComponent(b.id)}` }, b.title)),
+      b.error ? h('div', { class: 'alert error' }, b.error) : [
+        h('p', { class: 'small muted' }, b.description),
+        h('div', { class: 'row small' }, `${b.count} question(s)`,
+          b.new ? h('span', { class: BANK_STATUS.new[0] }, `${b.new} nouvelle(s)`) : null,
+          b.imported ? h('span', { class: BANK_STATUS.imported[0] }, `${b.imported} importée(s)`) : null,
+          b.modified ? h('span', { class: BANK_STATUS.modified[0] }, `${b.modified} modifiée(s)`) : null),
+        h('div', { style: { marginTop: '.6rem' } }, h('a', { class: 'btn small', href: `#/banques/${encodeURIComponent(b.id)}` }, 'Ouvrir')),
+      ])))
+      : h('div', { class: 'empty' }, 'Aucun fichier dans le répertoire des banques.'));
+}
+
+export async function bankPage({ params }) {
+  const [{ bank }, { classes }] = await Promise.all([api.get(`/banks/${encodeURIComponent(params.id)}`), api.get('/classes')]);
   const checks = [];
-  const list = h('div', { class: 'checklist', style: { maxHeight: '24rem' } }, Object.entries(groups).map(([ch, qs]) => [
-    h('div', { class: 'group' }, ch),
+  const groups = {};
+  bank.questions.forEach((q) => (groups[q.chapter || 'Sans chapitre'] ||= []).push(q));
+  const rows = Object.entries(groups).map(([ch, qs]) => [
+    h('tr', {}, h('td', { colspan: 5, class: 'small', style: { fontWeight: 600, background: 'var(--surface-2)' } }, ch)),
     qs.map((q) => {
-      const cb = h('input', { type: 'checkbox', value: q.title, checked: !q.imported, disabled: q.imported });
+      const cb = h('input', { type: 'checkbox', value: q.title, checked: q.status !== 'imported', disabled: q.status === 'imported', 'aria-label': 'Sélectionner' });
+      cb.dataset.status = q.status;
       checks.push(cb);
-      return h('div', { class: 'row between', style: { padding: '.1rem 0' } },
-        h('label', { class: 'inline' }, cb, q.title, q.imported ? h('span', { class: 'pill good' }, 'déjà importée') : null),
-        h('button', { class: 'small', type: 'button', onclick: () => previewModal(q.title, q.template) }, 'Aperçu'));
+      const [cls, label] = BANK_STATUS[q.status];
+      return h('tr', {},
+        h('td', {}, cb),
+        h('td', {}, q.status !== 'new' ? h('a', { href: `#/questions/${q.question_id}` }, q.title) : q.title,
+          h('div', { class: 'small muted' }, (q.skills || []).join(' · '))),
+        h('td', { class: 'small' }, ['', 'facile', 'moyen', 'difficile'][q.difficulty || 2]),
+        h('td', {}, h('span', { class: cls }, label)),
+        h('td', { class: 'num' }, h('button', { class: 'small', onclick: () => previewModal(q.title, q.template) }, 'Aperçu')));
     }),
-  ]));
+  ]);
   const boxes = classes.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id }), c.name));
   const out = h('div');
-  const btn = h('button', { class: 'primary', style: { marginTop: '1rem' } }, 'Importer la sélection');
+  const btn = h('button', { class: 'primary' }, 'Importer / mettre à jour la sélection');
   btn.addEventListener('click', async () => {
-    const titles = checks.filter((c) => c.checked && !c.disabled).map((c) => c.value);
-    if (!titles.length) return mount(out, h('div', { class: 'alert error' }, 'Aucune question sélectionnée.'));
+    const sel = checks.filter((c) => c.checked && !c.disabled);
+    const titles = sel.filter((c) => c.dataset.status === 'new').map((c) => c.value);
+    const update = sel.filter((c) => c.dataset.status === 'modified').map((c) => c.value);
+    if (!titles.length && !update.length) return mount(out, h('div', { class: 'alert error' }, 'Aucune question sélectionnée.'));
     btn.disabled = true;
+    mount(out, h('div', { class: 'alert info' }, `Chaque question est testée sur 20 tirages avant import (${titles.length + update.length} question(s))…`));
     try {
       const class_ids = boxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value));
-      const r = await api.post('/questions/import-examples', { class_ids, titles });
-      close();
-      toast(`${r.created.length} question(s) importée(s).`);
+      const r = await api.post(`/banks/${encodeURIComponent(bank.id)}/import`, { titles, update, class_ids });
+      importReport(r);
       render();
     } catch (e) { mount(out, errorBox(e)); btn.disabled = false; }
   });
-  const close = modal("Questions d'exemple", h('div', {},
-    h('p', { class: 'small muted', style: { marginTop: 0 } }, "Cliquez sur « Aperçu » pour essayer une question avant de l'importer. Une fois importées, vous pourrez les modifier ou vous en inspirer."),
-    h('div', { class: 'row small' },
-      h('button', { class: 'small link', type: 'button', onclick: () => checks.forEach((c) => { if (!c.disabled) c.checked = true; }) }, 'tout cocher'),
-      h('button', { class: 'small link', type: 'button', onclick: () => checks.forEach((c) => { c.checked = false; }) }, 'tout décocher')),
-    list,
-    classes.length ? h('div', { style: { marginTop: '.8rem' } }, h('label', {}, 'Affecter aussi aux classes (facultatif, faisable plus tard)'), h('div', { class: 'row' }, boxes)) : null,
-    out, btn));
+  const setAll = (v) => checks.forEach((c) => { if (!c.disabled) c.checked = v; });
+  return h('div', {},
+    h('p', {}, h('a', { href: '#/banques' }, '← Banques de questions')),
+    h('h1', {}, bank.title),
+    bank.description ? h('p', { class: 'muted' }, bank.description) : null,
+    h('p', { class: 'small muted' }, 'Fichier ', h('code', {}, `banque/${bank.id}.json`), '. « Aperçu » permet d\'essayer une question avant de l\'importer. Une question « modifiée dans le fichier » a déjà été importée mais sa version du fichier est différente : la mettre à jour crée une nouvelle version (les réponses passées des élèves sont conservées).'),
+    h('div', { class: 'row small', style: { margin: '.6rem 0' } },
+      h('button', { class: 'small link', onclick: () => setAll(true) }, 'tout cocher'),
+      h('button', { class: 'small link', onclick: () => setAll(false) }, 'tout décocher')),
+    h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
+      h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'Question'), h('th', {}, 'Difficulté'), h('th', {}, 'État'), h('th', {}, ''))),
+      h('tbody', {}, rows))),
+    classes.length ? h('div', { class: 'field', style: { marginTop: '1rem' } }, h('label', {}, 'Affecter aussi aux classes (facultatif)'), h('div', { class: 'row' }, boxes)) : null,
+    out, h('div', { style: { marginTop: '.6rem' } }, btn));
 }
 
 function bulkClasses(classes, ids) {
@@ -177,7 +221,8 @@ async function importFile(file) {
 
 function importReport(r) {
   modal("Résultat de l'import", h('div', {},
-    h('div', { class: 'alert info' }, `${r.created.length} question(s) importée(s)` + (r.skipped && r.skipped.length ? `, ${r.skipped.length} déjà présente(s)` : '') + '.'),
+    h('div', { class: 'alert info' }, `${r.created.length} question(s) importée(s)` + (r.updated && r.updated.length ? `, ${r.updated.length} mise(s) à jour` : '')
+      + (r.skipped && r.skipped.length ? `, ${r.skipped.length} déjà présente(s)` : '') + '.'),
     r.warnings && r.warnings.length ? [h('h3', {}, 'À vérifier'),
       h('p', { class: 'small muted' }, "Ces questions ont été importées mais l'auto-test a relevé des points à contrôler. Ouvrez-les dans l'éditeur pour les corriger."),
       h('ul', {}, r.warnings.map((w) => h('li', {}, h('a', { href: `#/questions/${w.id}` }, w.title), h('ul', { class: 'small' }, w.messages.map((m) => h('li', {}, m))))))] : null,

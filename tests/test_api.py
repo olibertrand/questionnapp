@@ -184,17 +184,42 @@ class ApiTest(unittest.TestCase):
         # suppression d'une question déjà utilisée = archivage
         self.assertTrue(prof.ok("DELETE", f"/api/questions/{qid}")["archived"])
 
-        # banque d'exemples : import en un clic, sans doublon au second appel
-        examples = prof.ok("GET", "/api/questions/examples")["questions"]
-        self.assertFalse(any(e["imported"] for e in examples))
-        one = prof.ok("POST", "/api/questions/import-examples", {"titles": [examples[0]["title"]]})
-        self.assertEqual(len(one["created"]), 1)
-        self.assertTrue(prof.ok("GET", "/api/questions/examples")["questions"][0]["imported"])
-        ex = prof.ok("POST", "/api/questions/import-examples", {"class_ids": [cid]})
-        self.assertEqual(len(ex["created"]), len(examples) - 1)
-        self.assertEqual(prof.ok("POST", "/api/questions/import-examples", {})["created"], [])
-        self.assertEqual(eleve.call("POST", "/api/questions/import-examples", {})[0], 403)
-        self.assertGreater(len(eleve.ok("GET", "/api/me/dashboard")["chapters"]), 3)
+        # banques de questions (répertoire banque/)
+        banks = prof.ok("GET", "/api/banks")["banks"]
+        dico = next(b for b in banks if b["id"] == "python-dictionnaires")
+        self.assertEqual(dico["new"], dico["count"])
+        bank = prof.ok("GET", "/api/banks/python-dictionnaires")["bank"]
+        titles = [q["title"] for q in bank["questions"]]
+        r = prof.ok("POST", "/api/banks/python-dictionnaires/import", {"titles": titles[:3], "class_ids": [cid]})
+        self.assertEqual(len(r["created"]), 3, r)
+        self.assertEqual(r["errors"], [])
+        statuses = {q["title"]: q["status"] for q in prof.ok("GET", "/api/banks/python-dictionnaires")["bank"]["questions"]}
+        self.assertEqual(statuses[titles[0]], "imported")
+        self.assertEqual(statuses[titles[3]], "new")
+        self.assertEqual(prof.call("GET", "/api/banks/..%2Fapp%2Fschema")[0], 404)
+        self.assertEqual(eleve.call("GET", "/api/banks")[0], 403)
+        self.assertIn("Python : dictionnaires", [c["name"] for c in eleve.ok("GET", "/api/me/dashboard")["chapters"]])
+        # une question modifiée dans le fichier peut être mise à jour (nouvelle version)
+        from app import config
+        import shutil
+        bank_dir = tempfile.mkdtemp(prefix="qa-banque-")
+        shutil.copy(os.path.join(ROOT, "banque", "python-dictionnaires.json"), bank_dir)
+        path = os.path.join(bank_dir, "python-dictionnaires.json")
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        data["questions"][0]["template"]["statement"] += "\n\n(version modifiée)"
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+        old_dir, config.BANK_DIR = config.BANK_DIR, bank_dir
+        try:
+            modified = [q for q in prof.ok("GET", "/api/banks/python-dictionnaires")["bank"]["questions"] if q["status"] == "modified"]
+            self.assertEqual([q["title"] for q in modified], [titles[0]])
+            r = prof.ok("POST", "/api/banks/python-dictionnaires/import", {"update": [titles[0]]})
+            self.assertEqual(len(r["updated"]), 1)
+            q0 = prof.ok("GET", f"/api/questions/{r['updated'][0]}")["question"]
+            self.assertIn("version modifiée", q0["template"]["statement"])
+        finally:
+            config.BANK_DIR = old_dir
 
         # import d'un fichier (ex. produit par Claude) : auto-test de chaque question
         bundle = {"format": "questionnapp/questions", "version": 1, "questions": [

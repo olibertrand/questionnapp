@@ -1,5 +1,7 @@
-"""Chaque question d'exemple doit passer l'auto-test du moteur (génération, variété, correction)."""
+"""Chaque fichier du répertoire banque/ doit être valide et chaque question passer l'auto-test
+du moteur (génération sur 30 tirages, variété, correction de référence acceptée, tests non triviaux)."""
 
+import glob
 import json
 import os
 import sys
@@ -10,21 +12,43 @@ sys.path.insert(0, ROOT)
 
 from engine import core  # noqa: E402
 
-EXAMPLES = os.path.join(ROOT, "examples", "questions-informatique.json")
+BANK_FILES = sorted(glob.glob(os.path.join(ROOT, "banque", "*.json")))
+
+
+def all_questions():
+    for path in BANK_FILES:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        for q in data["questions"]:
+            yield os.path.basename(path), q
 
 
 def reference_answers(template, seed):
+    """Réponses parfaites d'une instance (utilisé aussi par scripts/demo.py)."""
     public, priv, _ns = core._build(template, seed)
     return core.reference_answers(template, public, priv)[0]
 
 
-class ExamplesTest(unittest.TestCase):
-    def test_examples(self):
-        with open(EXAMPLES, encoding="utf-8") as f:
-            questions = json.load(f)["questions"]
-        self.assertGreater(len(questions), 10)
-        for q in questions:
-            with self.subTest(q["title"]):
+class BankTest(unittest.TestCase):
+    def test_files_format(self):
+        self.assertGreaterEqual(len(BANK_FILES), 5)
+        titles = []
+        for path in BANK_FILES:
+            with self.subTest(os.path.basename(path)):
+                with open(path, encoding="utf-8") as f:
+                    data = json.load(f)
+                self.assertEqual(data.get("format"), "questionnapp/questions")
+                self.assertTrue(data.get("title"))
+                for q in data["questions"]:
+                    for key in ("title", "chapter", "skills", "difficulty", "template"):
+                        self.assertIn(key, q, q.get("title"))
+                    self.assertTrue(q["skills"], q["title"])
+                    titles.append(q["title"])
+        self.assertEqual(len(titles), len(set(titles)), "titres en double dans la banque")
+
+    def test_every_question_passes_selftest(self):
+        for filename, q in all_questions():
+            with self.subTest(f"{filename} : {q['title']}"):
                 report = core.selftest(q["template"], samples=30)
                 self.assertEqual(report["status"], "ok", report)
                 self.assertGreaterEqual(report["distinct"], 4)

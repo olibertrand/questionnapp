@@ -1,0 +1,96 @@
+{
+  "format": "questionnapp/questions",
+  "version": 1,
+  "title": "Bases de données",
+  "description": "Modèle relationnel et requêtes SQL (sélection, agrégation, jointures).",
+  "questions": [
+    {
+      "title": "SQL : sélection avec condition",
+      "chapter": "Bases de données",
+      "difficulty": 2,
+      "skills": [
+        "SQL : SELECT ... WHERE"
+      ],
+      "template": {
+        "code": "villes = sample(VILLES, 4)\neleves = [(i, choice(PRENOMS), randint(15, 19), choice(villes)) for i in range(1, randint(7, 10))]\nsetup = (\"CREATE TABLE Eleve(id INTEGER PRIMARY KEY, prenom TEXT, age INTEGER, ville TEXT);\\n\"\n         + sql_insert(\"Eleve\", eleves))\n\nage = randint(16, 18)\ncmp = choice([\">=\", \"<\", \"=\"])\nmots = {\">=\": \"au moins\", \"<\": \"strictement moins de\", \"=\": \"exactement\"}\nville = choice(villes)\navec_ville = coin()\nq_ref = f\"SELECT prenom FROM Eleve WHERE age {cmp} {age}\" + (f\" AND ville = '{ville}'\" if avec_ville else \"\")\nrequire(len(sql_run(setup, q_ref)) > 0)",
+        "statement": "On dispose de la table **Eleve** :\n\n{{ sql_table(setup, 'Eleve') }}\n\nÉcrire une requête SQL qui donne le **prénom** des élèves ayant {{ mots[cmp] }} {{ age }} ans{{ (\" et habitant à \" + ville) if avec_ville else \"\" }}.",
+        "fields": [
+          {
+            "type": "sql",
+            "label": "Requête",
+            "setup": "setup",
+            "answer": "q_ref"
+          }
+        ],
+        "solution": "```sql\n{{ q_ref }}\n```",
+        "hints": [
+          "On ne veut que la colonne `prenom` : `SELECT prenom FROM Eleve`, puis on filtre les lignes avec `WHERE`.",
+          "Plusieurs conditions se combinent avec `AND` ; une chaîne de caractères s'écrit entre apostrophes : `'{{ ville }}'`."
+        ]
+      }
+    },
+    {
+      "title": "SQL : agrégation et regroupement",
+      "chapter": "Bases de données",
+      "difficulty": 3,
+      "skills": [
+        "SQL : fonctions d'agrégation",
+        "SQL : GROUP BY"
+      ],
+      "template": {
+        "code": "villes = sample(VILLES, 4)\neleves = [(i, choice(PRENOMS), randint(15, 19), choice(villes)) for i in range(1, randint(7, 10))]\nsetup = (\"CREATE TABLE Eleve(id INTEGER PRIMARY KEY, prenom TEXT, age INTEGER, ville TEXT);\\n\"\n         + sql_insert(\"Eleve\", eleves))\n\nkind = choice([\"count_ville\", \"avg_age\", \"count_age\"])\nif kind == \"count_ville\":\n    enonce = \"le **nombre d'élèves par ville** (colonnes : ville, nombre)\"\n    q_ref = \"SELECT ville, COUNT(*) FROM Eleve GROUP BY ville\"\nelif kind == \"avg_age\":\n    enonce = \"l'**âge moyen** des élèves de chaque ville (colonnes : ville, âge moyen)\"\n    q_ref = \"SELECT ville, AVG(age) FROM Eleve GROUP BY ville\"\nelse:\n    a = randint(16, 18)\n    enonce = f\"le **nombre d'élèves** ayant plus de {a} ans (strictement)\"\n    q_ref = f\"SELECT COUNT(*) FROM Eleve WHERE age > {a}\"",
+        "statement": "Table **Eleve** :\n\n{{ sql_table(setup, 'Eleve') }}\n\nÉcrire une requête SQL qui donne {{ enonce }}.",
+        "fields": [
+          {
+            "type": "sql",
+            "label": "Requête",
+            "setup": "setup",
+            "answer": "q_ref"
+          }
+        ],
+        "solution": "```sql\n{{ q_ref }}\n```"
+      }
+    },
+    {
+      "title": "SQL : jointure",
+      "chapter": "Bases de données",
+      "difficulty": 3,
+      "skills": [
+        "SQL : jointures"
+      ],
+      "template": {
+        "code": "auteurs = [(i, n) for i, n in enumerate(sample([\"Hugo\", \"Zola\", \"Sand\", \"Verne\", \"Duras\", \"Camus\", \"Colette\"], 4), 1)]\ntitres = [\"Les Misérables\", \"Germinal\", \"La Mare au diable\", \"Vingt mille lieues\", \"L'Amant\", \"L'Étranger\",\n          \"Chéri\", \"Notre-Dame\", \"Nana\", \"Indiana\", \"Le Tour du monde\", \"La Peste\"]\nlivres = [(i, t, choice(auteurs)[0], randint(1830, 1960)) for i, t in enumerate(sample(titres, randint(6, 9)), 1)]\nsetup = (\"CREATE TABLE Auteur(id INTEGER PRIMARY KEY, nom TEXT);\\n\"\n         \"CREATE TABLE Livre(id INTEGER PRIMARY KEY, titre TEXT, id_auteur INTEGER REFERENCES Auteur(id), annee INTEGER);\\n\"\n         + sql_insert(\"Auteur\", auteurs) + \"\\n\" + sql_insert(\"Livre\", livres))\nan = randint(1860, 1930)\nq_ref = f\"SELECT Livre.titre, Auteur.nom FROM Livre JOIN Auteur ON Livre.id_auteur = Auteur.id WHERE Livre.annee < {an}\"\nrequire(len(sql_run(setup, q_ref)) > 0)",
+        "statement": "Schéma :\n\n{{ sql_schema(setup) }}\n\n{{ sql_table(setup, 'Auteur') }}\n\n{{ sql_table(setup, 'Livre') }}\n\nÉcrire une requête donnant le **titre** et le **nom de l'auteur** de chaque livre paru avant {{ an }} (strictement).",
+        "fields": [
+          {
+            "type": "sql",
+            "label": "Requête",
+            "setup": "setup",
+            "answer": "q_ref"
+          }
+        ],
+        "solution": "```sql\n{{ q_ref }}\n```"
+      }
+    },
+    {
+      "title": "Vocabulaire des bases de données",
+      "chapter": "Bases de données",
+      "difficulty": 1,
+      "skills": [
+        "Modèle relationnel"
+      ],
+      "template": {
+        "code": "defs = [\n    (\"clé primaire\", \"attribut (ou groupe d'attributs) qui identifie de façon unique chaque ligne d'une table\"),\n    (\"clé étrangère\", \"attribut qui fait référence à la clé primaire d'une autre table\"),\n    (\"schéma relationnel\", \"description des tables, de leurs attributs et de leurs clés\"),\n    (\"domaine\", \"ensemble des valeurs que peut prendre un attribut\"),\n    (\"attribut\", \"colonne d'une table, désignée par un nom\"),\n    (\"enregistrement\", \"ligne d'une table (n-uplet)\"),\n]\nterme, definition = choice(defs)",
+        "statement": "Quel terme correspond à la définition suivante ?\n\n> {{ definition }}",
+        "fields": [
+          {
+            "type": "choice",
+            "label": "",
+            "options": "[(t, t == terme) for t, _ in sample(defs, len(defs))]"
+          }
+        ],
+        "solution": "Il s'agit d'un·e **{{ terme }}**."
+      }
+    }
+  ]
+}

@@ -1,9 +1,9 @@
 import json
-import os
 import re
 import secrets
+from concurrent.futures import ThreadPoolExecutor
 
-from .. import config, db, engine_client, security
+from .. import db, engine_client, security
 from ..web import HttpError, Response, int_list, json_response, require_str, router, to_int
 
 MAX_TEMPLATE_SIZE = 200_000
@@ -169,12 +169,27 @@ def selftest(template):
     return engine_client.call_or_raise({"action": "selftest", "template": template, "samples": 20}, timeout=75)
 
 
+def selftest_many(templates, workers=4):
+    """Auto-tests en parallèle : {id(template): rapport} (les modèles invalides sont ignorés)."""
+    templates = [t for t in templates if isinstance(t, dict)]
+
+    def one(t):
+        try:
+            return id(t), selftest(t)
+        except HttpError:
+            return id(t), None
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        return {k: v for k, v in pool.map(one, templates) if v is not None}
+
+
 def _import_items(conn, user, items, class_ids, validate=True, skip_existing=False):
     """Importe une liste de questions. Avec `validate`, chaque modèle passe l'auto-test du moteur :
     une question qui ne se génère pas est refusée ; une question importée mais suspecte
     (correction refusée, tests laxistes, peu de variété) est signalée dans `warnings`."""
     existing = {r["title"] for r in db.all_(conn, "SELECT title FROM questions WHERE archived = 0")} if skip_existing else set()
     created, skipped, errors, warnings = [], [], [], []
+    reports = selftest_many([it.get("template") for it in items if isinstance(it, dict) and it.get("title") not in existing]) \
+        if validate else {}
     for i, item in enumerate(items):
         if not isinstance(item, dict):
             errors.append(f"question {i + 1} : format invalide")
@@ -188,7 +203,7 @@ def _import_items(conn, user, items, class_ids, validate=True, skip_existing=Fal
             if validate:
                 if not isinstance(template, dict):
                     raise HttpError(400, "modèle manquant")
-                report = selftest(template)
+                report = reports.get(id(template)) or selftest(template)
                 generation_failed = [e for e in report["errors"] if "référence" not in e["error"]]
                 if generation_failed or not report["samples"]:
                     raise HttpError(422, "; ".join(_selftest_messages(report)[:3]) or "génération impossible")
@@ -214,11 +229,6 @@ def import_questions(req):
     class_ids = int_list(data, "class_ids") if isinstance(data, dict) and "class_ids" in data else []
     validate = data.get("validate", True) if isinstance(data, dict) else True
     return json_response(_import_items(req.db, user, items, class_ids, validate))
-
-
-def _load_examples():
-    with open(os.path.join(config.ROOT, "examples", "questions-informatique.json"), encoding="utf-8") as f:
-        return json.load(f)["questions"]
 
 
 @router.get("/api/questions/referential")
@@ -249,29 +259,6 @@ def referential(req):
         lines.append("")
     return Response("\n".join(lines), content_type="text/markdown; charset=utf-8",
                     headers={"Content-Disposition": 'attachment; filename="referentiel-questionnapp.md"'})
-
-
-@router.get("/api/questions/examples")
-def list_examples(req):
-    """Banque d'exemples fournie, consultable (avec aperçu) avant import."""
-    security.require_staff(req)
-    existing = {r["title"] for r in db.all_(req.db, "SELECT title FROM questions WHERE archived = 0")}
-    items = [dict(item, imported=item["title"] in existing) for item in _load_examples()]
-    return json_response({"questions": items})
-
-
-@router.post("/api/questions/import-examples")
-def import_examples(req):
-    """Importe les exemples (tous, ou ceux dont le titre est dans `titles`).
-    Les questions déjà présentes (même titre) ne sont pas dupliquées."""
-    user = security.require_staff(req)
-    class_ids = int_list(req.json, "class_ids") if "class_ids" in req.json else []
-    items = _load_examples()
-    titles = req.json.get("titles")
-    if isinstance(titles, list):
-        items = [it for it in items if it["title"] in titles]
-    # ces exemples sont testés automatiquement (tests/test_examples.py) : pas besoin de les revalider
-    return json_response(_import_items(req.db, user, items, class_ids, validate=False, skip_existing=True))
 
 
 @router.post("/api/questions/preview")

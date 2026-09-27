@@ -1,0 +1,125 @@
+{
+  "format": "questionnapp/questions",
+  "version": 1,
+  "title": "Python : les bases",
+  "description": "Variables, types, conditions, boucles, entrées/sorties.",
+  "questions": [
+    {
+      "title": "Suivre l'évolution de variables",
+      "chapter": "Python : les bases",
+      "difficulty": 1,
+      "skills": [
+        "Tracer l'exécution d'un programme",
+        "Affectation"
+      ],
+      "template": {
+        "code": "a, b = randint(2, 9), randint(2, 9)\nx, y = randname(k=2)\nops = shuffled([f\"{x} = {x} + {y}\", f\"{y} = {x} * 2\", f\"{x} = {y} - {x}\", f\"{y} = {y} + 1\"])[:3]\nsrc = f\"{x} = {a}\\n{y} = {b}\\n\" + \"\\n\".join(ops)\nns = {}\nrun(src, namespace=ns)\nvx, vy = ns[x], ns[y]",
+        "statement": "On exécute le programme suivant :\n\n{{ code_block(src) }}\n\nQuelles sont les valeurs de `{{ x }}` et `{{ y }}` à la fin ?",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Valeur de `{{ x }}`",
+            "answer": "vx"
+          },
+          {
+            "type": "number",
+            "label": "Valeur de `{{ y }}`",
+            "answer": "vy"
+          }
+        ],
+        "solution": "À la fin : `{{ x }} = {{ vx }}` et `{{ y }} = {{ vy }}`. Pensez à noter les valeurs ligne par ligne dans un tableau.",
+        "hints": [
+          "Faites un tableau avec une colonne pour `{{ x }}` et une pour `{{ y }}`, et remplissez une ligne par instruction.",
+          "Dans `{{ ops[0] }}`, la partie droite est calculée avec les valeurs **d'avant** l'instruction, puis rangée dans la variable de gauche."
+        ]
+      }
+    },
+    {
+      "title": "Boucle for et range",
+      "chapter": "Python : les bases",
+      "difficulty": 2,
+      "skills": [
+        "Boucle for",
+        "Fonction range"
+      ],
+      "template": {
+        "code": "start = randint(0, 5)\nstop = start + randint(6, 15)\nstep = choice([1, 2, 3])\nacc = choice([\"s\", \"total\", \"somme\", \"res\"])\nop = choice([\"+\", \"*\"]) if stop - start < 8 and step > 1 else \"+\"\ninit = 0 if op == \"+\" else 1\nsrc = f\"{acc} = {init}\\nfor i in range({start}, {stop}, {step}):\\n    {acc} = {acc} {op} i\\nprint({acc})\"\nif op == \"*\":\n    src = src.replace(f\"range({start}\", f\"range({max(start, 1)}\")\nout = run(src)\nvals = list(range(max(start, 1) if op == \"*\" else start, stop, step))",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Affichage",
+            "answer": "int(out)"
+          }
+        ],
+        "solution": "`i` prend successivement les valeurs {{ vals }} (la borne {{ stop }} est exclue). Le programme affiche **{{ out }}**.",
+        "hints": [
+          "`i` commence à {{ vals[0] }}, avance de {{ step }} en {{ step }} et s'arrête **avant** {{ stop }} : écrivez la liste des valeurs prises par `i`.",
+          "Les valeurs de `i` sont {{ vals[:3] }}… : il reste à les combiner une par une avec `{{ acc }}`."
+        ]
+      }
+    },
+    {
+      "title": "Type d'une expression",
+      "chapter": "Python : les bases",
+      "difficulty": 1,
+      "skills": [
+        "Types de base"
+      ],
+      "template": {
+        "code": "a, b = randint(2, 9), randint(2, 9)\npool = [\n    (f\"{a * b} / {b}\", \"float\"), (f\"{a * b + 1} // {b}\", \"int\"), (f\"{a} % {b}\", \"int\"),\n    (f\"'{a}' * {b}\", \"str\"), (f\"[{a}] * {b}\", \"list\"), (f\"{a} == {a}.0\", \"bool\"),\n    (f\"str({a}) + '{b}'\", \"str\"), (f\"{a} ** 2\", \"int\"), (f\"{a} + {b}.0\", \"float\"),\n    (f\"len('{randword()}')\", \"int\"), (f\"({a}, {b})\", \"tuple\"), (f\"{a} < {b} or {a} > {b}\", \"bool\"),\n]\nexpr, ty = choice(pool)\nvalue = eval(expr)",
+        "statement": "Quel est le type de la valeur de l'expression `{{ expr }}` ?",
+        "fields": [
+          {
+            "type": "choice",
+            "label": "",
+            "options": "[(t, t == ty) for t in ['int', 'float', 'str', 'bool', 'list', 'tuple']]"
+          }
+        ],
+        "solution": "`{{ expr }}` vaut `{{ repr(value) }}`, de type `{{ ty }}`."
+      }
+    },
+    {
+      "title": "Instructions conditionnelles",
+      "chapter": "Python : les bases",
+      "difficulty": 1,
+      "skills": [
+        "Conditions if/elif/else"
+      ],
+      "template": {
+        "code": "x = randint(-20, 30)\ns1, s2 = sorted(sample(range(-10, 25), 2))\nw = sample([\"froid\", \"doux\", \"chaud\", \"tiède\", \"glacial\", \"bon\"], 3)\nsrc = dedent(f'''\nt = {x}\nif t < {s1}:\n    print(\"{w[0]}\")\nelif t < {s2}:\n    print(\"{w[1]}\")\nelse:\n    print(\"{w[2]}\")\n''')\nout = run(src)",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Affichage (sans les guillemets)",
+            "answer": "out",
+            "ignore_case": true
+          }
+        ],
+        "solution": "Avec `t = {{ x }}`, le programme affiche `{{ out }}`."
+      }
+    },
+    {
+      "title": "Saisie et conversion (input)",
+      "chapter": "Python : les bases",
+      "difficulty": 2,
+      "skills": [
+        "Entrées/sorties",
+        "Types de base"
+      ],
+      "template": {
+        "code": "a, b = randint(2, 30), randint(2, 30)\nconv = choice([\"int\", \"str\"])\nif conv == \"int\":\n    src = \"x = int(input())\\ny = int(input())\\nprint(x + y)\"\nelse:\n    src = \"x = input()\\ny = input()\\nprint(x + y)\"\nout = run(src, inputs=[a, b]).split(\"\\n\")[-1]",
+        "statement": "L'utilisateur tape `{{ a }}` puis `{{ b }}` (chacun suivi d'Entrée). Qu'affiche le programme à la fin ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Dernière ligne affichée",
+            "answer": "out"
+          }
+        ],
+        "solution": "`input()` renvoie toujours une **chaîne**. {{ \"Avec la conversion en entier, on additionne des nombres\" if conv == \"int\" else \"Sans conversion, `+` concatène les chaînes\" }} : le programme affiche `{{ out }}`."
+      }
+    }
+  ]
+}

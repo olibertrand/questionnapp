@@ -22,6 +22,8 @@ const routes = [
   ['/questions', () => questions.listPage, true],
   ['/questions/nouvelle', () => questions.editorPage, true],
   ['/questions/:id', () => questions.editorPage, true],
+  ['/banques', () => questions.banksPage, true],
+  ['/banques/:id', () => questions.bankPage, true],
   ['/utilisateurs', () => users.listPage, true],
   ['/stats', () => stats.indexPage, true],
   ['/stats/:id', () => stats.classPage, true],
@@ -56,7 +58,7 @@ function match(path) {
 
 function navLinks(path) {
   const links = isStaff()
-    ? [['/classes', 'Classes'], ['/questions', 'Questions'], ['/stats', 'Statistiques'], ['/utilisateurs', 'Utilisateurs']]
+    ? [['/classes', 'Classes'], ['/questions', 'Questions'], ['/banques', 'Banques'], ['/stats', 'Statistiques'], ['/utilisateurs', 'Utilisateurs']]
     : [['/', 'Accueil'], ['/jouer?mode=adaptive', 'Entraînement'], ['/historique', 'Historique']];
   return links.map(([href, label]) => {
     const active = href === '/' ? path === '/' : path.startsWith(href.split('?')[0]);

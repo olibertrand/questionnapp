@@ -92,7 +92,8 @@ app/            serveur : server.py (HTTP), web.py (routeur), db.py, security.py
 engine/         moteur : core.py (génération/correction), helpers.py (fonctions des modèles),
                 sandbox.py (garde-fous), runner.py (protocole JSON)
 web/            interface : index.html, css/, js/app.js (routeur), js/views/*.js, player.js
-examples/       banque de questions d'exemple (format d'import/export)
+banque/         banques de questions, un fichier JSON par thème (format d'import/export)
+claude-projet/  instructions et fichiers pour créer des questions avec un projet Claude
 scripts/demo.py données de démonstration
 tests/          moteur, exemples (chaque question accepte sa propre correction), API
 ```

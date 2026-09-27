@@ -22,7 +22,9 @@ avec des valeurs différentes. La correction est automatique.
   erreurs localisées (ligne du générateur), modèles de départ, import/export JSON.
 - Une question appartient à un chapitre, travaille des compétences et peut être affectée à
   0, 1 ou plusieurs classes. Chaque modification est versionnée.
-- 20 questions d'exemple fournies (`examples/questions-informatique.json`).
+- **Banques de questions** : répertoire [`banque/`](banque/LISEZMOI.md), un fichier JSON par
+  thème (40 questions fournies, dont 18 sur les dictionnaires et les données imbriquées),
+  consultable depuis le menu **Banques** avec aperçu, import et mise à jour.
 
 **Utilisateurs et classes**
 - Comptes administrateur, professeur, élève (identifiant / mot de passe), import de listes
@@ -54,10 +56,10 @@ python3 run.py            # puis ouvrir http://127.0.0.1:8000
 ```
 
 Sans les données de démo, le premier lancement crée un compte `admin` et affiche son mot de
-passe dans le terminal (ou utilise `QUESTIONNAPP_ADMIN_PASSWORD`). Pour charger les 20 questions
-d'exemple : *Questions → Questions d'exemple…* (chaque question peut être essayée avec
-« Aperçu » avant import). Dans la banque, le bouton « Aperçu » montre une question comme la
-verra un élève, sans qu'elle soit affectée à une classe.
+passe dans le terminal (ou utilise `QUESTIONNAPP_ADMIN_PASSWORD`). Pour charger des questions :
+menu **Banques**, choisir un thème, essayer les questions avec « Aperçu », puis importer.
+Dans la page Questions, le bouton « Aperçu » montre une question comme la verra un élève, sans
+qu'elle soit affectée à une classe.
 
 Premiers pas : 1) créer une classe et y ajouter les élèves ; 2) ajouter des questions et les
 affecter à la classe ; 3) éventuellement créer une séance datée. Les élèves ne voient que les
@@ -73,6 +75,7 @@ questions affectées à leurs classes.
 | `QUESTIONNAPP_SECURE_COOKIES` | `0` | `1` derrière un proxy HTTPS |
 | `QUESTIONNAPP_SANDBOX_CMD` | vide | préfixe d'isolation du moteur, ex. `firejail --quiet --net=none --private` |
 | `QUESTIONNAPP_SESSION_DAYS` | `7` | durée des sessions |
+| `QUESTIONNAPP_BANK_DIR` | `banque/` | répertoire des banques de questions |
 
 En production : placer l'application derrière un proxy HTTPS (nginx, Caddy), activer les
 cookies sécurisés et isoler le moteur (voir `docs/ARCHITECTURE.md`, § Sécurité).

@@ -7,7 +7,7 @@ exercices mobilisent (des dictionnaires dans un chapitre de POO, par exemple).
 | Fichier | Rôle |
 |---|---|
 | `INSTRUCTIONS.md` | texte à coller dans les instructions du projet |
-| `REFERENCE-QUESTIONNAPP.md` | à ajouter aux connaissances du projet : format complet, bonnes pratiques, 25 questions d'exemple |
+| `REFERENCE-QUESTIONNAPP.md` | à ajouter aux connaissances du projet : format complet, bonnes pratiques, et toutes les questions du répertoire `banque/` comme exemples |
 | `questionnapp_moteur.py` | à ajouter aussi : le moteur de l'application en un seul fichier, pour que Claude teste ses questions |
 
 ## Mise en place (une seule fois)
@@ -33,7 +33,9 @@ exercices mobilisent (des dictionnaires dans un chapitre de POO, par exemple).
    donne un fichier `questions-….json`.
    Si Claude indique ne pas trouver le moteur, joignez `questionnapp_moteur.py` directement à la
    conversation.
-5. Dans QuestionnApp : **Questions → Importer (JSON)**. Chaque question est testée à nouveau
+5. Dans QuestionnApp : **Questions → Importer (JSON)** ; ou bien enregistrez le fichier dans le
+   répertoire `banque/` de l'application : il apparaît dans le menu **Banques**, où vous pouvez
+   essayer chaque question et choisir celles à importer. Chaque question est testée à nouveau
    (20 tirages) : celles qui ne fonctionnent pas sont refusées, celles qui sont douteuses sont
    importées mais signalées « à vérifier ».
 6. Relisez chaque nouvelle question avec **Aperçu** (plusieurs tirages avec 🎲), corrigez-la si

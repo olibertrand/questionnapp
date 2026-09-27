@@ -8,6 +8,7 @@ la classe « 1re NSI », les questions d'exemple, trois séances et deux semaine
 """
 
 import datetime
+import glob
 import json
 import os
 import random
@@ -50,7 +51,7 @@ def wrong_answers(template, seed):
 
 
 def good_answers(template, seed):
-    from tests.test_examples import reference_answers
+    from tests.test_banque import reference_answers
     return reference_answers(template, seed)
 
 
@@ -75,8 +76,10 @@ def main():
         conn.execute("INSERT INTO class_members(class_id, user_id) VALUES (?, ?)", (cid, uid))
         students.append((uid, rng.uniform(0.35, 0.95)))  # niveau de l'élève simulé
 
-    with open(os.path.join(ROOT, "examples", "questions-informatique.json"), encoding="utf-8") as f:
-        items = json.load(f)["questions"]
+    items = []
+    for path in sorted(glob.glob(os.path.join(ROOT, "banque", "*.json"))):
+        with open(path, encoding="utf-8") as f:
+            items += json.load(f)["questions"]
     user = {"id": prof, "role": "teacher"}
     qids = []
     for item in items:
@@ -86,10 +89,13 @@ def main():
     print(f"{len(qids)} questions importées")
 
     today = datetime.date.today()
-    plan = [("Boucles et conditions", today - datetime.timedelta(days=7), qids[0:5]),
-            ("Listes et tris", today - datetime.timedelta(days=2), [qids[5], qids[6], qids[9], qids[10]]),
-            ("SQL : premières requêtes", today, [q for q, it in zip(qids, items) if it["chapter"] == "Bases de données"][:3]),
-            ("Représentation des données", today + datetime.timedelta(days=3), [q for q, it in zip(qids, items) if it["chapter"].startswith("Représentation")])]
+    by_chapter = lambda ch: [q for q, it in zip(qids, items) if it["chapter"] == ch]  # noqa: E731
+    plan = [("Boucles et conditions", today - datetime.timedelta(days=7), by_chapter("Python : les bases")),
+            ("Listes et tris", today - datetime.timedelta(days=2),
+             by_chapter("Python : listes et chaînes")[:2] + by_chapter("Algorithmique")[:2]),
+            ("Dictionnaires", today - datetime.timedelta(days=1), by_chapter("Python : dictionnaires")[:6]),
+            ("SQL : premières requêtes", today, by_chapter("Bases de données")[:3]),
+            ("Représentation des données", today + datetime.timedelta(days=3), by_chapter("Représentation des données et architecture"))]
     assignments = []
     for title, day, aq in plan:
         aid = db.insert(conn, "INSERT INTO assignments(class_id, title, day, created_by, created_at) VALUES (?, ?, ?, ?, ?)",
