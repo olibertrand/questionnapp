@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     role          TEXT NOT NULL CHECK (role IN ('admin', 'teacher', 'student')),
     active        INTEGER NOT NULL DEFAULT 1,
     created_at    TEXT NOT NULL,
-    last_login_at TEXT
+    last_login_at TEXT,
+    must_change_password INTEGER NOT NULL DEFAULT 0  -- 1 : changement demandé à la prochaine connexion
 );
 
 CREATE TABLE IF NOT EXISTS sessions (
@@ -74,6 +75,7 @@ CREATE TABLE IF NOT EXISTS question_versions (
     id          INTEGER PRIMARY KEY,
     question_id INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
     template    TEXT NOT NULL,             -- JSON, voir docs/QUESTION_FORMAT.md
+    sample      TEXT,                      -- JSON : un exemple d'énoncé (affiché dans la liste des questions)
     created_at  TEXT NOT NULL
 );
 
@@ -95,11 +97,34 @@ CREATE TABLE IF NOT EXISTS assignments (
     id         INTEGER PRIMARY KEY,
     class_id   INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
     title      TEXT NOT NULL,
-    day        TEXT NOT NULL,              -- AAAA-MM-JJ
+    day        TEXT NOT NULL,              -- AAAA-MM-JJ (séance datée) ; date de création pour une séance thématique
+    kind       TEXT NOT NULL DEFAULT 'dated' CHECK (kind IN ('dated', 'theme')),
+    active     INTEGER NOT NULL DEFAULT 1, -- 0 : désactivée par le prof (invisible pour les élèves)
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_assignments_class ON assignments(class_id, day);
+
+-- Groupes personnalisés d'élèves à l'intérieur d'une classe
+CREATE TABLE IF NOT EXISTS groups (
+    id       INTEGER PRIMARY KEY,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+    name     TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS group_members (
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    PRIMARY KEY (group_id, user_id)
+);
+
+-- Destinataires d'une séance : aucun = toute la classe ; sinon des groupes et/ou des élèves
+CREATE TABLE IF NOT EXISTS assignment_targets (
+    assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    group_id      INTEGER REFERENCES groups(id) ON DELETE CASCADE,
+    user_id       INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    CHECK ((group_id IS NULL) <> (user_id IS NULL))
+);
+CREATE INDEX IF NOT EXISTS idx_assignment_targets ON assignment_targets(assignment_id);
 
 CREATE TABLE IF NOT EXISTS assignment_questions (
     assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,

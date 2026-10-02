@@ -17,7 +17,11 @@ question invalide, avec en plus `where` et `line`).
 | POST | `/auth/login` | `{username, password}` → `{user}` (8 échecs / 5 min → 429) |
 | POST | `/auth/logout` | |
 | GET | `/auth/me` | `{user: {id, username, display_name, role} \| null}` |
-| POST | `/auth/password` | `{current, new}` |
+| POST | `/auth/password` | `{current, new}` ; `current` n'est pas demandé si l'utilisateur doit changer son mot de passe |
+
+Un compte créé (ou dont le mot de passe est réinitialisé) par un prof ou un admin a
+`must_change_password: true` : tant qu'il n'a pas changé son mot de passe, toute route hors
+`/api/auth/*` et `/api/version` répond 403 avec `must_change_password: true`.
 
 ## Utilisateurs (prof : élèves seulement ; admin : tous)
 | Méthode | Route | |
@@ -38,7 +42,9 @@ question invalide, avec en plus `where` et `line`).
 | POST | `/classes/:id/members` | `{user_ids}` |
 | DELETE | `/classes/:id/members/:uid` | |
 | PUT | `/classes/:id/questions` | `{question_ids}` remplace les questions affectées |
-| GET | `/classes/:id/assignments` | séances de la classe |
+| GET | `/classes/:id/assignments` | séances de la classe (`kind`, `active`, `audience`) |
+| GET / POST | `/classes/:id/groups` | groupes d'élèves `{name, user_ids}` |
+| PUT / DELETE | `/groups/:id` | modifier / supprimer un groupe (les séances qui ne visaient que lui sont désactivées) |
 
 ## Chapitres et compétences
 `GET/POST /chapters`, `PATCH/DELETE /chapters/:id` (`{name, position}`),
@@ -57,6 +63,7 @@ question invalide, avec en plus `where` et `line`).
 | POST | `/questions/selftest` | `{template}` → rapport d'auto-test du moteur + `messages` |
 | GET | `/questions/referential` | Markdown : chapitres, compétences et questions existantes (pour un projet Claude) |
 | POST | `/questions/try` | `{template, seed, answers}` → réponse brute du moteur (`check`) |
+| POST | `/questions/samples` | `{ids}` → un exemple d'énoncé par question (généré au besoin, mémorisé par version) |
 | POST | `/questions/bulk-delete` | `{ids, purge?}` : supprime (ou archive si des élèves ont répondu) ; `purge` (admin) efface aussi les réponses |
 | GET | `/questions/duplicates` | questions actives de même titre : `{groups: [{keep, remove}]}` |
 | POST | `/questions/remove-duplicates` | garde une question par titre et reporte les affectations des doublons |
@@ -74,9 +81,9 @@ question invalide, avec en plus `where` et `line`).
 ## Séances
 | Méthode | Route | |
 |---|---|---|
-| POST | `/assignments` | `{class_ids \| class_id, title, day, question_ids}` (une séance par classe) |
+| POST | `/assignments` | `{class_ids \| class_id, title, kind: dated \| theme, day (séance datée), question_ids, group_ids?, user_ids?}` : une séance par classe ; sans `group_ids` ni `user_ids`, elle s'adresse à toute la classe |
 | GET | `/assignments/:id` | séance + avancement de chaque élève |
-| PUT / DELETE | `/assignments/:id` | |
+| PUT / DELETE | `/assignments/:id` | mêmes champs, plus `active` (false = désactivée, invisible pour les élèves) |
 
 ## Travail de l'élève
 | Méthode | Route | |

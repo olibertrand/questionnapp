@@ -29,7 +29,7 @@ export async function listPage() {
 export async function detailPage({ params, query }) {
   const tab = query.tab || 'eleves';
   const { class: cls } = await api.get(`/classes/${params.id}`);
-  const tabs = [['eleves', 'Élèves'], ['questions', 'Questions affectées'], ['seances', 'Séances']];
+  const tabs = [['eleves', 'Élèves'], ['groupes', 'Groupes'], ['questions', 'Questions affectées'], ['seances', 'Séances']];
   const content = h('div', {}, h('p', { class: 'muted' }, 'Chargement…'));
   const header = h('div', { class: 'row between' },
     h('h1', { style: { margin: 0 } }, cls.name),
@@ -45,7 +45,7 @@ export async function detailPage({ params, query }) {
     cls.description ? h('p', { class: 'muted' }, cls.description) : null,
     h('nav', { class: 'tabs', style: { marginTop: '1rem' } }, tabs.map(([k, l]) => h('a', { href: `#/classes/${cls.id}?tab=${k}`, class: k === tab ? 'active' : '' }, l))),
     content);
-  const builder = { eleves: membersTab, questions: questionsTab, seances: assignmentsTab }[tab] || membersTab;
+  const builder = { eleves: membersTab, groupes: groupsTab, questions: questionsTab, seances: assignmentsTab }[tab] || membersTab;
   builder(cls).then((el) => content.replaceChildren(el)).catch((e) => content.replaceChildren(errorBox(e)));
   return view;
 }
@@ -125,7 +125,7 @@ function importModal(cls) {
   const ta = h('textarea', { rows: 10, class: 'code', placeholder: 'identifiant;mot de passe;Prénom Nom\nadupont;soleil42;Alice Dupont\nbmartin;lune17;Bilal Martin' });
   const out = h('div');
   modal('Importer des élèves', h('div', {},
-    h('p', { class: 'small muted' }, 'Une ligne par élève : identifiant ; mot de passe ; nom affiché (séparateur « ; », « , » ou tabulation — copier-coller depuis un tableur fonctionne). Les élèves déjà existants sont simplement ajoutés à la classe.'),
+    h('p', { class: 'small muted' }, 'Une ligne par élève : identifiant ; mot de passe ; nom affiché (séparateur « ; », « , » ou tabulation — copier-coller depuis un tableur fonctionne). Les élèves déjà existants sont simplement ajoutés à la classe. Chaque élève devra choisir son propre mot de passe à sa première connexion.'),
     ta, out,
     h('button', { class: 'primary', style: { marginTop: '.6rem' }, onclick: async () => {
       const r = await api.post('/users/import', { csv: ta.value, class_id: cls.id, role: 'student' });
@@ -175,33 +175,134 @@ async function questionsTab(cls) {
       : h('div', { class: 'empty' }, 'La banque de questions est vide. ', h('a', { href: '#/questions' }, 'Créer ou importer des questions')));
 }
 
+// ---------------------------------------------------------------------------
+// Groupes d'élèves
+// ---------------------------------------------------------------------------
+
+const studentName = (m) => m.display_name || m.username;
+
+async function groupsTab(cls) {
+  const { groups } = await api.get(`/classes/${cls.id}/groups`);
+  const students = cls.members.filter((m) => m.role === 'student');
+  const byId = Object.fromEntries(students.map((m) => [m.id, m]));
+  return h('div', {},
+    h('button', { class: 'primary', onclick: () => groupModal(cls, students) }, '+ Nouveau groupe'),
+    h('p', { class: 'muted small' }, "Un groupe rassemble quelques élèves de la classe (soutien, approfondissement…). On peut ensuite donner une séance à un ou plusieurs groupes, ou à des élèves choisis un par un."),
+    groups.length ? h('table', { class: 'data' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Groupe'), h('th', {}, 'Élèves'), h('th', {}, ''))),
+      h('tbody', {}, groups.map((g) => h('tr', {},
+        h('td', {}, h('strong', {}, g.name)),
+        h('td', { class: 'small' }, g.user_ids.map((id) => byId[id] ? studentName(byId[id]) : '?').join(', ') || h('span', { class: 'muted' }, 'aucun élève')),
+        h('td', { class: 'actions' },
+          h('button', { class: 'small', onclick: () => groupModal(cls, students, g) }, 'Modifier'),
+          h('button', { class: 'small danger', onclick: async () => {
+            if (!confirmBox(`Supprimer le groupe « ${g.name} » ? Les séances qui ne visaient que ce groupe seront désactivées.`)) return;
+            const r = await api.del(`/groups/${g.id}`);
+            if (r.deactivated) toast(`${r.deactivated} séance(s) désactivée(s).`);
+            render();
+          } }, 'Supprimer'))))))
+      : h('div', { class: 'empty' }, 'Aucun groupe dans cette classe.'));
+}
+
+function studentChecklist(students, selected) {
+  const filter = h('input', { type: 'search', placeholder: 'Filtrer…', style: { marginBottom: '.4rem' } });
+  const box = h('div', { class: 'checklist', style: { maxHeight: '16rem' } }, students.map((m) => h('label', { class: 'inline', 'data-s': `${studentName(m)} ${m.username}`.toLowerCase() },
+    h('input', { type: 'checkbox', value: m.id, checked: selected.has(m.id) }), studentName(m), h('span', { class: 'muted small' }, ` (${m.username})`))));
+  filter.addEventListener('input', () => box.querySelectorAll('label').forEach((l) => { l.style.display = l.dataset.s.includes(filter.value.toLowerCase()) ? '' : 'none'; }));
+  const wrap = h('div', {}, students.length > 8 ? filter : null, box);
+  wrap.selected = () => [...box.querySelectorAll('input:checked')].map((x) => Number(x.value));
+  return wrap;
+}
+
+function groupModal(cls, students, existing = null) {
+  const name = h('input', { type: 'text', value: existing ? existing.name : '', placeholder: 'ex. Soutien, Groupe A, Projet…' });
+  const list = studentChecklist(students, new Set(existing ? existing.user_ids : []));
+  const err = h('div');
+  const close = modal(existing ? 'Modifier le groupe' : 'Nouveau groupe', h('div', {},
+    h('div', { class: 'field' }, h('label', {}, 'Nom du groupe'), name),
+    h('div', { class: 'field' }, h('label', {}, 'Élèves'), students.length ? list : h('p', { class: 'muted' }, "Aucun élève dans la classe.")),
+    err,
+    h('button', { class: 'primary', onclick: async () => {
+      const body = { name: name.value, user_ids: list.selected() };
+      try {
+        if (existing) await api.put(`/groups/${existing.id}`, body);
+        else await api.post(`/classes/${cls.id}/groups`, body);
+        close();
+        render();
+      } catch (e) { err.replaceChildren(errorBox(e)); }
+    } }, 'Enregistrer')));
+}
+
+// ---------------------------------------------------------------------------
+// Séances
+// ---------------------------------------------------------------------------
+
+function kindLabel(a) {
+  return a.kind === 'theme' ? h('span', { class: 'pill accent' }, 'thématique') : fmtDay(a.day);
+}
+
+async function toggleActive(a) {
+  await api.put(`/assignments/${a.id}`, { active: !a.active });
+  toast(a.active ? 'Séance désactivée : les élèves ne la voient plus.' : 'Séance réactivée.');
+  render();
+}
+
 async function assignmentsTab(cls) {
   const { assignments } = await api.get(`/classes/${cls.id}/assignments`);
   const today = todayIso();
   return h('div', {},
     h('button', { class: 'primary', onclick: () => assignmentModal(cls) }, '+ Nouvelle séance'),
-    h('p', { class: 'muted small' }, "Une séance est une liste de questions à traiter pour un jour donné. Les élèves la voient sur leur page d'accueil."),
-    assignments.length ? h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Jour'), h('th', {}, 'Titre'), h('th', { class: 'num' }, 'Questions'), h('th', {}, ''))),
-      h('tbody', {}, assignments.map((a) => h('tr', { class: 'clickable', onclick: () => navigate(`/seances/${a.id}`) },
-        h('td', {}, fmtDay(a.day), a.day === today ? h('span', { class: 'pill accent', style: { marginLeft: '.4rem' } }, "aujourd'hui") : null),
-        h('td', {}, a.title), h('td', { class: 'num' }, a.questions), h('td', { class: 'num' }, '›')))))
+    h('p', { class: 'muted small' }, "Une séance est une liste de questions choisies pour la classe ou pour certains élèves. Séance datée : à faire pour un jour donné. Séance thématique : sans date, elle reste proposée aux élèves (en haut de leur page d'accueil) jusqu'à ce que vous la désactiviez."),
+    assignments.length ? h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
+      h('thead', {}, h('tr', {}, h('th', {}, 'Jour'), h('th', {}, 'Titre'), h('th', {}, 'Pour'), h('th', { class: 'num' }, 'Questions'), h('th', {}, 'État'), h('th', {}, ''))),
+      h('tbody', {}, assignments.map((a) => h('tr', { style: a.active ? {} : { opacity: '.6' } },
+        h('td', {}, kindLabel(a), a.kind !== 'theme' && a.day === today ? h('span', { class: 'pill accent', style: { marginLeft: '.4rem' } }, "aujourd'hui") : null),
+        h('td', {}, h('a', { href: `#/seances/${a.id}` }, a.title)),
+        h('td', { class: 'small' }, a.audience),
+        h('td', { class: 'num' }, a.questions),
+        h('td', {}, a.active ? h('span', { class: 'pill good' }, 'active') : h('span', { class: 'pill' }, 'désactivée')),
+        h('td', { class: 'actions' },
+          h('button', { class: 'small', onclick: () => toggleActive(a) }, a.active ? 'Désactiver' : 'Réactiver'),
+          h('a', { class: 'btn small', href: `#/seances/${a.id}` }, 'Suivi')))))))
       : h('div', { class: 'empty' }, 'Aucune séance.'));
 }
 
 export async function assignmentModal(cls, existing = null) {
-  const [{ questions }, { classes }] = await Promise.all([api.get('/questions'), api.get('/classes')]);
-  const title = h('input', { type: 'text', value: existing ? existing.title : '', placeholder: 'ex. Boucles — séance du mardi' });
-  const day = h('input', { type: 'date', value: existing ? existing.day : todayIso() });
+  const [{ questions }, { classes }, { class: full }, { groups }] = await Promise.all([
+    api.get('/questions'), api.get('/classes'), api.get(`/classes/${cls.id}`), api.get(`/classes/${cls.id}/groups`)]);
+  const students = full.members.filter((m) => m.role === 'student');
+  const title = h('input', { type: 'text', value: existing ? existing.title : '', placeholder: 'ex. Boucles — séance du mardi, ou Révisions : dictionnaires' });
+
+  // type de séance
+  const kind = existing ? existing.kind : 'dated';
+  const kindDated = h('input', { type: 'radio', name: 'kind', value: 'dated', checked: kind === 'dated' });
+  const kindTheme = h('input', { type: 'radio', name: 'kind', value: 'theme', checked: kind === 'theme' });
+  const day = h('input', { type: 'date', value: existing && existing.kind === 'dated' ? existing.day : todayIso(), style: { width: 'auto' } });
+  const syncKind = () => { day.disabled = !kindDated.checked; };
+  kindDated.addEventListener('change', syncKind);
+  kindTheme.addEventListener('change', syncKind);
+  syncKind();
+
+  // destinataires
+  const t = existing ? existing.targets : { group_ids: [], user_ids: [] };
+  const someone = t.group_ids.length > 0 || t.user_ids.length > 0;
+  const allClass = h('input', { type: 'radio', name: 'aud', checked: !someone });
+  const some = h('input', { type: 'radio', name: 'aud', checked: someone });
+  const groupBoxes = groups.map((g) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: g.id, checked: t.group_ids.includes(g.id) }),
+    g.name, h('span', { class: 'muted small' }, ` (${g.user_ids.length})`)));
+  const studentList = studentChecklist(students, new Set(t.user_ids));
+  const audienceBox = h('div', { style: { marginTop: '.4rem' } },
+    groups.length ? [h('div', { class: 'small muted' }, 'Groupes :'), h('div', { class: 'row', style: { marginBottom: '.5rem' } }, groupBoxes)]
+      : h('p', { class: 'small muted' }, "Pas encore de groupe (onglet « Groupes » de la classe) : choisissez les élèves un par un."),
+    h('div', { class: 'small muted' }, 'Élèves :'), studentList);
+
   const selected = new Set(existing ? existing.questions.map((q) => q.id) : []);
   const onlyClass = h('input', { type: 'checkbox', checked: !existing });
   const listBox = h('div');
-  const classQ = new Set();
-  if (!existing) (await api.get(`/classes/${cls.id}`)).class.question_ids.forEach((id) => classQ.add(id));
-  let list;
+  const classQ = new Set(full.question_ids);
   const refresh = () => {
     const qs = onlyClass.checked && classQ.size ? questions.filter((q) => classQ.has(q.id) || selected.has(q.id)) : questions;
-    list = questionChecklist(qs, selected);
+    const list = questionChecklist(qs, selected);
     list.addEventListener('change', (e) => { if (e.target.type !== 'checkbox') return; const id = Number(e.target.value); if (e.target.checked) selected.add(id); else selected.delete(id); });
     listBox.replaceChildren(list);
   };
@@ -210,21 +311,43 @@ export async function assignmentModal(cls, existing = null) {
   const others = classes.filter((c) => c.id !== cls.id);
   const alsoBox = !existing && others.length ? h('div', { class: 'field' }, h('label', {}, 'Créer aussi pour les classes'),
     h('div', { class: 'row' }, others.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id }), c.name)))) : null;
+  const syncAudience = () => {
+    audienceBox.style.display = some.checked ? '' : 'none';
+    if (alsoBox) alsoBox.style.display = some.checked ? 'none' : '';
+  };
+  allClass.addEventListener('change', syncAudience);
+  some.addEventListener('change', syncAudience);
+  syncAudience();
+
   const err = h('div');
   const close = modal(existing ? 'Modifier la séance' : 'Nouvelle séance', h('div', {},
-    h('div', { class: 'fields-2' }, h('div', { class: 'field' }, h('label', {}, 'Titre'), title), h('div', { class: 'field' }, h('label', {}, 'Jour'), day)),
+    h('div', { class: 'field' }, h('label', {}, 'Titre'), title),
+    h('div', { class: 'field' }, h('label', {}, 'Type de séance'),
+      h('label', { class: 'inline' }, kindDated, 'Séance datée, pour le ', day),
+      h('label', { class: 'inline', style: { marginTop: '.3rem' } }, kindTheme, 'Séance thématique : sans date, active jusqu\'à ce que vous la désactiviez')),
+    h('div', { class: 'field' }, h('label', {}, 'Pour qui ?'),
+      h('label', { class: 'inline' }, allClass, 'Toute la classe'),
+      h('label', { class: 'inline' }, some, 'Certains élèves ou groupes'),
+      audienceBox),
     h('div', { class: 'field' }, h('div', { class: 'row between' }, h('label', {}, 'Questions (dans l\'ordre de la liste)'),
-      !existing && classQ.size ? h('label', { class: 'inline small' }, onlyClass, 'seulement celles de la classe') : null), listBox,
-    h('div', { class: 'hint' }, 'Les questions choisies sont automatiquement affectées à la classe.')),
+      classQ.size ? h('label', { class: 'inline small' }, onlyClass, 'seulement celles de la classe') : null), listBox,
+    h('div', { class: 'hint' }, "Séance pour toute la classe : ses questions sont aussi affectées à la classe (entraînement). Séance pour certains élèves : seuls ces élèves y ont accès.")),
     alsoBox, err,
     h('button', { class: 'primary', onclick: async () => {
       const qids = questions.map((q) => q.id).filter((id) => selected.has(id));
+      const body = { title: title.value, kind: kindTheme.checked ? 'theme' : 'dated', question_ids: qids,
+        group_ids: some.checked ? groupBoxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value)) : [],
+        user_ids: some.checked ? studentList.selected() : [] };
+      if (kindDated.checked) body.day = day.value;
+      if (some.checked && !body.group_ids.length && !body.user_ids.length) {
+        return err.replaceChildren(h('div', { class: 'alert error' }, 'Choisissez au moins un groupe ou un élève.'));
+      }
       try {
         if (existing) {
-          await api.put(`/assignments/${existing.id}`, { title: title.value, day: day.value, question_ids: qids });
+          await api.put(`/assignments/${existing.id}`, body);
         } else {
-          const extra = alsoBox ? [...alsoBox.querySelectorAll('input:checked')].map((x) => Number(x.value)) : [];
-          await api.post('/assignments', { title: title.value, day: day.value, question_ids: qids, class_ids: [cls.id, ...extra] });
+          const extra = alsoBox && !some.checked ? [...alsoBox.querySelectorAll('input:checked')].map((x) => Number(x.value)) : [];
+          await api.post('/assignments', { ...body, class_ids: [cls.id, ...extra] });
         }
         close();
         render();
@@ -240,13 +363,15 @@ export async function assignmentPage({ params }) {
     h('p', {}, h('a', { href: `#/classes/${cls.id}?tab=seances` }, `← ${cls.name}`)),
     h('div', { class: 'row between' }, h('h1', { style: { margin: 0 } }, a.title),
       h('div', { class: 'row' },
+        h('button', { onclick: () => toggleActive(a) }, a.active ? 'Désactiver' : 'Réactiver'),
         h('button', { onclick: () => assignmentModal(cls, a) }, 'Modifier'),
         h('button', { class: 'danger', onclick: async () => {
           if (!confirmBox('Supprimer cette séance ? Les réponses des élèves restent dans les statistiques.')) return;
           await api.del(`/assignments/${a.id}`);
           navigate(`/classes/${cls.id}?tab=seances`);
         } }, 'Supprimer'))),
-    h('p', { class: 'muted' }, fmtDay(a.day)),
+    h('p', { class: 'row muted' }, kindLabel(a), h('span', {}, `· pour : ${a.audience}`),
+      a.active ? h('span', { class: 'pill good' }, 'active') : h('span', { class: 'pill' }, 'désactivée (invisible pour les élèves)')),
     h('h2', {}, 'Avancement des élèves'),
     h('p', { class: 'small muted' }, 'Pour chaque question : meilleur score obtenu (nombre d\'essais).'),
     h('div', { class: 'table-wrap' }, h('table', { class: 'data' },

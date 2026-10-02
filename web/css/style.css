@@ -215,6 +215,23 @@ button.link { border: none; background: none; color: var(--accent-ink); padding:
 .code-block pre.gutter { padding: .8rem .5rem; line-height: 1.45; flex: none; }
 .code-block pre:not(.gutter) { flex: 1; min-width: 0; padding-left: .8rem; }
 
+/* ---- liste des questions : exemple d'énoncé ---- */
+.sample-cell { width: 62%; max-width: 0; min-width: 18rem; }  /* max-width: 0 : la cellule ne s'élargit pas au contenu */
+.sample-body .md, .sample-body .md * { max-width: 100%; }
+.sample-body pre, .sample-body .table-wrap { overflow-x: auto; }
+.sample { margin-top: .3rem; border-left: 3px solid var(--border); padding-left: .6rem; }
+.sample-body { max-height: 9rem; overflow: hidden; position: relative; font-size: .9rem; }
+.sample:not(.open):not(.short) .sample-body::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2.5rem;
+  background: linear-gradient(to bottom, transparent, var(--surface)); pointer-events: none; }
+.sample.open .sample-body { max-height: none; }
+.sample-body > .md > :first-child { margin-top: 0; }
+.sample-body pre { font-size: .8rem; margin: .3rem 0; }
+.sample-body .code-block { margin: .3rem 0; }
+.sample-fields { margin: .2rem 0 0; padding-left: 1.1rem; color: var(--text-2); font-size: .85rem; }
+.sample-more { margin-top: .2rem; }
+td.actions { white-space: nowrap; text-align: right; }
+td.actions > * { margin-left: .25rem; }
+
 /* ---- éditeur ---- */
 .field-card { border: 1px solid var(--border); border-radius: 8px; padding: .8rem; margin-bottom: .8rem; background: var(--surface-2); }
 .field-card .head { display: flex; gap: .5rem; align-items: center; margin-bottom: .6rem; }

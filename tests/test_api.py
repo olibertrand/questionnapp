@@ -54,7 +54,14 @@ class Client:
         return data
 
     def login(self, username, password):
-        return self.ok("POST", "/api/auth/login", {"username": username, "password": password})
+        r = self.ok("POST", "/api/auth/login", {"username": username, "password": password})
+        if r["user"]["must_change_password"]:
+            # tant que le mot de passe n'est pas changé, le reste de l'API est fermé
+            status, data = self.call("GET", "/api/classes")
+            assert status == 403 and data.get("must_change_password"), (status, data)
+            self.ok("POST", "/api/auth/password", {"new": password})  # le même mot de passe est accepté
+            assert not self.ok("GET", "/api/auth/me")["user"]["must_change_password"]
+        return r
 
 
 class ApiTest(unittest.TestCase):
@@ -281,6 +288,43 @@ class ApiTest(unittest.TestCase):
         r = prof.ok("POST", "/api/questions/import", {**dico_file, "questions": dico_file["questions"][:1]})
         self.assertEqual(r["created"], [])
         self.assertEqual(len(r["restored"]), 1)
+
+        # groupes, séances pour certains élèves, séances thématiques
+        e1_id = next(m["id"] for m in prof.ok("GET", f"/api/classes/{cid}")["class"]["members"] if m["username"] == "e1")
+        e2_id = next(m["id"] for m in prof.ok("GET", f"/api/classes/{cid}")["class"]["members"] if m["username"] == "e2")
+        gid = prof.ok("POST", f"/api/classes/{cid}/groups", {"name": "Soutien", "user_ids": [e2_id]})["id"]
+        self.assertEqual(prof.ok("GET", f"/api/classes/{cid}/groups")["groups"][0]["user_ids"], [e2_id])
+        q_target = prof.ok("POST", "/api/questions", {"title": "Réservée au groupe", "template": TEMPLATE})["id"]
+        a_group = prof.ok("POST", "/api/assignments", {"class_id": cid, "title": "Soutien jeudi", "day": "2099-01-01",
+                                                       "question_ids": [q_target], "group_ids": [gid]})["ids"][0]
+        a_theme = prof.ok("POST", "/api/assignments", {"class_id": cid, "title": "Révisions dictionnaires", "kind": "theme",
+                                                       "question_ids": [q_target], "user_ids": [e1_id]})["ids"][0]
+        titles_e1 = [a["title"] for a in eleve.ok("GET", "/api/me/dashboard")["assignments"]]
+        titles_e2 = [a["title"] for a in e2.ok("GET", "/api/me/dashboard")["assignments"]]
+        self.assertIn("Révisions dictionnaires", titles_e1)
+        self.assertNotIn("Soutien jeudi", titles_e1)
+        self.assertIn("Soutien jeudi", titles_e2)
+        self.assertNotIn("Révisions dictionnaires", titles_e2)
+        self.assertEqual(eleve.call("POST", "/api/practice/next", {"mode": "assignment", "assignment_id": a_group})[0], 403)
+        # la question d'une séance ciblée n'est accessible qu'aux élèves concernés
+        self.assertEqual(eleve.call("POST", "/api/practice/next", {"mode": "free", "question_id": q_target})[0], 200)
+        detail = prof.ok("GET", f"/api/assignments/{a_group}")["assignment"]
+        self.assertEqual([s["id"] for s in detail["students"]], [e2_id])
+        self.assertEqual(detail["audience"], "Soutien")
+        listed = {a["id"]: a for a in prof.ok("GET", f"/api/classes/{cid}/assignments")["assignments"]}
+        self.assertEqual(listed[a_theme]["kind"], "theme")
+        # désactivation : la séance thématique disparaît pour l'élève
+        prof.ok("PUT", f"/api/assignments/{a_theme}", {"active": False})
+        self.assertNotIn("Révisions dictionnaires", [a["title"] for a in eleve.ok("GET", "/api/me/dashboard")["assignments"]])
+        status, err = eleve.call("POST", "/api/practice/next", {"mode": "assignment", "assignment_id": a_theme})
+        self.assertEqual(status, 403)
+        self.assertIn("désactivée", err["error"])
+        self.assertEqual(eleve.call("POST", "/api/practice/next", {"mode": "free", "question_id": q_target})[0], 403)
+        # suppression du groupe : la séance qui ne visait que lui est désactivée (et non ouverte à toute la classe)
+        self.assertEqual(prof.ok("DELETE", f"/api/groups/{gid}")["deactivated"], 1)
+        self.assertNotIn("Soutien jeudi", [a["title"] for a in eleve.ok("GET", "/api/me/dashboard")["assignments"]])
+        cells = prof.ok("GET", f"/api/stats/classes/{cid}/assignments")["cells"]
+        self.assertNotIn(f"{e2_id}:{a_theme}", cells)  # e2 n'était pas concerné
 
         eleve.ok("POST", "/api/auth/logout")
         self.assertEqual(eleve.call("GET", "/api/me/dashboard")[0], 401)

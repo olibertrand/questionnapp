@@ -36,6 +36,9 @@ def handle(request):
             # protection CSRF : un site tiers ne peut pas poser cet en-tête sans pré-vol CORS
             raise HttpError(403, "En-tête X-Requested-With manquant")
         request.user = security.user_from_request(conn, request)
+        if (request.user and request.user["must_change_password"]
+                and not request.path.startswith("/api/auth/") and request.path != "/api/version"):
+            raise HttpError(403, "Vous devez d'abord changer votre mot de passe", must_change_password=True)
         func, params = router.match(request.method, request.path)
         request.params = params
         resp = func(request)
@@ -106,15 +109,18 @@ def bootstrap():
         from .api.banks import assign_missing_uids
         assign_missing_uids(conn)
         if not db.one(conn, "SELECT id FROM users LIMIT 1"):
-            password = os.environ.get("QUESTIONNAPP_ADMIN_PASSWORD") or secrets.token_urlsafe(9)
-            conn.execute("INSERT INTO users(username, password_hash, display_name, role, created_at) "
-                         "VALUES ('admin', ?, 'Administrateur', 'admin', ?)",
-                         (security.hash_password(password), db.now()))
+            chosen = os.environ.get("QUESTIONNAPP_ADMIN_PASSWORD")
+            password = chosen or secrets.token_urlsafe(9)
+            # mot de passe tiré au hasard : à changer à la première connexion
+            conn.execute("INSERT INTO users(username, password_hash, display_name, role, created_at, must_change_password) "
+                         "VALUES ('admin', ?, 'Administrateur', 'admin', ?, ?)",
+                         (security.hash_password(password), db.now(), 0 if chosen else 1))
             print("=" * 60)
             print(" Compte administrateur créé")
             print("   identifiant : admin")
             print(f"   mot de passe : {password}")
-            print(" Changez-le après la première connexion.")
+            print(" Il sera demandé de le changer à la première connexion." if not chosen else
+                  " (mot de passe fourni par QUESTIONNAPP_ADMIN_PASSWORD)")
             print("=" * 60, flush=True)
     finally:
         conn.close()

@@ -38,19 +38,40 @@ export async function listPage({ query }) {
     h('a', { class: 'btn', href: '#/banques' }, '📚 Banques de questions'),
     h('button', { onclick: downloadReferential, title: 'Chapitres, compétences et questions existantes, à fournir à Claude pour créer de nouvelles questions' }, 'Référentiel pour Claude'));
 
+  const sampleBoxes = {};
   const rows = questions.map((q) => {
     const cb = h('input', { type: 'checkbox', value: q.id, 'aria-label': 'Sélectionner' });
     checks.push(cb);
+    const box = h('div', { class: 'sample' });
+    sampleBoxes[q.id] = box;
+    fillSample(box, q.sample);
     return h('tr', {},
       h('td', {}, cb),
       h('td', {}, uidBadge(q.uid)),
-      h('td', {}, h('a', { href: `#/questions/${q.id}`, title: 'Modifier' }, q.title), q.archived ? h('span', { class: 'pill bad', style: { marginLeft: '.3rem' } }, 'archivée') : null,
-        h('div', { class: 'small muted' }, q.skills.join(' · '))),
-      h('td', {}, q.chapter || h('span', { class: 'muted' }, '—')),
-      h('td', { class: 'small' }, q.class_ids.map((id) => className[id]).filter(Boolean).join(', ') || h('span', { class: 'muted' }, 'aucune')),
-      h('td', { class: 'num' }, q.attempts), h('td', { class: 'num' }, pct(q.avg_score)),
-      h('td', { class: 'num' }, h('button', { class: 'small', onclick: () => previewQuestion(q.id) }, 'Aperçu')));
+      h('td', { class: 'sample-cell' },
+        h('div', { class: 'small' }, h('a', { href: `#/questions/${q.id}`, title: 'Modifier' }, q.title),
+          q.archived ? h('span', { class: 'pill bad', style: { marginLeft: '.3rem' } }, 'archivée') : null,
+          q.skills.length ? h('span', { class: 'muted' }, ' · ' + q.skills.join(' · ')) : null),
+        box),
+      h('td', { class: 'small' }, q.chapter || h('span', { class: 'muted' }, '—'),
+        h('div', { class: 'muted' }, q.class_ids.map((id) => className[id]).filter(Boolean).join(', ') || 'aucune classe')),
+      h('td', { class: 'num small' }, q.attempts, h('div', { class: 'muted' }, pct(q.avg_score))),
+      h('td', { class: 'actions' },
+        h('button', { class: 'small', onclick: () => previewQuestion(q.id) }, 'Aperçu'),
+        h('a', { class: 'btn small', href: `#/questions/${q.id}` }, 'Modifier'),
+        h('button', { class: 'small danger', onclick: () => deleteOne(q) }, 'Supprimer')));
   });
+  // exemples d'énoncés manquants : générés par lots puis mémorisés côté serveur
+  const missing = questions.filter((q) => !q.sample).map((q) => q.id);
+  (async () => {
+    for (let i = 0; i < missing.length; i += 12) {
+      const chunk = missing.slice(i, i + 12);
+      try {
+        const { samples } = await api.post('/questions/samples', { ids: chunk });
+        chunk.forEach((id) => fillSample(sampleBoxes[id], samples[id] || { error: 'exemple indisponible' }));
+      } catch { chunk.forEach((id) => fillSample(sampleBoxes[id], { error: 'exemple indisponible' })); }
+    }
+  })();
   const all = h('input', { type: 'checkbox', 'aria-label': 'Tout sélectionner', title: 'Tout sélectionner', onchange: (e) => checks.forEach((c) => { c.checked = e.target.checked; }) });
 
   return h('div', {},
@@ -62,7 +83,7 @@ export async function listPage({ query }) {
       h('label', { class: 'inline small' }, h('input', { type: 'checkbox', checked: query.archives === '1', onchange: (e) => setQuery('archives', e.target.checked ? '1' : '') }), 'archivées')),
     bulk,
     questions.length ? h('div', { class: 'table-wrap', style: { marginTop: '1rem' } }, h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'N°'), h('th', {}, 'Question'), h('th', {}, 'Chapitre'), h('th', {}, 'Classes'), h('th', { class: 'num' }, 'Réponses'), h('th', { class: 'num' }, 'Réussite'), h('th', {}, ''))),
+      h('thead', {}, h('tr', {}, h('th', {}, all), h('th', {}, 'N°'), h('th', {}, 'Question (exemple d\'énoncé)'), h('th', {}, 'Chapitre · classes'), h('th', { class: 'num' }, 'Réponses'), h('th', {}, ''))),
       h('tbody', {}, rows)))
       : h('div', { class: 'empty', style: { marginTop: '1rem' } },
         h('p', {}, 'La banque de questions est vide.'),
@@ -184,6 +205,31 @@ export async function bankPage({ params }) {
       h('tbody', {}, rows))),
     classes.length ? h('div', { class: 'field', style: { marginTop: '1rem' } }, h('label', {}, 'Affecter aussi aux classes (facultatif)'), h('div', { class: 'row' }, boxes)) : null,
     out, h('div', { style: { marginTop: '.6rem' } }, btn));
+}
+
+// Exemple d'énoncé dans la liste : l'énoncé et l'intitulé des champs (jamais les options d'un QCM)
+function fillSample(box, sample) {
+  if (!box) return;
+  if (!sample) return box.replaceChildren(h('span', { class: 'muted small' }, 'génération de l\'exemple…'));
+  if (sample.error) return box.replaceChildren(h('span', { class: 'error-line small' }, `⚠ ${sample.error}`));
+  const labels = sample.fields.map((f) => f.label).filter((l) => l && l.trim());
+  const content = h('div', { class: 'sample-body' }, md(sample.statement),
+    labels.length ? h('ul', { class: 'sample-fields' }, labels.map((l) => h('li', {}, md(l, 'span')))) : null);
+  const more = h('button', { class: 'link small sample-more', type: 'button' }, 'voir tout');
+  more.addEventListener('click', () => {
+    const open = box.classList.toggle('open');
+    more.textContent = open ? 'réduire' : 'voir tout';
+  });
+  box.replaceChildren(content, more);
+  // le bouton n'apparaît que si l'énoncé est plus long que la zone visible
+  requestAnimationFrame(() => { if (content.scrollHeight <= content.clientHeight + 4) { more.remove(); box.classList.add('short'); } });
+}
+
+async function deleteOne(q) {
+  if (!confirmBox(`Supprimer la question ${q.uid ? q.uid + ' ' : ''}« ${q.title} » ?\n(Si des élèves y ont déjà répondu, elle sera archivée pour garder les statistiques.)`)) return;
+  const r = await api.del(`/questions/${q.id}`);
+  toast(r.archived ? 'Question archivée (des élèves y avaient répondu).' : 'Question supprimée.');
+  render();
 }
 
 function bulkDelete(ids) {

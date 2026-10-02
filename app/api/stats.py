@@ -13,7 +13,7 @@ from collections import defaultdict
 
 from .. import adaptive, db, security
 from ..web import Response, json_response, router, to_int
-from .assignments import progress
+from .assignments import audience, progress
 
 
 def _period(req):
@@ -71,7 +71,9 @@ def overview(req):
     logins = {r["user_id"]: r for r in db.all_(conn, f"""
         SELECT user_id, count(*) AS total, sum(CASE WHEN at >= ? THEN 1 ELSE 0 END) AS week
         FROM logins WHERE user_id IN ({_in(ids)}) GROUP BY user_id""", week, *ids)}
-    assigns = db.all_(conn, "SELECT id FROM assignments WHERE class_id = ? AND day <= ?", cid, db.today())
+    # séances déjà commencées (datées jusqu'à aujourd'hui, et thématiques), avec leurs élèves concernés
+    assigns = db.all_(conn, "SELECT * FROM assignments WHERE class_id = ? AND (day <= ? OR kind = 'theme')", cid, db.today())
+    concerned = {x["id"]: {s["id"] for s in audience(conn, x)} for x in assigns}
     for s in students:
         a = agg.get(s["id"], {})
         s.update({
@@ -81,8 +83,9 @@ def overview(req):
             "logins_total": logins.get(s["id"], {}).get("total", 0),
             "logins_week": logins.get(s["id"], {}).get("week", 0) or 0,
         })
-        if assigns:
-            progs = [progress(conn, x["id"], s["id"]) for x in assigns]
+        mine = [x for x in assigns if s["id"] in concerned[x["id"]]]
+        if mine:
+            progs = [progress(conn, x["id"], s["id"]) for x in mine]
             tot = sum(p["total"] for p in progs)
             s["assignments_done"] = round(sum(p["done"] for p in progs) / tot, 3) if tot else None
             s["assignments_score"] = round(sum(p["score"] * p["total"] for p in progs) / tot, 3) if tot else None
@@ -176,11 +179,14 @@ def by_question(req):
 def by_assignment(req):
     cid = _class_access(req)
     students = _class_students(req.db, cid)
-    assigns = db.all_(req.db, "SELECT id, title, day FROM assignments WHERE class_id = ? ORDER BY day DESC, id DESC",
-                      cid)
+    assigns = db.all_(req.db, """SELECT id, class_id, title, day, kind, active FROM assignments WHERE class_id = ?
+                                 ORDER BY kind = 'theme' DESC, day DESC, id DESC""", cid)
     cells = {}
     for a in assigns:
+        concerned = {s["id"] for s in audience(req.db, a)}
         for s in students:
+            if s["id"] not in concerned:
+                continue  # élève non concerné par cette séance : case vide
             p = progress(req.db, a["id"], s["id"])
             cells[f"{s['id']}:{a['id']}"] = {k: p[k] for k in ("total", "done", "mastered", "score")}
     return json_response({"students": students, "assignments": assigns, "cells": cells})

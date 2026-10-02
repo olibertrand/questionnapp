@@ -70,7 +70,7 @@ def user_from_request(conn, request):
     if not token:
         return None
     row = db.one(conn, """
-        SELECT u.id, u.username, u.display_name, u.role, u.active, s.expires_at
+        SELECT u.id, u.username, u.display_name, u.role, u.active, u.must_change_password, s.expires_at
         FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?""", _token_hash(token))
     if not row or not row["active"] or row["expires_at"] < db.now():
         return None

@@ -161,6 +161,7 @@ def list_questions(req):
         args += [f"%{req.arg('q')}%"] * 3
     rows = db.all_(req.db, f"""
         SELECT q.id, q.uid, q.title, q.chapter_id, c.name AS chapter, q.difficulty, q.archived, q.updated_at,
+               (SELECT v.sample FROM question_versions v WHERE v.id = q.version_id) AS sample,
                (SELECT group_concat(s.name, ' | ') FROM question_skills qs JOIN skills s ON s.id = qs.skill_id
                 WHERE qs.question_id = q.id) AS skills,
                (SELECT group_concat(cq.class_id) FROM class_questions cq WHERE cq.question_id = q.id) AS class_ids,
@@ -171,7 +172,42 @@ def list_questions(req):
     for r in rows:
         r["skills"] = r["skills"].split(" | ") if r["skills"] else []
         r["class_ids"] = [int(x) for x in r["class_ids"].split(",")] if r["class_ids"] else []
+        r["sample"] = json.loads(r["sample"]) if r["sample"] else None
     return json_response({"questions": rows})
+
+
+def _sample_of(public):
+    """Ce qu'on montre d'une question dans la liste : l'énoncé et l'intitulé des champs (pas les options d'un QCM)."""
+    return {"statement": public["statement"],
+            "fields": [{"type": f["type"], "label": f.get("label", "")} for f in public["fields"]]}
+
+
+@router.post("/api/questions/samples")
+def samples(req):
+    """Un exemple d'énoncé par question (généré au besoin, puis mémorisé pour la version courante)."""
+    security.require_staff(req)
+    ids = int_list(req.json, "ids")[:60]
+    if not ids:
+        return json_response({"samples": {}})
+    marks = ",".join("?" * len(ids))
+    rows = db.all_(req.db, f"""SELECT q.id, q.version_id, v.template, v.sample FROM questions q
+                               JOIN question_versions v ON v.id = q.version_id WHERE q.id IN ({marks})""", *ids)
+    out = {r["id"]: json.loads(r["sample"]) for r in rows if r["sample"]}
+    todo = [r for r in rows if not r["sample"]]
+
+    def one(r):
+        res = engine_client.call({"action": "generate", "template": json.loads(r["template"]), "seed": secrets.randbits(32)})
+        if res.get("ok"):
+            return r, _sample_of(res["result"]["public"])
+        return r, {"error": res.get("error", "génération impossible")}
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(one, todo))
+    for r, sample in results:
+        out[r["id"]] = sample
+        if "error" not in sample:
+            req.db.execute("UPDATE question_versions SET sample = ? WHERE id = ?",
+                           (json.dumps(sample, ensure_ascii=False), r["version_id"]))
+    return json_response({"samples": {str(k): v for k, v in out.items()}})
 
 
 @router.get("/api/questions/export")

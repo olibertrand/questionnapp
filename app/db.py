@@ -37,6 +37,10 @@ MIGRATIONS = [
     ("attempts", "tries", "INTEGER NOT NULL DEFAULT 0"),
     ("attempts", "history", "TEXT"),
     ("questions", "uid", "TEXT"),
+    ("users", "must_change_password", "INTEGER NOT NULL DEFAULT 0"),
+    ("question_versions", "sample", "TEXT"),
+    ("assignments", "kind", "TEXT NOT NULL DEFAULT 'dated'"),
+    ("assignments", "active", "INTEGER NOT NULL DEFAULT 1"),
 ]
 
 
@@ -49,6 +53,9 @@ def init(conn):
             conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
             if (table, column) == ("attempts", "tries"):
                 conn.execute("UPDATE attempts SET tries = 1 WHERE score IS NOT NULL")
+            if (table, column) == ("users", "must_change_password"):
+                # les comptes jamais utilisés devront changer leur mot de passe à la première connexion
+                conn.execute("UPDATE users SET must_change_password = 1 WHERE last_login_at IS NULL")
     # identifiants des questions créées avant leur introduction (les questions de la banque
     # reçoivent ensuite leur identifiant officiel, voir banks.assign_missing_uids)
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_questions_uid ON questions(uid)")
