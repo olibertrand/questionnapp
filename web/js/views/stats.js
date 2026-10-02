@@ -118,9 +118,9 @@ async function assignmentsTab(cls) {
     rampLegend(),
     heatmap(d.students, d.assignments, (st, a) => {
       const c = d.cells[`${st.id}:${a.id}`];
-      return c.done ? { value: c.score, tip: `${name(st)} — ${a.title}\n${c.done}/${c.total} traitée(s), ${c.mastered} réussie(s)\nscore ${pct(c.score)}` }
-        : { value: null, tip: `${name(st)} — ${a.title}\nrien de traité` };
-    }, { rowLabel: name, colLabel: (a) => `${a.day.slice(5).split('-').reverse().join('/')} ${a.title}`, onRow: (st) => `#/eleves/${st.id}` }));
+      return c && c.done ? { value: c.score, tip: `${name(st)} — ${a.title}\n${c.done}/${c.total} traitée(s), ${c.mastered} réussie(s)\nscore ${pct(c.score)}` }
+        : { value: null, tip: c ? `${name(st)} — ${a.title}\nrien de traité` : `${name(st)} — ${a.title}\nnon concerné(e) par cette séance` };
+    }, { rowLabel: name, colLabel: (a) => (a.kind === 'theme' ? `[thème] ${a.title}` : `${a.day.slice(5).split('-').reverse().join('/')} ${a.title}`) + (a.active ? '' : ' (désactivée)'), onRow: (st) => `#/eleves/${st.id}` }));
 }
 
 export async function studentPage({ params, query }) {

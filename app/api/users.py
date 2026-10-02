@@ -25,8 +25,9 @@ def create_user(conn, username, password, display_name, role):
     security.check_password_strength(password)
     if db.one(conn, "SELECT id FROM users WHERE username = ?", username):
         raise HttpError(409, f"L'identifiant « {username} » existe déjà")
-    return db.insert(conn, """INSERT INTO users(username, password_hash, display_name, role, created_at)
-                              VALUES (?, ?, ?, ?, ?)""",
+    # un compte créé par un prof ou un admin devra changer son mot de passe à la première connexion
+    return db.insert(conn, """INSERT INTO users(username, password_hash, display_name, role, created_at, must_change_password)
+                              VALUES (?, ?, ?, ?, ?, 1)""",
                      username, security.hash_password(password), display_name.strip(), role, db.now())
 
 
@@ -116,7 +117,7 @@ def update(req):
                            (opt_str(data, "display_name", max_len=100), uid))
         if data.get("password"):
             security.check_password_strength(data["password"])
-            req.db.execute("UPDATE users SET password_hash = ? WHERE id = ?",
+            req.db.execute("UPDATE users SET password_hash = ?, must_change_password = 1 WHERE id = ?",
                            (security.hash_password(data["password"]), uid))
             req.db.execute("DELETE FROM sessions WHERE user_id = ?", (uid,))
         if "active" in data:

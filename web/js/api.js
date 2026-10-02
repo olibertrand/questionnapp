@@ -20,6 +20,7 @@ async function request(method, path, body) {
   const data = type.includes('application/json') ? await res.json() : await res.text();
   if (!res.ok) {
     if (res.status === 401 && !path.startsWith('/auth/')) window.dispatchEvent(new Event('qa:logout'));
+    if (res.status === 403 && data && data.must_change_password) window.dispatchEvent(new Event('qa:must-change-password'));
     throw new ApiError(res.status, data);
   }
   return data;

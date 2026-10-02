@@ -84,7 +84,7 @@ def main():
     qids = []
     for item in items:
         qids.append(save_question(conn, user, {
-            "title": item["title"], "difficulty": item["difficulty"], "skills": item["skills"],
+            "uid": item.get("uid"), "title": item["title"], "difficulty": item["difficulty"], "skills": item["skills"],
             "template": item["template"], "chapter_name": item["chapter"], "class_ids": [cid]}, validate=False))
     print(f"{len(qids)} questions importées")
 
@@ -103,6 +103,16 @@ def main():
         for pos, qid in enumerate(aq):
             conn.execute("INSERT INTO assignment_questions(assignment_id, question_id, position) VALUES (?, ?, ?)", (aid, qid, pos))
         assignments.append((aid, day, aq))
+
+    # un groupe et une séance thématique pour ce groupe
+    gid = db.insert(conn, "INSERT INTO groups(class_id, name) VALUES (?, ?)", cid, "Soutien")
+    for uid, _level in students[:4]:
+        conn.execute("INSERT INTO group_members(group_id, user_id) VALUES (?, ?)", (gid, uid))
+    tid = db.insert(conn, "INSERT INTO assignments(class_id, title, day, kind, created_by, created_at) VALUES (?, ?, ?, 'theme', ?, ?)",
+                    cid, "Révisions : dictionnaires", today.isoformat(), prof, db.now())
+    conn.execute("INSERT INTO assignment_targets(assignment_id, group_id) VALUES (?, ?)", (tid, gid))
+    for pos, qid in enumerate(by_chapter("Python : dictionnaires")[6:12]):
+        conn.execute("INSERT INTO assignment_questions(assignment_id, question_id, position) VALUES (?, ?, ?)", (tid, qid, pos))
 
     templates = {qid: json.loads(db.one(conn, """SELECT v.template FROM questions q JOIN question_versions v
                                                 ON v.id = q.version_id WHERE q.id = ?""", qid)["template"]) for qid in qids}

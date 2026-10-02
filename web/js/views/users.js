@@ -50,7 +50,7 @@ function createModal(classes, isAdmin) {
     h('div', { class: 'field' }, h('label', {}, 'Nom affiché'), display),
     h('div', { class: 'field' }, h('label', {}, 'Identifiant'), username, h('div', { class: 'hint' }, 'minuscules, chiffres, . _ -'))),
   h('div', { class: 'fields-2' },
-    h('div', { class: 'field' }, h('label', {}, 'Mot de passe'), password),
+    h('div', { class: 'field' }, h('label', {}, 'Mot de passe'), password, h('div', { class: 'hint' }, 'Provisoire : il sera demandé de le changer à la première connexion.')),
     h('div', { class: 'field' }, h('label', {}, 'Rôle'), role)),
   classes.length ? h('div', { class: 'field' }, h('label', {}, 'Classes'), h('div', { class: 'row' }, boxes)) : null,
   err, h('button', { class: 'primary', type: 'submit' }, 'Créer')));
@@ -80,7 +80,7 @@ function editModal(u, isAdmin) {
     h('div', { class: 'field' }, h('label', {}, 'Nom affiché'), display),
     h('div', { class: 'field' }, h('label', {}, 'Identifiant'), username)),
   h('div', { class: 'fields-2' },
-    h('div', { class: 'field' }, h('label', {}, 'Nouveau mot de passe'), password),
+    h('div', { class: 'field' }, h('label', {}, 'Nouveau mot de passe'), password, h('div', { class: 'hint' }, "À changer par l'utilisateur à sa prochaine connexion.")),
     h('div', { class: 'field' }, h('label', {}, 'Rôle'), role)),
   h('label', { class: 'inline' }, active, 'Compte actif'),
   err,

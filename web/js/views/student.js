@@ -12,13 +12,14 @@ function progressLine(p) {
 }
 
 function assignmentCard(a, today) {
-  const late = a.day < today && a.progress.done < a.progress.total;
+  const theme = a.kind === 'theme';
+  const late = !theme && a.day < today && a.progress.done < a.progress.total;
   return h('div', { class: 'card' },
     h('div', { class: 'row between' }, h('strong', {}, a.title),
       h('div', { class: 'row' },
-        a.day === today ? h('span', { class: 'pill accent' }, "aujourd'hui") : null,
+        theme ? h('span', { class: 'pill accent' }, 'thématique') : a.day === today ? h('span', { class: 'pill accent' }, "aujourd'hui") : null,
         late ? h('span', { class: 'pill bad' }, 'à terminer') : a.progress.mastered === a.progress.total ? h('span', { class: 'pill good' }, '✓ terminé') : null)),
-    h('div', { class: 'small muted', style: { margin: '.2rem 0 .6rem' } }, `${a.class_name} · ${fmtDay(a.day)}`),
+    h('div', { class: 'small muted', style: { margin: '.2rem 0 .6rem' } }, theme ? `${a.class_name} · à faire quand vous voulez` : `${a.class_name} · ${fmtDay(a.day)}`),
     progressLine(a.progress),
     h('div', { class: 'row', style: { marginTop: '.8rem' } },
       h('a', { class: 'btn primary', href: `#/jouer?mode=assignment&a=${a.id}` }, a.progress.done ? 'Continuer' : 'Commencer'),
@@ -28,9 +29,13 @@ function assignmentCard(a, today) {
 export async function homePage() {
   const d = await api.get('/me/dashboard');
   const today = d.today;
-  // séances prévues : aujourd'hui et à venir, de la plus proche à la plus lointaine
-  const planned = d.assignments.filter((a) => a.day >= today).sort((x, y) => x.day.localeCompare(y.day) || x.id - y.id);
-  const past = d.assignments.filter((a) => a.day < today).reverse();
+  // séances prévues : datées d'aujourd'hui et à venir (de la plus proche à la plus lointaine),
+  // puis les séances thématiques, actives tant que le professeur ne les a pas désactivées
+  const planned = [
+    ...d.assignments.filter((a) => a.kind !== 'theme' && a.day >= today).sort((x, y) => x.day.localeCompare(y.day) || x.id - y.id),
+    ...d.assignments.filter((a) => a.kind === 'theme').sort((x, y) => x.title.localeCompare(y.title)),
+  ];
+  const past = d.assignments.filter((a) => a.kind !== 'theme' && a.day < today).reverse();
   const chapterSelect = h('select', { 'aria-label': 'Limiter à un chapitre' },
     h('option', { value: '' }, 'Tous les chapitres'), d.chapters.map((c) => h('option', { value: c.id ?? '' }, c.name)));
 
@@ -120,7 +125,7 @@ export async function assignmentPage({ params }) {
   return h('div', {},
     h('p', {}, h('a', { href: '#/' }, '← Accueil')),
     h('h1', {}, a.title),
-    h('p', { class: 'muted' }, fmtDay(a.day)),
+    h('p', { class: 'muted' }, a.kind === 'theme' ? 'Séance thématique' : fmtDay(a.day)),
     h('div', { class: 'card', style: { maxWidth: '720px' } },
       progressLine(a.progress),
       h('table', { class: 'data', style: { marginTop: '1rem' } }, h('tbody', {}, a.questions.map((q, i) => {

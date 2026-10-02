@@ -92,7 +92,11 @@ def remove_member(req):
     user = security.require_staff(req)
     cid = to_int(req.params["id"])
     security.require_class_access(req.db, user, cid)
-    req.db.execute("DELETE FROM class_members WHERE class_id = ? AND user_id = ?", (cid, to_int(req.params["uid"])))
+    uid = to_int(req.params["uid"])
+    with db.Tx(req.db):
+        req.db.execute("DELETE FROM class_members WHERE class_id = ? AND user_id = ?", (cid, uid))
+        req.db.execute("DELETE FROM group_members WHERE user_id = ? AND group_id IN (SELECT id FROM groups WHERE class_id = ?)",
+                       (uid, cid))
     return json_response({"ok": True})
 
 

@@ -31,10 +31,14 @@ avec des valeurs différentes. La correction est automatique.
 **Utilisateurs et classes**
 - Comptes administrateur, professeur, élève (identifiant / mot de passe), import de listes
   d'élèves par copier-coller depuis un tableur.
-- Classes avec leurs élèves et leurs professeurs.
+- Classes avec leurs élèves et leurs professeurs ; **groupes personnalisés** d'élèves dans une classe.
+- À la première connexion (ou après une réinitialisation par un prof), chacun doit choisir son
+  mot de passe (il peut garder celui qu'on lui a donné).
 
 **Élèves** : trois façons de travailler
-- les **séances** du jour données par le prof (et celles à venir / en retard) ;
+- les **séances** données par le prof, à toute la classe ou à certains élèves / groupes :
+  séances **datées** (pour un jour donné) et séances **thématiques** (sans date, actives jusqu'à
+  ce que le prof les désactive), toutes affichées en haut de la page d'accueil ;
 - l'**entraînement par chapitre** (toutes les questions du chapitre, les moins vues d'abord) ;
 - l'**entraînement automatique** qui repropose les notions les moins maîtrisées.
 

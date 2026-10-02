@@ -18,16 +18,20 @@ MASTERED = 0.8
 
 
 def available_questions(conn, user_id, chapter_id=None):
-    """Questions (non archivées) affectées à au moins une classe de l'élève."""
-    sql = """SELECT DISTINCT q.id, q.title, q.chapter_id, q.difficulty FROM questions q
-             JOIN class_questions cq ON cq.question_id = q.id
-             JOIN class_members m ON m.class_id = cq.class_id
-             WHERE m.user_id = ? AND q.archived = 0 AND q.version_id IS NOT NULL"""
-    args = [user_id]
+    """Questions (non archivées) accessibles à l'élève : affectées à l'une de ses classes, ou
+    faisant partie d'une séance active qui lui est destinée (séance pour certains élèves)."""
+    from .api.assignments import VISIBLE_SQL
+    sql = f"""SELECT q.id, q.title, q.chapter_id, q.difficulty FROM questions q
+              WHERE q.archived = 0 AND q.version_id IS NOT NULL
+              AND (q.id IN (SELECT cq.question_id FROM class_questions cq
+                            JOIN class_members m ON m.class_id = cq.class_id WHERE m.user_id = :u)
+                   OR q.id IN (SELECT aq.question_id FROM assignment_questions aq
+                               JOIN assignments a ON a.id = aq.assignment_id WHERE {VISIBLE_SQL}))"""
+    args = {"u": user_id}
     if chapter_id is not None:
-        sql += " AND q.chapter_id = ?"
-        args.append(chapter_id)
-    return db.all_(conn, sql, *args)
+        sql += " AND q.chapter_id = :c"
+        args["c"] = chapter_id
+    return conn.execute(sql, args).fetchall()
 
 
 def question_skills(conn, question_ids):

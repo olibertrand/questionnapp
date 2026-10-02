@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from .. import adaptive, db, engine_client, security
 from ..web import HttpError, json_response, router, to_int
-from .assignments import assignment_questions, progress
+from .assignments import VISIBLE_SQL, assignment_questions, is_visible, progress
 
 
 def _student_class_ids(conn, user_id):
@@ -51,8 +51,13 @@ def _load_assignment_for_student(conn, user, aid):
     a = db.one(conn, "SELECT * FROM assignments WHERE id = ?", aid)
     if not a:
         raise HttpError(404, "Séance introuvable")
-    if not security.is_admin(user) and a["class_id"] not in _student_class_ids(conn, user["id"]):
-        raise HttpError(403, "Cette séance ne vous est pas destinée")
+    if user["role"] == "student":
+        if not is_visible(conn, aid, user["id"]):
+            if a["class_id"] in _student_class_ids(conn, user["id"]) and not a["active"]:
+                raise HttpError(403, "Cette séance a été désactivée par votre professeur")
+            raise HttpError(403, "Cette séance ne vous est pas destinée")
+    elif not security.is_admin(user):
+        security.require_class_access(conn, user, a["class_id"])
     return a
 
 
@@ -223,13 +228,11 @@ def dashboard(req):
     classes = db.all_(conn, """SELECT c.id, c.name FROM classes c JOIN class_members m ON m.class_id = c.id
                                WHERE m.user_id = ? ORDER BY c.name""", uid)
     since = (datetime.date.today() - datetime.timedelta(days=45)).isoformat()
-    assigns = []
-    if classes:
-        marks = ",".join("?" * len(classes))
-        assigns = db.all_(conn, f"""SELECT a.id, a.title, a.day, a.class_id, c.name AS class_name
-                                    FROM assignments a JOIN classes c ON c.id = a.class_id
-                                    WHERE a.class_id IN ({marks}) AND a.day >= ? ORDER BY a.day, a.id""",
-                          *[c["id"] for c in classes], since)
+    # séances actives qui le concernent : thématiques (sans date) et datées des 45 derniers jours ou à venir
+    assigns = conn.execute(f"""SELECT a.id, a.title, a.day, a.kind, a.class_id, c.name AS class_name
+                               FROM assignments a JOIN classes c ON c.id = a.class_id
+                               WHERE {VISIBLE_SQL} AND (a.kind = 'theme' OR a.day >= :since)
+                               ORDER BY a.day, a.id""", {"u": uid, "since": since}).fetchall()
     for a in assigns:
         p = progress(conn, a["id"], uid)
         a["progress"] = {k: p[k] for k in ("total", "done", "mastered", "score")}

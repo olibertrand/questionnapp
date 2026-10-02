@@ -88,6 +88,7 @@ let renderToken = 0;
 export async function render() {
   const app = document.getElementById('app');
   if (!state.user) return mount(app, loginView());
+  if (state.user.must_change_password) return mount(app, firstPasswordView());
   const { path, query } = parseHash();
   const m = match(path);
   const main = h('main');
@@ -140,6 +141,39 @@ function loginView() {
     form);
 }
 
+// Première connexion (ou mot de passe réinitialisé par un professeur) : choix du mot de passe
+function firstPasswordView() {
+  const n1 = passwordInput({ id: 'n1', autocomplete: 'new-password', required: true });
+  const n2 = passwordInput({ id: 'n2', autocomplete: 'new-password', required: true });
+  const err = h('div');
+  const form = h('form', { class: 'card' },
+    h('h1', {}, 'Choisissez votre mot de passe'),
+    h('p', { class: 'muted' }, `Bonjour ${state.user.display_name} ! Pour cette première connexion, choisissez le mot de passe que vous utiliserez désormais (vous pouvez garder celui qu'on vous a donné).`),
+    h('div', { class: 'field' }, h('label', { for: 'n1' }, 'Nouveau mot de passe'), n1.container, h('div', { class: 'hint' }, 'Au moins 4 caractères.')),
+    h('div', { class: 'field' }, h('label', { for: 'n2' }, 'Confirmation'), n2.container),
+    err,
+    h('div', { class: 'row between' },
+      h('button', { class: 'primary', type: 'submit' }, 'Enregistrer et continuer'),
+      h('button', { class: 'link', type: 'button', onclick: logout }, 'Se déconnecter')));
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.replaceChildren();
+    if (n1.value !== n2.value) return err.replaceChildren(h('div', { class: 'alert error' }, 'Les deux mots de passe diffèrent.'));
+    try {
+      await api.post('/auth/password', { new: n1.value });
+      state.user.must_change_password = false;
+      toast('Mot de passe enregistré.');
+      render();
+    } catch (ex) { err.replaceChildren(errorBox(ex)); }
+  });
+  setTimeout(() => n1.focus(), 0);
+  return h('div', { class: 'login-wrap' },
+    h('p', { class: 'brand', style: { fontSize: '1.6rem', textAlign: 'center' } }, 'Questionn', h('span', {}, 'App')), form);
+}
+
+window.addEventListener('qa:must-change-password', () => {
+  if (state.user && !state.user.must_change_password) { state.user.must_change_password = true; render(); }
+});
 window.addEventListener('hashchange', render);
 window.addEventListener('qa:logout', () => {
   if (state.user) { state.user = null; toast('Session expirée, reconnectez-vous.', 'error'); render(); }
