@@ -84,7 +84,8 @@ questions affectées à leurs classes.
 | `QUESTIONNAPP_BANK_DIR` | `banque/` | répertoire des banques de questions |
 | `QUESTIONNAPP_BACKUP_DIR` | `data/sauvegardes/` | dossier des sauvegardes de la base |
 
-En production : placer l'application derrière un proxy HTTPS (nginx, Caddy), activer les
+En production : voir [`docs/MIGRATION_VPS.md`](docs/MIGRATION_VPS.md) et le dossier `deploy/`
+(service systemd, site nginx, script de mise à jour). Principe : placer l'application derrière un proxy HTTPS (nginx, Caddy), activer les
 cookies sécurisés et isoler le moteur (voir `docs/ARCHITECTURE.md`, § Sécurité).
 Sauvegarde : copier le fichier SQLite.
 

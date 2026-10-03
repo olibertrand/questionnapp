@@ -1,0 +1,39 @@
+# Service systemd de QuestionnApp (à copier dans /etc/systemd/system/questionnapp.service).
+# L'appli démarre avec le serveur et redémarre seule en cas de plantage.
+# Elle n'écoute que sur 127.0.0.1 : seul nginx (HTTPS) est joignable depuis Internet.
+
+[Unit]
+Description=QuestionnApp (questionnaires à données aléatoires)
+After=network.target
+
+[Service]
+Type=simple
+User=questionnapp
+Group=questionnapp
+WorkingDirectory=/opt/questionnapp
+ExecStart=/usr/bin/python3 /opt/questionnapp/run.py
+Restart=on-failure
+RestartSec=3
+
+Environment=QUESTIONNAPP_HOST=127.0.0.1
+Environment=QUESTIONNAPP_PORT=8000
+Environment=QUESTIONNAPP_DB=/var/lib/questionnapp/questionnapp.db
+Environment=QUESTIONNAPP_BACKUP_DIR=/var/lib/questionnapp/sauvegardes
+Environment=QUESTIONNAPP_SECURE_COOKIES=1
+Environment=QUESTIONNAPP_QUIET=1
+Environment=PYTHONUNBUFFERED=1
+
+# Durcissement : l'appli ne peut écrire que dans son dossier de données
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/questionnapp
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
