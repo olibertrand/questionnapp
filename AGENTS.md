@@ -74,7 +74,8 @@ préviens-moi immédiatement.
    identifiant dans l'URL. Un professeur ne voit que ses classes et leurs élèves.
 5. Les clés d'accès (par exemple une future clé d'IA) ne partent jamais vers le navigateur.
 6. Chaque action a une limite de fréquence (personne ne peut se servir en boucle).
-7. Les sauvegardes de la base (le fichier SQLite) existent et ont été testées au moins une fois.
+7. Les sauvegardes de la base (le fichier SQLite) existent et ont été testées au moins une fois
+   (`scripts/sauvegarde.py`, `scripts/restaurer.py --test`, voir `docs/SAUVEGARDE.md`).
 8. Rien de ce qui servait à tester ne reste ouvert en production : jamais `scripts/demo.py`
    sur le serveur, pas de compte de démo (admin/admin, prof/prof, eleve01…).
 9. Le code tapé par les élèves s'exécute isolé (sous-processus, limites de temps et de mémoire,
@@ -104,7 +105,12 @@ préviens-moi immédiatement.
 - La version en cours (commit) s'affiche en bas de chaque page de l'appli.
 
 ## Où on en est
-- L'appli est en production sur mon serveur et des élèves l'utilisent déjà.
+- L'appli est en production sur mon serveur et des élèves l'utilisent déjà. Le serveur est en
+  HTTPS.
+- Sauvegardes : scripts ajoutés ; copies gardées sur le même serveur pour l'instant. Reste à
+  faire de mon côté : planifier la sauvegarde chaque nuit (cron) et faire une première
+  restauration de test (`docs/SAUVEGARDE.md`). Plus tard : copier aussi les sauvegardes sur une
+  autre machine.
 - Prochaine étape qui m'importe : la création de nouvelles questions.
 - Proposé, pas encore décidé : vérification automatique des tests sur GitHub à chaque demande de
   fusion ; protection de la branche `main` sur GitHub ; ne faire confiance à l'en-tête

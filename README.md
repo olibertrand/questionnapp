@@ -82,6 +82,7 @@ questions affectées à leurs classes.
 | `QUESTIONNAPP_SANDBOX_CMD` | vide | préfixe d'isolation du moteur, ex. `firejail --quiet --net=none --private` |
 | `QUESTIONNAPP_SESSION_DAYS` | `7` | durée des sessions |
 | `QUESTIONNAPP_BANK_DIR` | `banque/` | répertoire des banques de questions |
+| `QUESTIONNAPP_BACKUP_DIR` | `data/sauvegardes/` | dossier des sauvegardes de la base |
 
 En production : placer l'application derrière un proxy HTTPS (nginx, Caddy), activer les
 cookies sécurisés et isoler le moteur (voir `docs/ARCHITECTURE.md`, § Sécurité).
@@ -93,6 +94,15 @@ Le dossier [`claude-projet/`](claude-projet/LISEZMOI.md) permet de monter un pro
 (claude.ai) qui transforme un cours et ses exercices en questions : notions du chapitre et
 prérequis mobilisés dans les exercices. Claude teste ses questions avec le moteur de l'app,
 puis on importe le fichier JSON obtenu ; l'import refait un auto-test de chaque question.
+
+### Sauvegardes
+
+```sh
+python3 scripts/sauvegarde.py              # copie sûre de la base, même appli en marche, avec rotation
+python3 scripts/restaurer.py --test FICHIER  # vérifie une sauvegarde sans toucher à la vraie base
+```
+
+Planification chaque nuit, test et restauration : [`docs/SAUVEGARDE.md`](docs/SAUVEGARDE.md).
 
 ### Repartir d'une banque de questions vide
 
