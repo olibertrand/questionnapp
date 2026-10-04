@@ -14,6 +14,7 @@ l'essayer avec **Aperçu**, puis l'importer (ou la mettre à jour) et l'affecter
 | `algorithmique.json` | tris, dichotomie, complexité |
 | `representation-donnees.json` | bases 2 et 16, complément à deux, booléens |
 | `bases-de-donnees.json` | modèle relationnel, SQL |
+| `python-premiere-while.json` | série 1ère NSI : listes, listes de listes et de dictionnaires, dictionnaires, parcours (afficher, compter, cumuler, chercher, « tous »), fonctions simples, portée ; **boucles `while` uniquement** |
 
 ## Ajouter des questions
 

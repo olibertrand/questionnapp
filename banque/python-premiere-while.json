@@ -1,0 +1,952 @@
+{
+  "format": "questionnapp/questions",
+  "version": 1,
+  "title": "1ère NSI : listes, dictionnaires et fonctions (boucles while)",
+  "description": "Série pour la Première NSI : listes, listes de listes, listes de dictionnaires, dictionnaires ; parcours pour afficher, compter, cumuler, chercher et tester une condition sur tous les éléments ; fonctions simples, portée des variables. Toutes les boucles s'écrivent avec while.",
+  "questions": [
+    {
+      "uid": "NSI1-01",
+      "title": "Listes : append, concaténation et len",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 1,
+      "skills": [
+        "Listes : indices et tranches",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "themes = [\n    (\"boissons\", [\"cafe\", \"the\", \"chocolat\", \"latte\", \"cappuccino\", \"moka\"]),\n    (\"saveurs\", [\"vanille\", \"caramel\", \"noisette\", \"cannelle\", \"coco\", \"menthe\"]),\n    (\"toppings\", [\"chantilly\", \"cacao\", \"sucre\", \"miel\", \"amandes\", \"biscuit\"]),\n]\n(n1, p1), (n2, p2) = sample(themes, 2)\nA = sample(p1, randint(2, 3))\nB = sample(p2, randint(2, 3))\najout = choice([x for x in p1 if x not in A])\ni = randint(1, len(A) + len(B))\nfin = choice([f\"print(len(menu), menu[{i}])\", f\"print(len({n1}), len(menu))\", f\"print(menu[{i}], menu[-1])\",\n              f\"print(menu[{len(A)}], len({n2}))\"])\nsrc = \"\\n\".join([f\"{n1} = {A!r}\", f\"{n2} = {B!r}\", f\"{n1}.append({ajout!r})\", f\"menu = {n1} + {n2}\", fin])\nout = run(src)\nmenu = evaluate(src, \"menu\")",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Affichage",
+            "answer": "out"
+          }
+        ],
+        "solution": "Après `append`, `{{ n1 }}` contient {{ len(A) + 1 }} éléments ; `menu` vaut `{{ repr(menu) }}` ({{ len(menu) }} éléments, indices 0 à {{ len(menu) - 1 }}).\n\nLe programme affiche `{{ out }}`.",
+        "hints": [
+          "`append` ajoute **un** élément à la fin de la liste (et modifie la liste) ; `+` fabrique une **nouvelle** liste qui met les deux bout à bout.",
+          "Écrivez `menu` en entier, puis numérotez ses éléments à partir de **0** ; `menu[-1]` est le dernier."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-02",
+      "title": "Listes : lire et modifier par indice",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 1,
+      "skills": [
+        "Listes : indices et tranches",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "nom = choice(NOMS_LISTES)\nL = randlist(randint(5, 6), 1, 20)\nn = len(L)\ni, j = sample(range(n), 2)\nk = randint(2, 5)\nlignes = [f\"{nom} = {L!r}\", f\"{nom}[{i}] = {nom}[{j}] + {k}\",\n          choice([f\"x = {nom}[len({nom}) - 1]\", f\"x = {nom}[-2]\", f\"x = {nom}[{i}] * 2\", f\"x = {nom}[len({nom}) - {randint(2, n)}]\"]),\n          f\"{nom}[0] = x\",\n          f\"print({nom})\"]\nsrc = \"\\n\".join(lignes)\nout = run(src)",
+        "statement": "Qu'affiche ce programme ? Écrire la liste comme Python l'affiche.\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Affichage",
+            "answer": "out",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "Le programme affiche `{{ out }}`.\n\n`{{ nom }}[i] = ...` remplace l'élément d'indice `i` ; les indices vont de `0` à `len({{ nom }}) - 1` = {{ n - 1 }}.",
+        "hints": [
+          "Recopiez la liste et numérotez ses éléments à partir de 0, puis appliquez les lignes **une par une** (chaque ligne travaille sur la liste déjà modifiée).",
+          "`len({{ nom }})` vaut {{ n }} : le dernier élément est donc `{{ nom }}[{{ n - 1 }}]`, qu'on peut aussi écrire `{{ nom }}[-1]`."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-03",
+      "title": "Listes : pop, remove et append",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Listes : indices et tranches",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "nom = choice([\"bulles\", \"L\", \"joueurs\", \"file\"])\nL = sample(PRENOMS, 5) if nom in (\"joueurs\", \"file\") else randlist(5, 1, 30, distinct=True)\na = choice(L)\nlignes = [f\"{nom} = {L!r}\"]\nops = [f\"{nom}.remove({a!r})\", f\"x = {nom}.pop({randint(0, 3)})\", f\"{nom}.append(x)\" if coin() else f\"{nom}.pop()\"]\nlignes += ops\nlignes.append(f\"print({nom}, len({nom}))\")\nsrc = \"\\n\".join(lignes)\nout = run(src)",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Affichage",
+            "answer": "[out, out.replace(\"'\", '\"')]",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "Le programme affiche `{{ out }}`.\n\n- `{{ nom }}.pop(i)` retire l'élément d'**indice** `i` et le renvoie ; `{{ nom }}.pop()` retire le dernier.\n- `{{ nom }}.remove(v)` retire la première **valeur** égale à `v`.",
+        "hints": [
+          "Attention à la différence : `pop` reçoit un **indice** (une position), `remove` reçoit une **valeur**.",
+          "Après chaque retrait, les éléments suivants se décalent : renumérotez la liste avant la ligne suivante."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-04",
+      "title": "Liste de listes : écrire l'instruction d'affichage",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Données imbriquées : liste de listes",
+        "Listes : indices et tranches"
+      ],
+      "template": {
+        "code": "def cible(consigne, ref):\n    c = {\"consigne\": consigne, \"ref\": ref,\n         \"attendu\": run(ref, namespace={nom: copy.deepcopy(data)}),\n         \"attendu2\": run(ref, namespace={nom: copy.deepcopy(data2)})}\n    require(c[\"attendu\"].strip() != c[\"attendu2\"].strip())\n    return c\n\ndef joli_liste(L, nom):\n    return nom + \" = [\\n\" + \"\\n\".join(f\"    {e!r},\" for e in L) + \"\\n]\"\n\nimport copy\nif coin():\n    nom = \"C\"\n    noms = sample([\"sumatra\", \"moka\", \"java\", \"colombie\", \"kenya\", \"bresil\", \"guatemala\", \"ethiopie\"], 4)\n    data = [[c, round(randint(20, 60) / 10, 1)] for c in noms]\n    data2 = [[c, round(randint(20, 60) / 10, 1)] for c in noms]\n    quoi = \"chaque café avec son prix au kilo\"\n    ip = 1\n    unite = \"le prix du café\"\nelse:\n    nom = \"Livres\"\n    livres = sample([(\"Germinal\", \"Zola\"), (\"Candide\", \"Voltaire\"), (\"Le Cid\", \"Corneille\"), (\"Les Misérables\", \"Hugo\"),\n          (\"Le Petit Prince\", \"Saint-Exupéry\"), (\"Bel-Ami\", \"Maupassant\"), (\"Madame Bovary\", \"Flaubert\"),\n          (\"Phèdre\", \"Racine\")], 4)\n    data = [[t, a, randint(5, 25)] for t, a in livres]\n    data2 = [[t, a, randint(5, 25)] for t, a in livres]\n    noms = [t for t, a in livres]\n    quoi = \"chaque livre avec son titre, son auteur et son prix\"\n    ip = 2\n    unite = \"le prix du livre\"\ni1, i2 = sample(range(4), 2)\nmodeles = [\n    (lambda i: f\"{unite} « {noms[i]} »\", lambda i: f\"print({nom}[{i}][{ip}])\"),\n    (lambda i: f\"{unite} « {noms[i]} » augmenté de 1\", lambda i: f\"print({nom}[{i}][{ip}] + 1)\"),\n    (lambda i: f\"toute la liste qui décrit « {noms[i]} »\", lambda i: f\"print({nom}[{i}])\"),\n    (lambda i: f\"le double du prix de « {noms[i]} »\", lambda i: f\"print({nom}[{i}][{ip}] * 2)\"),\n]\nm1, m2 = sample(modeles, 2)\nc1 = cible(m1[0](i1), m1[1](i1))\nc2 = cible(m2[0](i2), m2[1](i2))",
+        "statement": "La liste `{{ nom }}` décrit {{ quoi }}. Elle est **déjà définie** (inutile de la recopier) :\n\n{{ code_block(joli_liste(data, nom)) }}\n\nPour chaque question, écrire l'instruction qui affiche la valeur demandée **en allant la chercher dans `{{ nom }}`** (et non en recopiant la valeur).",
+        "fields": [
+          {
+            "type": "code",
+            "label": "1. Instruction qui affiche {{ c1['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "import re\nc = c1\n_code = re.sub(r\"#.*\", \"\", student_code)\nsortie = student_output.strip()\nattendu = c[\"attendu\"].strip()\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`).\")\nelif False and not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != attendu:\n    check(False, \"Votre code affiche `\" + \" / \".join(sortie.splitlines()) + \"` alors qu'on attend `\"\n          + \" / \".join(attendu.splitlines()) + \"` (le / sépare les lignes).\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"].strip(), \"Le bon résultat s'affiche, mais votre code doit aller chercher les valeurs \"\n          f\"dans `{nom}` au lieu de les écrire directement.\")",
+            "reference": "{{ c1['ref'] }}"
+          },
+          {
+            "type": "code",
+            "label": "2. Instruction qui affiche {{ c2['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "import re\nc = c2\n_code = re.sub(r\"#.*\", \"\", student_code)\nsortie = student_output.strip()\nattendu = c[\"attendu\"].strip()\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`).\")\nelif False and not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != attendu:\n    check(False, \"Votre code affiche `\" + \" / \".join(sortie.splitlines()) + \"` alors qu'on attend `\"\n          + \" / \".join(attendu.splitlines()) + \"` (le / sépare les lignes).\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"].strip(), \"Le bon résultat s'affiche, mais votre code doit aller chercher les valeurs \"\n          f\"dans `{nom}` au lieu de les écrire directement.\")",
+            "reference": "{{ c2['ref'] }}"
+          }
+        ],
+        "solution": "{{ code_block(c1['ref'] + chr(10) + c2['ref']) }}\n\n`{{ nom }}[i]` est la **sous-liste** d'indice `i` ; un deuxième crochet va chercher un élément dans cette sous-liste : `{{ nom }}[i][{{ ip }}]` est son prix.",
+        "hints": [
+          "`{{ nom }}[0]` est la première sous-liste : `{{ repr(data[0]) }}`. Un **deuxième crochet** prend un élément dans cette sous-liste.",
+          "Par exemple `{{ nom }}[0][{{ ip }}]` vaut `{{ repr(data[0][ip]) }}`. Repérez d'abord l'indice de la sous-liste qui vous intéresse (on compte à partir de 0)."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-05",
+      "title": "Liste de dictionnaires : écrire l'instruction d'affichage",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 2,
+      "skills": [
+        "Données imbriquées : liste de dictionnaires",
+        "Dictionnaires : accès et modification"
+      ],
+      "template": {
+        "code": "def cible(consigne, ref):\n    c = {\"consigne\": consigne, \"ref\": ref,\n         \"attendu\": run(ref, namespace={nom: copy.deepcopy(data)}),\n         \"attendu2\": run(ref, namespace={nom: copy.deepcopy(data2)})}\n    require(c[\"attendu\"].strip() != c[\"attendu2\"].strip())\n    return c\n\ndef joli_liste(L, nom):\n    return nom + \" = [\\n\" + \"\\n\".join(f\"    {e!r},\" for e in L) + \"\\n]\"\n\nimport copy\nnom = \"films\"\ntitres = sample([\"Le Roi lion\", \"Titanic\", \"Coco\", \"Vaiana\", \"Ratatouille\", \"Inception\", \"Matrix\", \"Shrek\", \"Wall-E\", \"Avatar\"], 4)\ndef tirage():\n    return [{\"titre\": t, \"annee\": randint(1990, 2023), \"duree\": randint(80, 170)} for t in titres]\ndata, data2 = tirage(), tirage()\ni1, i2, i3 = sample(range(4), 3)\nmodeles = [\n    (lambda i: f\"l'année de sortie du film « {titres[i]} »\", lambda i: f\"print({nom}[{i}]['annee'])\"),\n    (lambda i: f\"la durée (en minutes) du film « {titres[i]} »\", lambda i: f\"print({nom}[{i}]['duree'])\"),\n    (lambda i: f\"tout le dictionnaire qui décrit le film « {titres[i]} »\", lambda i: f\"print({nom}[{i}])\"),\n    (lambda i: f\"la durée du film « {titres[i]} » diminuée de 10 minutes\", lambda i: f\"print({nom}[{i}]['duree'] - 10)\"),\n]\nm1, m2 = sample(modeles, 2)\nc1 = cible(m1[0](i1), m1[1](i1))\nc2 = cible(m2[0](i2), m2[1](i2))",
+        "statement": "La liste `{{ nom }}` contient un dictionnaire par film. Elle est **déjà définie** (inutile de la recopier) :\n\n{{ code_block(joli_liste(data, nom)) }}\n\nPour chaque question, écrire l'instruction qui affiche la valeur demandée **en allant la chercher dans `{{ nom }}`**.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "1. Instruction qui affiche {{ c1['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "import re\nc = c1\n_code = re.sub(r\"#.*\", \"\", student_code)\nsortie = student_output.strip()\nattendu = c[\"attendu\"].strip()\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`).\")\nelif False and not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != attendu:\n    check(False, \"Votre code affiche `\" + \" / \".join(sortie.splitlines()) + \"` alors qu'on attend `\"\n          + \" / \".join(attendu.splitlines()) + \"` (le / sépare les lignes).\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"].strip(), \"Le bon résultat s'affiche, mais votre code doit aller chercher les valeurs \"\n          f\"dans `{nom}` au lieu de les écrire directement.\")",
+            "reference": "{{ c1['ref'] }}"
+          },
+          {
+            "type": "code",
+            "label": "2. Instruction qui affiche {{ c2['consigne'] }}",
+            "given": "{nom: data}",
+            "tests": "import re\nc = c2\n_code = re.sub(r\"#.*\", \"\", student_code)\nsortie = student_output.strip()\nattendu = c[\"attendu\"].strip()\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`).\")\nelif False and not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != attendu:\n    check(False, \"Votre code affiche `\" + \" / \".join(sortie.splitlines()) + \"` alors qu'on attend `\"\n          + \" / \".join(attendu.splitlines()) + \"` (le / sépare les lignes).\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"].strip(), \"Le bon résultat s'affiche, mais votre code doit aller chercher les valeurs \"\n          f\"dans `{nom}` au lieu de les écrire directement.\")",
+            "reference": "{{ c2['ref'] }}"
+          }
+        ],
+        "solution": "{{ code_block(c1['ref'] + chr(10) + c2['ref']) }}\n\n`{{ nom }}[i]` est un **dictionnaire** (on choisit le film par son indice dans la liste) ; on y lit une valeur par sa **clé** : `{{ nom }}[i]['annee']`.",
+        "hints": [
+          "`{{ nom }}[{{ i3 }}]` est le dictionnaire du film « {{ titres[i3] }} » : on choisit d'abord le film par son **indice** dans la liste (à partir de 0).",
+          "Ensuite, on lit une valeur du dictionnaire par sa **clé** entre guillemets : `{{ nom }}[{{ i3 }}]['duree']` vaut {{ data[i3]['duree'] }}."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-06",
+      "title": "Dictionnaire : écrire les modifications",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 1,
+      "skills": [
+        "Dictionnaires : accès et modification"
+      ],
+      "template": {
+        "code": "if coin():\n    nom = choice([\"stocks\", \"Stocks\"])\n    cles = sample(FRUITS, 5)\n    data = {c: randint(3, 40) for c in cles[:4]}\n    unite = \"le stock de\"\nelse:\n    nom = \"scores\"\n    cles = sample(PRENOMS, 5)\n    data = {c: randint(3, 40) for c in cles[:4]}\n    unite = \"le score de\"\na, b = sample(cles[:4], 2)\nnouveau = cles[4]\nk = randint(2, 9)\nm = randint(1, 3)\nv = randint(5, 30)\nattendu = dict(data)\nattendu[a] = attendu[a] + k\nattendu[b] = attendu[b] - m\nattendu[nouveau] = v\nref = f\"{nom}[{a!r}] = {nom}[{a!r}] + {k}\\n{nom}[{b!r}] = {nom}[{b!r}] - {m}\\n{nom}[{nouveau!r}] = {v}\"",
+        "statement": "Le dictionnaire `{{ nom }}` est **déjà défini** (inutile de le recopier) :\n\n{{ code_block(nom + \" = \" + repr(data)) }}\n\nÉcrire les instructions qui :\n\n1. augmentent {{ unite }} `{{ a }}` de {{ k }} ;\n2. diminuent {{ unite }} `{{ b }}` de {{ m }} ;\n3. ajoutent la clé `{{ nouveau }}` avec la valeur {{ v }}.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Vos instructions",
+            "given": "{nom: data}",
+            "reference": "{{ ref }}",
+            "tests": "import re\nobtenu = student.get(nom)\nif re.search(r\"\\b\" + nom + r\"\\s*=\\s*[{d]\", student_code):\n    check(False, f\"Ne redéfinissez pas `{nom}` en entier : modifiez seulement les valeurs avec `{nom}[clé] = ...`.\")\nelif not isinstance(obtenu, dict):\n    check(False, f\"`{nom}` doit rester un dictionnaire.\")\nelse:\n    for cle in attendu:\n        if cle not in obtenu:\n            check(False, f\"la clé {cle!r} manque dans `{nom}`.\")\n        else:\n            check_equal(obtenu[cle], attendu[cle], f\"`{nom}[{cle!r}]` vaut {obtenu[cle]!r} au lieu de {attendu[cle]!r}.\")\n    for cle in obtenu:\n        if cle not in attendu:\n            check(False, f\"la clé {cle!r} ne devrait pas exister.\")"
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\n`{{ nom }}[clé] = valeur` modifie la valeur si la clé existe, et **crée** la clé sinon. On peut aussi écrire `{{ nom }}[{{ repr(a) }}] += {{ k }}`.",
+        "hints": [
+          "On lit une valeur avec `{{ nom }}[clé]` et on la remplace avec `{{ nom }}[clé] = nouvelle_valeur` ; la clé est une chaîne, donc entre guillemets.",
+          "Pour augmenter : `{{ nom }}[{{ repr(a) }}] = {{ nom }}[{{ repr(a) }}] + {{ k }}`. Pour ajouter une clé, il suffit de lui affecter une valeur."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-07",
+      "title": "Qu'affiche cette boucle while ?",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 1,
+      "skills": [
+        "Boucle while",
+        "Parcours de liste",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "nom = choice(NOMS_LISTES)\nL = randlist(randint(5, 7), 1, 30, distinct=True)\nn = len(L)\nforme = choice([\"pas\", \"debut\", \"fin\", \"indice\", \"envers\"])\nif forme == \"pas\":\n    p = choice([2, 3])\n    corps = [\"i = 0\", f\"while i < len({nom}):\", f\"    print({nom}[i])\", f\"    i = i + {p}\"]\nelif forme == \"debut\":\n    s = randint(1, 2)\n    corps = [f\"i = {s}\", f\"while i < len({nom}):\", f\"    print({nom}[i])\", \"    i = i + 1\"]\nelif forme == \"fin\":\n    corps = [\"i = 0\", f\"while i < len({nom}) - {randint(1, 2)}:\", f\"    print({nom}[i])\", \"    i = i + 1\"]\nelif forme == \"indice\":\n    corps = [\"i = 0\", f\"while {nom}[i] != {L[randint(2, n - 1)]}:\", \"    print(i)\", \"    i = i + 1\"]\nelse:\n    corps = [f\"i = len({nom}) - 1\", \"while i >= 0:\", f\"    print({nom}[i])\", f\"    i = i - {choice([1, 2])}\"]\nsrc = f\"{nom} = {L!r}\\n\" + \"\\n\".join(corps)\nout = run(src)\nvals = out.split()",
+        "statement": "Qu'affiche ce programme ? Écrire les valeurs affichées **dans l'ordre, séparées par des espaces**.\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Valeurs affichées",
+            "answer": "[' '.join(vals), ', '.join(vals), ','.join(vals), ' ; '.join(vals), chr(10).join(vals)]"
+          }
+        ],
+        "solution": "Le programme affiche, une par ligne : `{{ ' '.join(vals) }}`.\n\nÀ chaque tour, la condition du `while` est testée **avant** d'exécuter le corps ; quand elle devient fausse, la boucle s'arrête.",
+        "hints": [
+          "Faites un tableau avec une colonne `i` : notez sa valeur à chaque tour, vérifiez la condition, puis notez ce qui est affiché.",
+          "`len({{ nom }})` vaut {{ n }} ; les indices vont de 0 à {{ n - 1 }}. Regardez bien de combien `i` change à chaque tour, et par quelle valeur il commence."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-08",
+      "title": "Afficher les éléments d'une liste avec while",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Parcours de liste"
+      ],
+      "template": {
+        "code": "def cible(consigne, ref):\n    c = {\"consigne\": consigne, \"ref\": ref,\n         \"attendu\": run(ref, namespace={nom: copy.deepcopy(data)}),\n         \"attendu2\": run(ref, namespace={nom: copy.deepcopy(data2)})}\n    require(c[\"attendu\"].strip() != c[\"attendu2\"].strip())\n    return c\n\ndef joli_liste(L, nom):\n    return nom + \" = [\\n\" + \"\\n\".join(f\"    {e!r},\" for e in L) + \"\\n]\"\n\nimport copy\nnom = choice([\"fruits\", \"boissons\", \"prenoms\"])\npool = PRENOMS if nom == \"prenoms\" else (FRUITS if nom == \"fruits\" else [\"cafe\", \"the\", \"chocolat\", \"latte\", \"cappuccino\", \"moka\", \"jus\", \"limonade\"])\ndata = sample(pool, randint(4, 5))\ndata2 = sample(pool, randint(3, 6))\nconsignes = [\n    (\"chaque élément de la liste, un par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i])\\n    i = i + 1\"),\n    (\"chaque élément précédé de son indice, un par ligne (par exemple `0 \" + data[0] + \"`)\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print(i, {nom}[i])\\n    i = i + 1\"),\n    (\"les éléments d'indice pair (indices 0, 2, 4…), un par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i])\\n    i = i + 2\"),\n    (\"les éléments en commençant par le dernier, un par ligne\",\n     f\"i = len({nom}) - 1\\nwhile i >= 0:\\n    print({nom}[i])\\n    i = i - 1\"),\n]\nconsigne, ref = choice(consignes)\nc1 = cible(consigne, ref)",
+        "statement": "La liste `{{ nom }}` est **déjà définie** (inutile de la recopier) :\n\n{{ code_block(nom + \" = \" + repr(data)) }}\n\nÉcrire un programme qui affiche **{{ c1['consigne'] }}**, à l'aide d'une boucle `while`. Votre programme doit fonctionner quelle que soit la liste (même avec un autre nombre d'éléments).",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre programme",
+            "given": "{nom: data}",
+            "tests": "import re\nc = c1\n_code = re.sub(r\"#.*\", \"\", student_code)\nsortie = student_output.strip()\nattendu = c[\"attendu\"].strip()\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`).\")\nelif True and not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != attendu:\n    check(False, \"Votre code affiche `\" + \" / \".join(sortie.splitlines()) + \"` alors qu'on attend `\"\n          + \" / \".join(attendu.splitlines()) + \"` (le / sépare les lignes).\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"].strip(), \"Le bon résultat s'affiche, mais votre code doit aller chercher les valeurs \"\n          f\"dans `{nom}` au lieu de les écrire directement.\")",
+            "reference": "{{ c1['ref'] }}",
+            "forbid": [
+              "for"
+            ],
+            "starter": "i = 0\nwhile "
+          }
+        ],
+        "solution": "{{ code_block(c1['ref']) }}\n\nLe schéma d'un parcours avec `while` : on part d'un indice, on teste qu'il reste dans la liste, on traite `{{ nom }}[i]`, et on fait **avancer** `i` (sinon la boucle ne s'arrête jamais).",
+        "hints": [
+          "Un parcours avec `while` a trois parties : `i = ...` (indice de départ), `while condition:` (rester dans la liste), et dans la boucle `i = i + ...` pour avancer.",
+          "Utilisez `len({{ nom }})` plutôt que le nombre {{ len(data) }} : votre programme sera testé avec une autre liste. Le dernier indice est `len({{ nom }}) - 1`."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-09",
+      "title": "Liste de dictionnaires : afficher les valeurs d'une clé",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Données imbriquées : liste de dictionnaires",
+        "Parcours de liste"
+      ],
+      "template": {
+        "code": "def cible(consigne, ref):\n    c = {\"consigne\": consigne, \"ref\": ref,\n         \"attendu\": run(ref, namespace={nom: copy.deepcopy(data)}),\n         \"attendu2\": run(ref, namespace={nom: copy.deepcopy(data2)})}\n    require(c[\"attendu\"].strip() != c[\"attendu2\"].strip())\n    return c\n\ndef joli_liste(L, nom):\n    return nom + \" = [\\n\" + \"\\n\".join(f\"    {e!r},\" for e in L) + \"\\n]\"\n\nimport copy\nnom = \"films\"\ndef tirage():\n    return [{\"titre\": t, \"annee\": randint(1990, 2023), \"duree\": randint(80, 170)}\n            for t in sample([\"Le Roi lion\", \"Titanic\", \"Coco\", \"Vaiana\", \"Ratatouille\", \"Inception\", \"Matrix\", \"Shrek\", \"Wall-E\", \"Avatar\"], randint(4, 5))]\ndata, data2 = tirage(), tirage()\nan = randint(2000, 2012)\nconsignes = [\n    (\"le titre de chaque film, un par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i]['titre'])\\n    i = i + 1\"),\n    (\"l'année de sortie de chaque film, une par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i]['annee'])\\n    i = i + 1\"),\n    (\"le titre et la durée de chaque film, séparés par un espace, un film par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i]['titre'], {nom}[i]['duree'])\\n    i = i + 1\"),\n    (f\"le titre des films sortis **après {an}** (strictement), un par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    if {nom}[i]['annee'] > {an}:\\n        print({nom}[i]['titre'])\\n    i = i + 1\"),\n]\nconsigne, ref = choice(consignes)\nc1 = cible(consigne, ref)",
+        "statement": "La liste `{{ nom }}` est **déjà définie** (inutile de la recopier) :\n\n{{ code_block(joli_liste(data, nom)) }}\n\nÉcrire un programme qui affiche {{ c1['consigne'] }}, à l'aide d'une boucle `while`. Il doit fonctionner avec n'importe quelle liste de films.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre programme",
+            "given": "{nom: data}",
+            "tests": "import re\nc = c1\n_code = re.sub(r\"#.*\", \"\", student_code)\nsortie = student_output.strip()\nattendu = c[\"attendu\"].strip()\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`).\")\nelif True and not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != attendu:\n    check(False, \"Votre code affiche `\" + \" / \".join(sortie.splitlines()) + \"` alors qu'on attend `\"\n          + \" / \".join(attendu.splitlines()) + \"` (le / sépare les lignes).\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"].strip(), \"Le bon résultat s'affiche, mais votre code doit aller chercher les valeurs \"\n          f\"dans `{nom}` au lieu de les écrire directement.\")",
+            "reference": "{{ c1['ref'] }}",
+            "forbid": [
+              "for"
+            ],
+            "starter": "i = 0\nwhile "
+          }
+        ],
+        "solution": "{{ code_block(c1['ref']) }}\n\n`{{ nom }}[i]` est le dictionnaire du film d'indice `i` ; `{{ nom }}[i]['titre']` est son titre.",
+        "hints": [
+          "Parcourez la liste avec un indice `i` comme d'habitude ; à chaque tour, `{{ nom }}[i]` est **un dictionnaire** (un film).",
+          "Dans ce dictionnaire, on lit une valeur par sa clé : `{{ nom }}[i]['titre']`, `{{ nom }}[i]['annee']`, `{{ nom }}[i]['duree']`."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-10",
+      "title": "Liste de listes : afficher avec while",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Données imbriquées : liste de listes",
+        "Parcours de liste"
+      ],
+      "template": {
+        "code": "def cible(consigne, ref):\n    c = {\"consigne\": consigne, \"ref\": ref,\n         \"attendu\": run(ref, namespace={nom: copy.deepcopy(data)}),\n         \"attendu2\": run(ref, namespace={nom: copy.deepcopy(data2)})}\n    require(c[\"attendu\"].strip() != c[\"attendu2\"].strip())\n    return c\n\ndef joli_liste(L, nom):\n    return nom + \" = [\\n\" + \"\\n\".join(f\"    {e!r},\" for e in L) + \"\\n]\"\n\nimport copy\nif coin():\n    nom = \"C\"\n    def tirage():\n        return [[c, round(randint(20, 60) / 10, 1)] for c in sample([\"sumatra\", \"moka\", \"java\", \"colombie\", \"kenya\", \"bresil\", \"guatemala\", \"ethiopie\"], randint(3, 5))]\n    ip, objet, seuil = 1, \"café\", choice([3.5, 4, 4.5])\nelse:\n    nom = \"Livres\"\n    def tirage():\n        return [[t, a, randint(5, 25)] for t, a in sample([(\"Germinal\", \"Zola\"), (\"Candide\", \"Voltaire\"), (\"Le Cid\", \"Corneille\"), (\"Les Misérables\", \"Hugo\"),\n          (\"Le Petit Prince\", \"Saint-Exupéry\"), (\"Bel-Ami\", \"Maupassant\"), (\"Madame Bovary\", \"Flaubert\"),\n          (\"Phèdre\", \"Racine\")], randint(3, 5))]\n    ip, objet, seuil = 2, \"livre\", choice([10, 12, 15])\ndata, data2 = tirage(), tirage()\nconsignes = [\n    (f\"le prix de chaque {objet}, un par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i][{ip}])\\n    i = i + 1\"),\n    (f\"le nom de chaque {objet} suivi de son prix, un par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i][0], {nom}[i][{ip}])\\n    i = i + 1\"),\n    (f\"le nom des {objet}s dont le prix est **inférieur ou égal à {seuil}**, un par ligne\",\n     f\"i = 0\\nwhile i < len({nom}):\\n    if {nom}[i][{ip}] <= {seuil}:\\n        print({nom}[i][0])\\n    i = i + 1\"),\n]\nconsigne, ref = choice(consignes)\nc1 = cible(consigne, ref)",
+        "statement": "La liste `{{ nom }}` est **déjà définie** (inutile de la recopier) ; chaque sous-liste décrit un {{ objet }} :\n\n{{ code_block(joli_liste(data, nom)) }}\n\nÉcrire un programme qui affiche {{ c1['consigne'] }}, à l'aide d'une boucle `while`. Il doit fonctionner avec n'importe quelle liste de ce type.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre programme",
+            "given": "{nom: data}",
+            "tests": "import re\nc = c1\n_code = re.sub(r\"#.*\", \"\", student_code)\nsortie = student_output.strip()\nattendu = c[\"attendu\"].strip()\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`).\")\nelif True and not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelif not sortie:\n    check(False, \"Votre code n'affiche rien : utilisez `print(...)`.\")\nelif sortie != attendu:\n    check(False, \"Votre code affiche `\" + \" / \".join(sortie.splitlines()) + \"` alors qu'on attend `\"\n          + \" / \".join(attendu.splitlines()) + \"` (le / sépare les lignes).\")\nelse:\n    try:\n        autre = rerun({nom: data2}).strip()\n    except Exception:\n        autre = None\n    check(autre == c[\"attendu2\"].strip(), \"Le bon résultat s'affiche, mais votre code doit aller chercher les valeurs \"\n          f\"dans `{nom}` au lieu de les écrire directement.\")",
+            "reference": "{{ c1['ref'] }}",
+            "forbid": [
+              "for"
+            ],
+            "starter": "i = 0\nwhile "
+          }
+        ],
+        "solution": "{{ code_block(c1['ref']) }}\n\n`{{ nom }}[i]` est la sous-liste d'indice `i` ; `{{ nom }}[i][0]` est le nom et `{{ nom }}[i][{{ ip }}]` le prix.",
+        "hints": [
+          "Parcourez `{{ nom }}` avec un indice `i` ; à chaque tour, `{{ nom }}[i]` est une **sous-liste**, par exemple `{{ repr(data[0]) }}`.",
+          "Le prix est à l'indice {{ ip }} de la sous-liste : `{{ nom }}[i][{{ ip }}]`. N'oubliez pas `i = i + 1` à la fin du corps de la boucle."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-11",
+      "title": "Quelle boucle while parcourt toute la liste ?",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 1,
+      "skills": [
+        "Boucle while",
+        "Parcours de liste"
+      ],
+      "template": {
+        "code": "nom = choice(NOMS_LISTES)\nL = randlist(4, 1, 9, distinct=True)\nbonne = (f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i])\\n    i = i + 1\",\n         \"affiche bien chaque élément, du premier au dernier.\")\nmauvaises = [\n    (f\"i = 0\\nwhile i <= len({nom}):\\n    print({nom}[i])\\n    i = i + 1\",\n     f\"provoque une erreur `IndexError` : au dernier tour `i` vaut {len(L)}, or le dernier indice est {len(L) - 1}.\"),\n    (f\"i = 1\\nwhile i < len({nom}):\\n    print({nom}[i])\\n    i = i + 1\",\n     \"oublie le premier élément : les indices commencent à 0.\"),\n    (f\"i = 0\\nwhile i < len({nom}) - 1:\\n    print({nom}[i])\\n    i = i + 1\",\n     \"oublie le dernier élément : la boucle s'arrête avant l'indice `len - 1`.\"),\n    (f\"i = 0\\nwhile i < len({nom}):\\n    print(i)\\n    i = i + 1\",\n     \"affiche les **indices** 0, 1, 2… et non les éléments.\"),\n    (f\"i = 0\\nwhile i < len({nom}):\\n    print({nom}[i])\\ni = i + 1\",\n     \"ne s'arrête jamais : `i = i + 1` n'est pas indenté, il est en dehors de la boucle, donc `i` reste à 0.\"),\n    (f\"i = 0\\nwhile i < len({nom}):\\n    i = i + 1\\n    print({nom}[i])\",\n     \"oublie le premier élément puis provoque une erreur `IndexError` : `i` augmente **avant** l'affichage.\"),\n]\nchoisis = shuffled([bonne] + sample(mauvaises, 3))\noptions = [(\"```python\\n\" + c + \"\\n```\", c == bonne[0]) for c, _ in choisis]\nexpl = \"\\n\\n\".join(\"```python\\n\" + c + \"\\n```\\n\" + (\"**Bonne réponse** : ce programme \" if c == bonne[0] else \"Ce programme \") + e\n                     for c, e in choisis)",
+        "statement": "On dispose de la liste `{{ nom }} = {{ repr(L) }}`.\n\nQuel programme affiche **tous** les éléments de `{{ nom }}`, un par ligne ?",
+        "fields": [
+          {
+            "type": "choice",
+            "label": "",
+            "options": "options",
+            "shuffle": false
+          }
+        ],
+        "solution": "{{ expl }}\n\nLe schéma correct : départ à `i = 0`, condition `i < len({{ nom }})`, et `i = i + 1` **dans** la boucle, après le traitement de `{{ nom }}[i]`.",
+        "hints": [
+          "Faites tourner chaque programme à la main sur la liste `{{ repr(L) }}` : quelle est la première valeur de `i`, et la dernière pour laquelle on exécute le corps ?",
+          "Vérifiez trois choses : l'indice de départ (0), la condition (le dernier indice est `len({{ nom }}) - 1`), et l'indentation de `i = i + 1`."
+        ],
+        "max_tries": 2
+      }
+    },
+    {
+      "uid": "NSI1-12",
+      "title": "Compter avec une boucle while : qu'affiche ce programme ?",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 1,
+      "skills": [
+        "Boucle while",
+        "Compter des occurrences",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "nom = choice(NOMS_LISTES)\nL = [randint(1, 6) for _ in range(randint(7, 9))]\nx = choice(L)\ncond, texte = choice([\n    (f\"{nom}[i] == {x}\", f\"égaux à {x}\"),\n    (f\"{nom}[i] > {x}\", f\"strictement supérieurs à {x}\"),\n    (f\"{nom}[i] % 2 == 0\", \"pairs\"),\n    (f\"{nom}[i] != {x}\", f\"différents de {x}\"),\n])\nsrc = \"\\n\".join([f\"{nom} = {L!r}\", \"n = 0\", \"i = 0\", f\"while i < len({nom}):\",\n                 f\"    if {cond}:\", \"        n = n + 1\", \"    i = i + 1\", \"print(n)\"])\nrep = int(run(src))",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Valeur affichée",
+            "answer": "rep"
+          }
+        ],
+        "solution": "Le programme compte les éléments {{ texte }} : il affiche **{{ rep }}**.\n\n`n` est un **compteur** : il part de 0 et augmente de 1 chaque fois que la condition est vraie.",
+        "hints": [
+          "`n` augmente de 1 seulement quand la condition du `if` est vraie. Passez les éléments un par un.",
+          "Cette boucle compte les éléments de `{{ nom }}` {{ texte }}. Entourez-les dans la liste et comptez-les."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-13",
+      "title": "Écrire compte(x, L) avec while",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Compter des occurrences",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "fname = choice([\"compte\", \"nb_occurrences\", \"occurrences\"])\nparams = \"x, L\"\ndef fabrique():\n    L = [randint(1, 5) for _ in range(randint(5, 9))]\n    return L\ncases = []\nfor _ in range(3):\n    L = fabrique()\n    x = choice(L)\n    cases.append(((x, L), L.count(x)))\ncases.append(((9, fabrique()), 0))\ncases.append(((3, []), 0))\nnoms = sample(FRUITS, 3)\nL = [choice(noms) for _ in range(6)]\ncases.append(((noms[0], L), L.count(noms[0])))\nref = f\"def {fname}(x, L):\\n    n = 0\\n    i = 0\\n    while i < len(L):\\n        if L[i] == x:\\n            n = n + 1\\n        i = i + 1\\n    return n\"\nex = cases[0]",
+        "statement": "Écrire une fonction `{{ fname }}(x, L)` qui **renvoie** le nombre de fois où la valeur `x` apparaît dans la liste `L`.\n\nPar exemple, `{{ fname }}({{ repr(ex[0][0]) }}, {{ repr(ex[0][1]) }})` renvoie `{{ ex[1] }}`.\n\nContraintes : utiliser une boucle `while` ; `for` et la méthode `count` sont interdits.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for",
+              "count"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn parcourt la liste avec un indice `i` et on augmente un compteur `n` chaque fois que `L[i]` est égal à `x`. Le `return` est **après** la boucle.",
+        "hints": [
+          "Il faut un **compteur** `n = 0` avant la boucle, et un indice `i` pour parcourir `L` ; dans la boucle, comparez `L[i]` à `x`.",
+          "Le `return n` doit être **en dehors** de la boucle (moins indenté) : sinon la fonction s'arrête au premier tour. Pensez aussi à la liste vide."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-14",
+      "title": "Compter dans une liste de dictionnaires",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Compter des occurrences",
+        "Données imbriquées : liste de dictionnaires",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "if coin():\n    fname, params, cle, objet = \"nb_films_longs\", \"films, duree_min\", \"duree\", \"films\"\n    def fab(n):\n        return [{\"titre\": t, \"duree\": randint(80, 170)} for t in sample([\"Le Roi lion\", \"Titanic\", \"Coco\", \"Vaiana\", \"Ratatouille\", \"Inception\", \"Matrix\", \"Shrek\", \"Wall-E\", \"Avatar\"], n)]\n    texte = \"le nombre de films dont la durée (clé `\\\"duree\\\"`) est **supérieure ou égale** à `duree_min`\"\n    seuils = [100, 120, 140]\nelse:\n    fname, params, cle, objet = \"nb_majeurs\", \"eleves, age_min\", \"age\", \"eleves\"\n    def fab(n):\n        return [{\"nom\": p, \"age\": randint(14, 20)} for p in sample(PRENOMS, n)]\n    texte = \"le nombre d'élèves dont l'âge (clé `\\\"age\\\"`) est **supérieur ou égal** à `age_min`\"\n    seuils = [16, 17, 18]\ncases = []\nfor n in (4, 5, 6):\n    L = fab(n)\n    s = choice(seuils)\n    cases.append(((L, s), len([e for e in L if e[cle] >= s])))\ncases.append((([], seuils[0]), 0))\np = params.split(\", \")\nref = (f\"def {fname}({params}):\\n    n = 0\\n    i = 0\\n    while i < len({p[0]}):\\n\"\n       f\"        if {p[0]}[i]['{cle}'] >= {p[1]}:\\n            n = n + 1\\n        i = i + 1\\n    return n\")\nex = cases[0]",
+        "statement": "Écrire une fonction `{{ fname }}({{ params }})` qui **renvoie** {{ texte }}.\n\nExemple :\n\n{{ code_block(params.split(', ')[0] + \" = \" + repr(ex[0][0]) + chr(10) + fname + \"(\" + params.split(', ')[0] + \", \" + str(ex[0][1]) + \")   # renvoie \" + str(ex[1])) }}\n\nContrainte : utiliser une boucle `while` (pas de `for`).",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nÀ chaque tour, `{{ params.split(', ')[0] }}[i]` est un dictionnaire ; on compare sa valeur `['{{ cle }}']` au seuil.",
+        "hints": [
+          "C'est un comptage : un compteur à 0 avant la boucle, `+ 1` quand la condition est vraie, et `return` après la boucle.",
+          "La condition porte sur `{{ params.split(', ')[0] }}[i]['{{ cle }}']` (on choisit l'élément par son indice, puis la valeur par sa clé)."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-15",
+      "title": "Cumuler avec une boucle while : qu'affiche ce programme ?",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 1,
+      "skills": [
+        "Boucle while",
+        "Calcul cumulatif",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "nom = choice(NOMS_LISTES)\nL = randlist(randint(5, 6), 1, 12)\nk = choice(L)\nforme = choice([\"somme\", \"pas\", \"si\", \"indices\"])\nif forme == \"somme\":\n    corps = [f\"    s = s + {nom}[i]\", \"    i = i + 1\"]\nelif forme == \"pas\":\n    corps = [f\"    s = s + {nom}[i]\", \"    i = i + 2\"]\nelif forme == \"si\":\n    corps = [f\"    if {nom}[i] > {k}:\", f\"        s = s + {nom}[i]\", \"    i = i + 1\"]\nelse:\n    corps = [\"    s = s + i\", \"    i = i + 1\"]\nsrc = \"\\n\".join([f\"{nom} = {L!r}\", \"s = 0\", \"i = 0\", f\"while i < len({nom}):\"] + corps + [\"print(s)\"])\nrep = int(run(src))",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Valeur affichée",
+            "answer": "rep"
+          }
+        ],
+        "solution": "Le programme affiche **{{ rep }}**.\n\n`s` est un **accumulateur** : il part de 0 et, à chaque tour concerné, on lui ajoute une valeur.",
+        "hints": [
+          "Faites un tableau avec les colonnes `i` et `s`, et remplissez une ligne par tour de boucle.",
+          "Regardez précisément ce qu'on ajoute à `s` : l'élément `{{ nom }}[i]` ou l'indice `i` ? À chaque tour ou seulement sous condition ?"
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-16",
+      "title": "Écrire une fonction de somme avec while",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Calcul cumulatif",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "variante = choice([\"somme\", \"somme_pairs\", \"somme_positifs\"])\nfname, params = variante, \"L\"\ncond = {\"somme\": None, \"somme_pairs\": \"L[i] % 2 == 0\", \"somme_positifs\": \"L[i] > 0\"}[variante]\ntexte = {\"somme\": \"la somme des éléments de la liste `L`\",\n         \"somme_pairs\": \"la somme des éléments **pairs** de la liste `L`\",\n         \"somme_positifs\": \"la somme des éléments **strictement positifs** de la liste `L`\"}[variante]\ndef attendu(L):\n    s = 0\n    for x in L:\n        if cond is None or (x % 2 == 0 if variante == \"somme_pairs\" else x > 0):\n            s = s + x\n    return s\ncases = []\nfor n in (4, 6, 7):\n    L = randlist(n, -9 if variante == \"somme_positifs\" else 1, 30)\n    cases.append(((L,), attendu(L)))\ncases.append((([],), 0))\nif cond:\n    corps = f\"        if {cond}:\\n            s = s + L[i]\\n\"\nelse:\n    corps = \"        s = s + L[i]\\n\"\nref = f\"def {fname}(L):\\n    s = 0\\n    i = 0\\n    while i < len(L):\\n{corps}        i = i + 1\\n    return s\"\nex = cases[0]",
+        "statement": "Écrire une fonction `{{ fname }}(L)` qui **renvoie** {{ texte }} (0 si la liste est vide).\n\nPar exemple, `{{ fname }}({{ repr(ex[0][0]) }})` renvoie `{{ ex[1] }}`.\n\nContraintes : utiliser une boucle `while` ; `for` et `sum` sont interdits.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for",
+              "sum"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn utilise un **accumulateur** `s` qui part de 0 ; à chaque tour (concerné), on lui ajoute `L[i]`.",
+        "hints": [
+          "Il faut deux variables avant la boucle : l'accumulateur `s = 0` et l'indice `i = 0`.",
+          "Dans la boucle : ajouter `L[i]` à `s`{{ ' seulement si la condition est vraie' if cond else '' }}, puis `i = i + 1`. Le `return s` vient **après** la boucle."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-17",
+      "title": "Total dans une liste de listes ou de dictionnaires",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Calcul cumulatif",
+        "Données imbriquées : liste de listes",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "if coin():\n    fname, params = \"prix_total\", \"livres\"\n    def fab(n):\n        return [[t, a, randint(5, 25)] for t, a in sample([(\"Germinal\", \"Zola\"), (\"Candide\", \"Voltaire\"), (\"Le Cid\", \"Corneille\"), (\"Les Misérables\", \"Hugo\"),\n          (\"Le Petit Prince\", \"Saint-Exupéry\"), (\"Bel-Ami\", \"Maupassant\"), (\"Madame Bovary\", \"Flaubert\"),\n          (\"Phèdre\", \"Racine\")], n)]\n    acces, texte = \"livres[i][2]\", \"le prix total des livres ; chaque livre est une liste `[titre, auteur, prix]`\"\n    def tot(L):\n        return sum(x[2] for x in L)\nelse:\n    fname, params = \"duree_totale\", \"films\"\n    def fab(n):\n        return [{\"titre\": t, \"annee\": randint(1990, 2023), \"duree\": randint(80, 170)} for t in sample([\"Le Roi lion\", \"Titanic\", \"Coco\", \"Vaiana\", \"Ratatouille\", \"Inception\", \"Matrix\", \"Shrek\", \"Wall-E\", \"Avatar\"], n)]\n    acces, texte = \"films[i]['duree']\", \"la durée totale (en minutes) des films ; chaque film est un dictionnaire de clés `\\\"titre\\\"`, `\\\"annee\\\"` et `\\\"duree\\\"`\"\n    def tot(L):\n        return sum(x[\"duree\"] for x in L)\ncases = [((L,), tot(L)) for L in (fab(3), fab(4), fab(5))] + [(([],), 0)]\nref = f\"def {fname}({params}):\\n    s = 0\\n    i = 0\\n    while i < len({params}):\\n        s = s + {acces}\\n        i = i + 1\\n    return s\"\nex = cases[0]",
+        "statement": "Écrire une fonction `{{ fname }}({{ params }})` qui **renvoie** {{ texte }}.\n\nExemple :\n\n{{ code_block(params + \" = \" + repr(ex[0][0]) + chr(10) + fname + \"(\" + params + \")   # renvoie \" + str(ex[1])) }}\n\nContraintes : utiliser une boucle `while` ; `for` et `sum` sont interdits.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for",
+              "sum"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nC'est une somme classique ; la seule différence est la façon d'atteindre la valeur : `{{ acces }}`.",
+        "hints": [
+          "Même schéma qu'une somme : `s = 0`, `i = 0`, une boucle `while` sur les indices, et `return s` après la boucle.",
+          "À chaque tour, la valeur à ajouter est `{{ acces }}`."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-18",
+      "title": "Écrire max_liste(L) ou min_liste(L) avec while",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Recherche de max/min",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "sens = choice([\"max\", \"min\"])\nfname, params = sens + \"_liste\", \"L\"\ncases = []\nfor n in (4, 5, 7):\n    L = randlist(n, -40, -1) if (n == 4 and sens == \"max\") else randlist(n, -20, 50)\n    if n == 4 and sens == \"min\":\n        L = randlist(n, 1, 40)\n    cases.append(((L,), max(L) if sens == \"max\" else min(L)))\nc = randint(-9, 9)\ncases.append((([c],), c))\nop = \">\" if sens == \"max\" else \"<\"\nref = f\"def {fname}(L):\\n    m = L[0]\\n    i = 1\\n    while i < len(L):\\n        if L[i] {op} m:\\n            m = L[i]\\n        i = i + 1\\n    return m\"\nex = cases[2]\nmot = \"le plus grand\" if sens == \"max\" else \"le plus petit\"",
+        "statement": "Écrire une fonction `{{ fname }}(L)` qui **renvoie** {{ mot }} élément d'une liste `L` de nombres **non vide**.\n\nPar exemple, `{{ fname }}({{ repr(ex[0][0]) }})` renvoie `{{ ex[1] }}`.\n\nContraintes : utiliser une boucle `while` ; `for`, `max`, `min`, `sorted` et `sort` sont interdits.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for",
+              "max",
+              "min",
+              "sorted",
+              "sort"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn garde dans `m` {{ mot }} élément **vu jusqu'ici** ; on l'initialise avec `L[0]` (et non 0, qui ne marcherait pas si tous les nombres sont {{ 'négatifs' if sens == 'max' else 'positifs' }}).",
+        "hints": [
+          "Gardez dans une variable `m` {{ mot }} élément rencontré jusqu'ici, et comparez-le à chaque `L[i]`.",
+          "Initialisez `m` avec le premier élément `L[0]`, pas avec 0 : la fonction est testée sur une liste où tous les nombres sont {{ 'négatifs' if sens == 'max' else 'positifs' }}."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-19",
+      "title": "Tous les éléments vérifient-ils la condition ? (while)",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Tester une condition sur tous les éléments",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "variante = choice([\"pairs\", \"positifs\", \"inferieurs\"])\nif variante == \"pairs\":\n    fname, params, cond, texte = \"tous_pairs\", \"L\", \"L[i] % 2 != 0\", \"`True` si **tous** les éléments de `L` sont pairs, `False` sinon\"\n    def bon():\n        return 2 * randint(-10, 30)\n    def mauvais():\n        return 2 * randint(-10, 30) + 1\nelif variante == \"positifs\":\n    fname, params, cond, texte = \"tous_positifs\", \"L\", \"L[i] <= 0\", \"`True` si **tous** les éléments de `L` sont strictement positifs, `False` sinon\"\n    def bon():\n        return randint(1, 50)\n    def mauvais():\n        return randint(-20, 0)\nelse:\n    fname, params, cond, texte = \"tous_inferieurs\", \"L, n\", \"L[i] >= n\", \"`True` si **tous** les éléments de `L` sont strictement inférieurs à `n`, `False` sinon\"\n    seuil = randint(20, 40)\n    def bon():\n        return randint(0, seuil - 1)\n    def mauvais():\n        return randint(seuil, seuil + 20)\nextra = (seuil,) if variante == \"inferieurs\" else ()\ndef liste(pos):\n    L = [bon() for _ in range(5)]\n    if pos is not None:\n        L[pos] = mauvais()\n    return L\ncases = [((liste(None),) + extra, True), ((liste(0),) + extra, False), ((liste(2),) + extra, False),\n         ((liste(4),) + extra, False), ((liste(None),) + extra, True), (([],) + extra, True)]\nref = f\"def {fname}({params}):\\n    i = 0\\n    while i < len(L):\\n        if {cond}:\\n            return False\\n        i = i + 1\\n    return True\"\nex = cases[3]",
+        "statement": "Écrire une fonction `{{ fname }}({{ params }})` qui **renvoie** {{ texte }}. Pour une liste vide, elle renvoie `True`.\n\nPar exemple, `{{ fname }}({{ \", \".join(repr(a) for a in ex[0]) }})` renvoie `{{ ex[1] }}`.\n\nContraintes : utiliser une boucle `while` ; `for`, `all` et `any` sont interdits.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for",
+              "all",
+              "any"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nDès qu'un élément ne respecte pas la condition, on peut répondre `False` tout de suite. On ne peut répondre `True` qu'**après** avoir vérifié tous les éléments, donc après la boucle.",
+        "hints": [
+          "Cherchez un **contre-exemple** : dès qu'un élément ne convient pas, la fonction peut renvoyer `False`.",
+          "Le `return True` doit être **après** la boucle : tant qu'on n'a pas tout vérifié, on ne peut pas conclure que tous les éléments conviennent."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-20",
+      "title": "Une fonction « tous » qui se trompe ?",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 3,
+      "skills": [
+        "Boucle while",
+        "Tester une condition sur tous les éléments",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "fname = choice([\"tous_pairs\", \"verif\", \"test_pairs\"])\nversion = choice([\"juste\", \"premier\", \"existe\"])\nif version == \"juste\":\n    corps = [\"    i = 0\", \"    while i < len(L):\", \"        if L[i] % 2 != 0:\", \"            return False\", \"        i = i + 1\", \"    return True\"]\nelif version == \"premier\":\n    corps = [\"    i = 0\", \"    while i < len(L):\", \"        if L[i] % 2 != 0:\", \"            return False\", \"        else:\",\n             \"            return True\", \"        i = i + 1\", \"    return True\"]\nelse:\n    corps = [\"    i = 0\", \"    while i < len(L):\", \"        if L[i] % 2 == 0:\", \"            return True\", \"        i = i + 1\", \"    return False\"]\nsrc = f\"def {fname}(L):\\n\" + \"\\n\".join(corps)\npair = lambda: 2 * randint(1, 20)\nimpair = lambda: 2 * randint(1, 20) + 1\nL1 = [pair() for _ in range(4)]\nL2 = [pair(), pair(), impair(), pair()]\nL3 = [impair(), pair(), impair(), impair()]\nlistes = shuffled([L1, L2, L3])\nreps = [repr(evaluate(src, f\"{fname}({L!r})\")) for L in listes]\navis = {\"juste\": \"Cette fonction est **correcte** : elle renvoie `False` dès qu'un élément est impair, et `True` seulement après avoir tout vérifié.\",\n        \"premier\": \"Cette fonction est **fausse** : au premier tour, elle renvoie forcément `True` ou `False`, donc elle ne regarde que le **premier** élément.\",\n        \"existe\": \"Cette fonction est **fausse** : elle renvoie `True` dès qu'elle trouve **un** élément pair ; elle teste donc s'il **existe** un élément pair, pas si **tous** le sont.\"}[version]",
+        "statement": "On veut une fonction qui renvoie `True` si **tous** les éléments de la liste sont pairs. Voici une proposition :\n\n{{ code_block(src) }}\n\nQue renvoient les appels suivants ? (répondre `True` ou `False`)",
+        "fields": [
+          {
+            "type": "text",
+            "label": "`{{ fname }}({{ repr(listes[0]) }})`",
+            "answer": "[reps[0], reps[0].lower()]"
+          },
+          {
+            "type": "text",
+            "label": "`{{ fname }}({{ repr(listes[1]) }})`",
+            "answer": "[reps[1], reps[1].lower()]"
+          },
+          {
+            "type": "text",
+            "label": "`{{ fname }}({{ repr(listes[2]) }})`",
+            "answer": "[reps[2], reps[2].lower()]"
+          }
+        ],
+        "solution": "Les appels renvoient `{{ reps[0] }}`, `{{ reps[1] }}` et `{{ reps[2] }}`.\n\n{{ avis }}\n\nLa bonne version :\n\n{{ code_block(\"def tous_pairs(L):\" + chr(10) + \"    i = 0\" + chr(10) + \"    while i < len(L):\" + chr(10) + \"        if L[i] % 2 != 0:\" + chr(10) + \"            return False\" + chr(10) + \"        i = i + 1\" + chr(10) + \"    return True\") }}",
+        "hints": [
+          "`return` arrête **immédiatement** la fonction, même au milieu d'une boucle. Suivez l'exécution tour par tour et arrêtez-vous au premier `return` rencontré.",
+          "Pour chaque appel, regardez le premier élément de la liste : quelle ligne `return` est exécutée en premier ?"
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-21",
+      "title": "Renvoyer l'indice d'un élément, ou -1",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Parcours de liste",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "fname = choice([\"indice\", \"position\", \"recherche\"])\nparams = \"x, L\"\ndef fab():\n    return [randint(1, 9) for _ in range(randint(5, 8))]\ndef ind(x, L):\n    return L.index(x) if x in L else -1\ncases = []\nL = fab(); cases.append(((L[0], L), 0))\nL = fab(); cases.append(((L[-1], L), ind(L[-1], L)))\nL = fab(); x = choice(L); L = L + [x]; cases.append(((x, L), ind(x, L)))\nL = fab(); cases.append(((0, L), -1))\ncases.append(((4, []), -1))\nref = (f\"def {fname}(x, L):\\n    i = 0\\n    while i < len(L) and L[i] != x:\\n        i = i + 1\\n\"\n       f\"    if i < len(L):\\n        return i\\n    return -1\")\nex = cases[2]",
+        "statement": "Écrire une fonction `{{ fname }}(x, L)` qui **renvoie** l'indice de la **première** apparition de `x` dans la liste `L`, ou `-1` si `x` n'est pas dans `L`.\n\nPar exemple, `{{ fname }}({{ repr(ex[0][0]) }}, {{ repr(ex[0][1]) }})` renvoie `{{ ex[1] }}`.\n\nContraintes : utiliser une boucle `while` ; `for`, `index` et `find` sont interdits.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for",
+              "index",
+              "find"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nLa boucle avance **tant qu'**on n'a pas trouvé `x` et qu'on reste dans la liste. On peut aussi écrire `return i` dans la boucle dès que `L[i] == x`, et `return -1` après la boucle.",
+        "hints": [
+          "Parcourez la liste avec un indice `i` ; dès que `L[i] == x`, la réponse est `i`.",
+          "Si on sort de la boucle sans avoir trouvé `x`, il faut renvoyer `-1` : ce `return -1` est donc **après** la boucle."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-22",
+      "title": "Bulles : écrire contient(b, x, y)",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 2,
+      "skills": [
+        "Dictionnaires : accès et modification",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "fname, params = \"contient\", \"b, x, y\"\ndef bulle(x, y, t):\n    return {\"x\": x, \"y\": y, \"vx\": randint(-3, 3), \"vy\": randint(-3, 3), \"taille\": t}\ncx, cy, t = randint(50, 300), randint(50, 300), randint(10, 40)\nb = bulle(cx, cy, t)\ndef dedans(b, x, y):\n    return (x - b[\"x\"]) ** 2 + (y - b[\"y\"]) ** 2 <= b[\"taille\"] ** 2\nb2 = bulle(randint(50, 300), randint(50, 300), 5)\ncases = [((b, cx, cy), True), ((b, cx + t - 1, cy), True), ((b, cx, cy + t + 2), False),\n         ((b, cx + t, cy + t), False), ((b2, b2[\"x\"] + 3, b2[\"y\"] - 4), True), ((b2, b2[\"x\"] + 4, b2[\"y\"] + 4), False)]\nref = f\"def contient(b, x, y):\\n    return (x - b['x']) ** 2 + (y - b['y']) ** 2 <= b['taille'] ** 2\"",
+        "statement": "Dans un jeu, une **bulle** est un disque représenté par un dictionnaire, par exemple :\n\n{{ code_block(\"b = \" + repr(b)) }}\n\n`\"x\"` et `\"y\"` sont les coordonnées du centre, `\"vx\"` et `\"vy\"` la vitesse, `\"taille\"` le rayon.\n\nÉcrire une fonction `contient(b, x, y)` qui renvoie `True` si le point de coordonnées `(x, y)` est dans la bulle `b` (bord compris), `False` sinon.\n\nRappel : le point est dans la bulle si sa distance au centre est inférieure ou égale au rayon, c'est-à-dire si (x − xc)² + (y − yc)² ≤ taille², où (xc, yc) est le centre de la bulle.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}"
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn lit le centre et le rayon dans le dictionnaire avec `b['x']`, `b['y']` et `b['taille']`, puis on compare les carrés (pas besoin de racine carrée).",
+        "hints": [
+          "Les coordonnées du centre se lisent dans le dictionnaire : `b['x']` et `b['y']` ; le rayon est `b['taille']`.",
+          "Une comparaison donne déjà `True` ou `False` : on peut écrire directement `return (x - b['x']) ** 2 + ... <= b['taille'] ** 2`."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-23",
+      "title": "Bulles : quelle bulle est touchée ?",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 3,
+      "skills": [
+        "Boucle while",
+        "Données imbriquées : liste de dictionnaires",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "fname, params = \"bulle_touchee\", \"L, x, y\"\ndef joli_liste(L, nom):\n    return nom + \" = [\\n\" + \"\\n\".join(f\"    {e!r},\" for e in L) + \"\\n]\"\ndef bulle(x, y, t):\n    return {\"x\": x, \"y\": y, \"vx\": randint(-3, 3), \"vy\": randint(-3, 3), \"taille\": t}\ndef dedans(b, x, y):\n    return (x - b[\"x\"]) ** 2 + (y - b[\"y\"]) ** 2 <= b[\"taille\"] ** 2\ndef touchee(L, x, y):\n    i = 0\n    while i < len(L):\n        if dedans(L[i], x, y):\n            return i\n        i = i + 1\n    return -1\nL = [bulle(60 + 100 * k, randint(50, 200), randint(15, 30)) for k in range(4)]\nL = shuffled(L)\ncases = []\nk = randint(0, 3)\ncases.append(((L, L[k][\"x\"], L[k][\"y\"]), k))\nk2 = randint(0, 3)\ncases.append(((L, L[k2][\"x\"] + 5, L[k2][\"y\"] - 5), k2))\ncases.append(((L, 0, 400), -1))\n# deux bulles superposées : on renvoie la première\nL2 = [bulle(100, 100, 20), bulle(200, 200, 30), bulle(205, 205, 30)]\ncases.append(((L2, 210, 210), 1))\ncases.append((([], 10, 10), -1))\nref = (\"def contient(b, x, y):\\n    return (x - b['x']) ** 2 + (y - b['y']) ** 2 <= b['taille'] ** 2\\n\\n\"\n       \"def bulle_touchee(L, x, y):\\n    i = 0\\n    while i < len(L):\\n        if contient(L[i], x, y):\\n\"\n       \"            return i\\n        i = i + 1\\n    return -1\")",
+        "statement": "Une bulle est un dictionnaire `{\"x\": ..., \"y\": ..., \"vx\": ..., \"vy\": ..., \"taille\": ...}` et la liste `L` contient toutes les bulles du jeu. La fonction `contient(b, x, y)` est déjà écrite (elle est dans le code de départ).\n\nÉcrire une fonction `bulle_touchee(L, x, y)` qui renvoie l'**indice** de la première bulle de `L` qui contient le point `(x, y)`, ou `-1` si aucune bulle ne le contient. On pourra ensuite retirer la bulle touchée avec `L.pop(i)`.\n\nPar exemple, avec\n\n{{ code_block(joli_liste(L, \"L\")) }}\n\nl'appel `bulle_touchee(L, {{ cases[1][0][1] }}, {{ cases[1][0][2] }})` renvoie `{{ cases[1][1] }}`, et `bulle_touchee(L, 0, 400)` renvoie `-1`.\n\nContrainte : utiliser une boucle `while` (pas de `for`).",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def contient(b, x, y):\n    return (x - b['x']) ** 2 + (y - b['y']) ** 2 <= b['taille'] ** 2\n\ndef bulle_touchee(L, x, y):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn parcourt les bulles avec un indice ; dès qu'une bulle contient le point, on renvoie son indice. Si la boucle se termine sans rien trouver, on renvoie `-1`.",
+        "hints": [
+          "Utilisez la fonction `contient` : `contient(L[i], x, y)` vaut `True` si la bulle d'indice `i` contient le point.",
+          "On renvoie `i` dès qu'on trouve ; le `return -1` est **après** la boucle (aucune bulle trouvée)."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-24",
+      "title": "stats_voyelles : compter les voyelles dans un dictionnaire",
+      "chapter": "Python : dictionnaires",
+      "difficulty": 3,
+      "skills": [
+        "Boucle while",
+        "Dictionnaires : accès et modification",
+        "Compter des occurrences",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "fname, params = \"stats_voyelles\", \"ch\"\nMOTS = [\"informatique\", \"dictionnaire\", \"algorithme\", \"python\", \"boucle\", \"variable\", \"fonction\", \"bonjour\",\n        \"ordinateur\", \"programmation\", \"anticonstitutionnellement\", \"ecran\", \"souris\", \"clavier\", \"processeur\", \"yoyo\"]\ndef stats(ch):\n    d = {v: 0 for v in \"aeiouy\"}\n    for c in ch:\n        if c in d:\n            d[c] = d[c] + 1\n    return d\nmots = sample(MOTS, 4)\ncases = [((m,), stats(m)) for m in mots] + [((\"\",), stats(\"\")), ((\"bzz\",), stats(\"bzz\"))]\nref = (\"def stats_voyelles(ch):\\n    d = {'a': 0, 'e': 0, 'i': 0, 'o': 0, 'u': 0, 'y': 0}\\n    i = 0\\n\"\n       \"    while i < len(ch):\\n        if ch[i] in d:\\n            d[ch[i]] = d[ch[i]] + 1\\n        i = i + 1\\n    return d\")\nex = cases[0]",
+        "statement": "Écrire une fonction `stats_voyelles(ch)` qui reçoit une chaîne `ch` en minuscules, sans accents, et **renvoie** un dictionnaire dont les clés sont les six voyelles `'a'`, `'e'`, `'i'`, `'o'`, `'u'`, `'y'` et les valeurs leur nombre d'apparitions dans `ch` (0 si la voyelle n'apparaît pas).\n\nPar exemple, `stats_voyelles({{ repr(ex[0][0]) }})` renvoie `{{ repr(ex[1]) }}`.\n\nContraintes : utiliser une boucle `while` ; `for` et `count` sont interdits.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for",
+              "count"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn prépare le dictionnaire avec toutes les voyelles à 0, puis on parcourt la chaîne caractère par caractère : `ch[i] in d` teste si le caractère est une clé, c'est-à-dire une voyelle.",
+        "hints": [
+          "Commencez par créer le dictionnaire `d = {'a': 0, 'e': 0, ...}` avec les six voyelles à 0. Une chaîne se parcourt comme une liste : `ch[i]` est le caractère d'indice `i`.",
+          "Pour chaque caractère `c = ch[i]` : si `c in d` (c'est une voyelle), on augmente `d[c]` de 1. On renvoie `d` après la boucle."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-25",
+      "title": "Construire une liste avec append dans une boucle while",
+      "chapter": "Python : listes et chaînes",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Parcours de liste",
+        "Écrire une fonction"
+      ],
+      "template": {
+        "code": "variante = choice([\"pairs\", \"doubles\", \"superieurs\"])\nif variante == \"pairs\":\n    fname, params, texte = \"pairs\", \"L\", \"la liste des éléments **pairs** de `L`, dans le même ordre\"\n    corps = \"        if L[i] % 2 == 0:\\n            R.append(L[i])\\n\"\n    f = lambda L: [x for x in L if x % 2 == 0]\nelif variante == \"doubles\":\n    fname, params, texte = \"doubles\", \"L\", \"la liste des **doubles** des éléments de `L` (même ordre)\"\n    corps = \"        R.append(2 * L[i])\\n\"\n    f = lambda L: [2 * x for x in L]\nelse:\n    fname, params, texte = \"superieurs\", \"L, n\", \"la liste des éléments de `L` **strictement supérieurs** à `n`, dans le même ordre\"\n    corps = \"        if L[i] > n:\\n            R.append(L[i])\\n\"\nseuil = randint(8, 15)\ncases = []\nfor k in (5, 6, 7):\n    L = randlist(k, 1, 25)\n    if variante == \"superieurs\":\n        cases.append(((L, seuil), [x for x in L if x > seuil]))\n    else:\n        cases.append(((L,), f(L)))\ncases.append((([], seuil) if variante == \"superieurs\" else ([],), []))\nref = f\"def {fname}({params}):\\n    R = []\\n    i = 0\\n    while i < len(L):\\n{corps}        i = i + 1\\n    return R\"\nex = cases[0]",
+        "statement": "Écrire une fonction `{{ fname }}({{ params }})` qui **renvoie** {{ texte }}. La liste `L` ne doit pas être modifiée.\n\nPar exemple, `{{ fname }}({{ \", \".join(repr(a) for a in ex[0]) }})` renvoie `{{ repr(ex[1]) }}`.\n\nContraintes : utiliser une boucle `while` et `append` ; `for` (y compris dans une liste en compréhension) est interdit.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "import re\n_code = re.sub(r\"#.*\", \"\", student_code)\nboucle_ok = False\nif re.search(r\"\\bfor\\b\", _code):\n    check(False, \"Dans cet exercice, les boucles s'écrivent avec `while` (pas de `for`, même dans une liste en compréhension).\")\nelif not re.search(r\"\\bwhile\\b\", _code):\n    check(False, \"Utilisez une boucle `while`.\")\nelse:\n    boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "for"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn part d'une liste vide `R = []` et on y ajoute les éléments voulus avec `R.append(...)` au fil du parcours.",
+        "hints": [
+          "Créez une nouvelle liste vide `R = []` avant la boucle, et renvoyez-la après la boucle.",
+          "Dans la boucle, `R.append(valeur)` ajoute une valeur à la fin de `R`. Ne modifiez pas `L` (pas de `L.append` ni de `L.pop`)."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-26",
+      "title": "Fonction avec while : que renvoie-t-elle ?",
+      "chapter": "Python : fonctions",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Fonctions : appel et valeur renvoyée",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "fname = choice([\"mys\", \"mystere\", \"f\", \"calcul\"])\nk = choice([3, 4, 5, 6, 7])\nop = choice([\">\", \">=\"])\nsrc_f = f\"def {fname}(x):\\n    a = x\\n    while a {op} {k}:\\n        a = a - {k}\\n    return a\"\nn = randint(2 * k + 1, 6 * k)\nm = randint(k + 1, 4 * k)\nappel = choice([f\"{fname}({fname}({n}))\", f\"{fname}({n}) + {fname}({m})\", f\"{fname}({n} + {fname}({m}))\", f\"{fname}({n}) * {fname}({m})\"])\nsrc = src_f + f\"\\n\\nprint({appel})\"\nrep = int(run(src))\nv_n = evaluate(src_f, f\"{fname}({n})\")",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Valeur affichée",
+            "answer": "rep"
+          }
+        ],
+        "solution": "Le programme affiche **{{ rep }}**.\n\nPar exemple `{{ fname }}({{ n }})` : `a` part de {{ n }} et diminue de {{ k }} tant que `a {{ op }} {{ k }}` ; on obtient {{ v_n }}. Pour un appel imbriqué, on calcule d'abord l'appel **intérieur**.",
+        "hints": [
+          "Calculez d'abord `{{ fname }}({{ n }})` à la main : écrivez les valeurs successives de `a` et arrêtez-vous quand la condition `a {{ op }} {{ k }}` devient fausse.",
+          "Dans `{{ fname }}({{ fname }}(...))` ou `{{ fname }}(... + {{ fname }}(...))`, on évalue d'abord l'appel le plus à l'intérieur, puis on utilise son résultat."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-27",
+      "title": "Tableau de suivi d'une fonction avec while",
+      "chapter": "Python : fonctions",
+      "difficulty": 2,
+      "skills": [
+        "Boucle while",
+        "Tracer l'exécution d'un programme",
+        "Fonctions : appel et valeur renvoyée"
+      ],
+      "template": {
+        "code": "fname = choice([\"mystere\", \"secret\", \"calcul\"])\nt = 3\ninit, maj = choice([\n    (\"0\", \"r = r + n * i\"),\n    (\"n\", \"r = r * 2 + i\"),\n    (\"1\", \"r = r * n - i\"),\n    (\"n\", \"r = r + i * i\"),\n    (\"0\", \"r = r + n - i\"),\n])\nn = randint(2, 6)\nsrc = f\"def {fname}(n):\\n    r = {init}\\n    i = 0\\n    while i < {t}:\\n        {maj}\\n        i = i + 1\\n    return r\"\nr = eval(init, {\"n\": n})\netapes = []\ni = 0\nwhile i < t:\n    r = eval(maj.split(\" = \")[1], {\"r\": r, \"n\": n, \"i\": i})\n    i = i + 1\n    etapes.append(r)\nfin_i = i",
+        "statement": "On considère la fonction suivante :\n\n{{ code_block(src) }}\n\nOn appelle `{{ fname }}({{ n }})`. Compléter le suivi des variables (valeurs **à la fin** de chaque tour de boucle).",
+        "fields": [
+          {
+            "type": "number",
+            "label": "`r` à la fin du 1er tour",
+            "answer": "etapes[0]"
+          },
+          {
+            "type": "number",
+            "label": "`r` à la fin du 2e tour",
+            "answer": "etapes[1]"
+          },
+          {
+            "type": "number",
+            "label": "`r` à la fin du 3e tour",
+            "answer": "etapes[2]"
+          },
+          {
+            "type": "number",
+            "label": "`i` à la sortie de la boucle",
+            "answer": "fin_i"
+          },
+          {
+            "type": "number",
+            "label": "valeur renvoyée par `{{ fname }}({{ n }})`",
+            "answer": "etapes[-1]"
+          }
+        ],
+        "solution": "| tour | `i` au début du tour | `r` à la fin du tour |\n|---|---|---|\n| 1 | 0 | {{ etapes[0] }} |\n| 2 | 1 | {{ etapes[1] }} |\n| 3 | 2 | {{ etapes[2] }} |\n\nEnsuite `i` vaut {{ fin_i }}, la condition `i < {{ t }}` est fausse : la boucle s'arrête et la fonction renvoie {{ etapes[-1] }}.",
+        "hints": [
+          "Au départ, `n` vaut {{ n }}, `r` vaut `{{ init }}` et `i` vaut 0. Dans chaque tour, `r` est calculé avec la valeur de `i` **avant** `i = i + 1`.",
+          "Quand `i` atteint {{ t }}, la condition `i < {{ t }}` est fausse : il y a donc exactement {{ t }} tours, et la fonction renvoie la dernière valeur de `r`."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-28",
+      "title": "Portée des variables, print et return",
+      "chapter": "Python : fonctions",
+      "difficulty": 2,
+      "skills": [
+        "Fonctions : portée des variables",
+        "Fonctions : appel et valeur renvoyée"
+      ],
+      "template": {
+        "code": "fname = choice([\"calcul\", \"max2\", \"mystere\", \"triple\"])\nk = randint(2, 5)\nn = randint(3, 9)\na, b = sample(range(2, 20), 2)\nv = n * k\nscenario = choice([\"locale\", \"globale\", \"print\", \"max2\"])\nif scenario == \"locale\":\n    src = f\"def {fname}(x):\\n    resultat = x * {k}\\n    return resultat\\n\\n{fname}({n})\\nprint(resultat)\"\n    bonne = \"Une erreur `NameError` : `resultat` n'existe pas en dehors de la fonction\"\n    expl = \"`resultat` est une variable **locale** : elle n'existe que pendant l'exécution de la fonction. Pour récupérer la valeur, il faut écrire `resultat = \" + fname + f\"({n})` avant le `print`.\"\nelif scenario == \"globale\":\n    src = f\"resultat = 0\\n\\ndef {fname}(x):\\n    resultat = x * {k}\\n    return resultat\\n\\n{fname}({n})\\nprint(resultat)\"\n    bonne = \"`0`\"\n    expl = f\"Dans la fonction, `resultat = ...` crée une variable **locale** qui porte le même nom ; la variable `resultat` du programme principal n'est pas modifiée et vaut toujours 0. La valeur renvoyée ({v}) n'est pas récupérée.\"\nelif scenario == \"print\":\n    src = f\"def {fname}(x):\\n    print(x * {k})\\n\\ny = {fname}({n})\\nprint(y)\"\n    bonne = f\"`{v}` puis `None`\"\n    expl = f\"La fonction **affiche** {v} mais ne **renvoie** rien : sans `return`, elle renvoie `None`, donc `y` vaut `None`.\"\nelse:\n    src = f\"def max2(a, b):\\n    if a > b:\\n        m = a\\n    else:\\n        m = b\\n    return m\\n\\nprint(max2({a}, {b}))\\nprint(m)\"\n    bonne = f\"`{max(a, b)}` puis une erreur `NameError` : `m` n'existe pas en dehors de la fonction\"\n    expl = \"Le premier `print` affiche la valeur renvoyée. Mais `m` est une variable **locale** de `max2` : en dehors de la fonction, elle n'existe pas.\"\nmx = max(a, b)\nerreur_res = \"Une erreur `NameError` : `resultat` n'existe pas en dehors de la fonction\"\npieges = {\n    \"locale\": [f\"`{v}`\", \"`None`\", \"`0`\", \"Rien du tout\"],\n    \"globale\": [f\"`{v}`\", erreur_res, \"`None`\"],\n    \"print\": [f\"`{v}`\", f\"`{v}` puis `{v}`\", \"`None`\", \"Rien du tout\"],\n    \"max2\": [f\"`{mx}` puis `{mx}`\", f\"`{mx}` puis `None`\", \"Une erreur `NameError` tout de suite, sans rien afficher\"],\n}[scenario]\noptions = [(bonne, True)] + [(t, False) for t in sample(pieges, 3)]",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "choice",
+            "label": "",
+            "options": "options"
+          }
+        ],
+        "solution": "Réponse : {{ bonne }}.\n\n{{ expl }}",
+        "hints": [
+          "Une variable créée **dans** une fonction est locale : elle disparaît quand la fonction se termine, et elle est différente d'une variable du même nom à l'extérieur.",
+          "`print` affiche une valeur à l'écran ; `return` la renvoie au programme qui a appelé la fonction. Une fonction sans `return` renvoie `None`."
+        ],
+        "max_tries": 2
+      }
+    },
+    {
+      "uid": "NSI1-29",
+      "title": "Écrire une fonction simple",
+      "chapter": "Python : fonctions",
+      "difficulty": 1,
+      "skills": [
+        "Écrire une fonction",
+        "Fonctions : appel et valeur renvoyée"
+      ],
+      "template": {
+        "code": "modeles = [\n    (\"max2\", \"a, b\", \"le plus grand des deux nombres `a` et `b`\",\n     \"def max2(a, b):\\n    if a > b:\\n        return a\\n    return b\",\n     lambda: [((x, y), max(x, y)) for x, y in [sample(range(-20, 50), 2) for _ in range(3)]] + [((7, 7), 7)], [\"max\"]),\n    (\"est_pair\", \"n\", \"`True` si l'entier `n` est pair, `False` sinon\",\n     \"def est_pair(n):\\n    return n % 2 == 0\",\n     lambda: [((x,), x % 2 == 0) for x in sample(range(-30, 100), 5)] + [((0,), True)], []),\n    (\"prix_ttc\", \"prix_ht\", \"le prix TTC correspondant au prix hors taxes `prix_ht`, avec une TVA de 20 %\",\n     \"def prix_ttc(prix_ht):\\n    return prix_ht * 1.2\",\n     lambda: [((x,), x * 1.2) for x in sample(range(1, 500), 4)] + [((0,), 0)], []),\n    (\"moyenne3\", \"a, b, c\", \"la moyenne des trois nombres `a`, `b` et `c`\",\n     \"def moyenne3(a, b, c):\\n    return (a + b + c) / 3\",\n     lambda: [((x, y, z), (x + y + z) / 3) for x, y, z in [sample(range(0, 21), 3) for _ in range(4)]], [\"sum\"]),\n    (\"valeur_absolue\", \"x\", \"la valeur absolue du nombre `x` (`x` s'il est positif, `-x` sinon)\",\n     \"def valeur_absolue(x):\\n    if x < 0:\\n        return -x\\n    return x\",\n     lambda: [((x,), abs(x)) for x in sample(range(-50, 50), 5)] + [((0,), 0)], [\"abs\"]),\n    (\"en_secondes\", \"h, m, s\", \"la durée `h` heures `m` minutes `s` secondes convertie en secondes\",\n     \"def en_secondes(h, m, s):\\n    return h * 3600 + m * 60 + s\",\n     lambda: [((h, m, s), h * 3600 + m * 60 + s) for h, m, s in [(randint(0, 5), randint(0, 59), randint(0, 59)) for _ in range(4)]], []),\n    (\"est_majeur\", \"age\", \"`True` si `age` est supérieur ou égal à 18, `False` sinon\",\n     \"def est_majeur(age):\\n    return age >= 18\",\n     lambda: [((17,), False), ((18,), True), ((randint(19, 80),), True), ((randint(0, 16),), False)], []),\n]\nfname, params, texte, ref, fab, interdits = choice(modeles)\ncases = fab()\nex = cases[0]",
+        "statement": "Écrire une fonction `{{ fname }}({{ params }})` qui **renvoie** {{ texte }}.\n\nPar exemple, `{{ fname }}({{ \", \".join(repr(a) for a in ex[0]) }})` renvoie `{{ repr(ex[1]) }}`.\n{{ \"\" if not interdits else chr(10) + \"Contrainte : \" + \", \".join(\"`\" + i + \"`\" for i in interdits) + \" interdit.\" }}",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre fonction",
+            "starter": "def {{ fname }}({{ params }}):\n    ",
+            "tests": "boucle_ok = True\nimport copy\nfn = student.get(fname)\nif not boucle_ok:\n    pass  # consigne « while » non respectée : la fonction n'est pas testée\nelif not callable(fn):\n    check(False, f\"la fonction {fname} doit être définie\")\nelse:\n    for args, attendu in cases:\n        appel = fname + \"(\" + \", \".join(repr(a) for a in args) + \")\"\n        try:\n            obtenu = fn(*copy.deepcopy(args))\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"`{appel}` provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(obtenu, attendu, f\"`{appel}` renvoie `{obtenu!r}` au lieu de `{attendu!r}`\")",
+            "reference": "{{ ref }}",
+            "forbid": [
+              "max",
+              "abs"
+            ]
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nUne fonction reçoit des **paramètres**, fait un calcul et **renvoie** le résultat avec `return` (et non `print`).",
+        "hints": [
+          "La première ligne est déjà écrite : `def {{ fname }}({{ params }}):`. Le corps de la fonction est indenté et se termine par `return ...`.",
+          "Utilisez `return` et non `print` : la fonction est testée sur le résultat qu'elle **renvoie**. Testez-la sur l'exemple de l'énoncé."
+        ]
+      }
+    },
+    {
+      "uid": "NSI1-30",
+      "title": "Fonction avec paramètres et if : que renvoie-t-elle ?",
+      "chapter": "Python : fonctions",
+      "difficulty": 1,
+      "skills": [
+        "Fonctions : appel et valeur renvoyée",
+        "Conditions if/elif/else",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "fname = choice(NOMS_FONCTIONS)\nk = randint(2, 4)\ncorps = choice([\n    f\"    if a > b:\\n        return a - b\\n    return b * {k}\",\n    f\"    if a % 2 == 0:\\n        return a + b\\n    return a * b\",\n    f\"    if a < b:\\n        a = a + {k}\\n    return a - b\",\n    f\"    c = a * {k}\\n    if c > b:\\n        return c - b\\n    return b\",\n])\nx, y = sample(range(1, 12), 2)\nappel = choice([f\"{fname}({x}, {y}) + {fname}({y}, {x})\", f\"{fname}({x}, {y}) * 2\", f\"{fname}({fname}({x}, {y}), {y})\"])\nsrc = f\"def {fname}(a, b):\\n{corps}\\n\\nprint({appel})\"\nrep = int(run(src))",
+        "statement": "Qu'affiche ce programme ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Valeur affichée",
+            "answer": "rep"
+          }
+        ],
+        "solution": "Le programme affiche **{{ rep }}**.\n\nÀ chaque appel, `a` et `b` prennent les valeurs données **dans l'ordre** des parenthèses ; `return` arrête la fonction et renvoie la valeur.",
+        "hints": [
+          "Traitez chaque appel séparément : écrivez `a = ...` et `b = ...`, puis suivez le code de la fonction jusqu'au premier `return`.",
+          "Attention à l'ordre des arguments : dans `{{ fname }}({{ y }}, {{ x }})`, c'est `a` qui vaut {{ y }}."
+        ]
+      }
+    }
+  ]
+}
