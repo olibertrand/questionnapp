@@ -47,6 +47,12 @@
   recopier la valeur (voir les exemples « écrire l'instruction d'affichage »).
 - `forbid` permet d'interdire les raccourcis qui vident l'exercice de son sens (`sum`, `max`,
   `sorted`, `sort`, `count`, `Counter`…).
+- **Boucles `while` imposées** (en 1ère NSI, toutes les boucles s'écrivent avec `while`) :
+  mettre `"forbid": ["for"]` et, en tête des `tests`, vérifier avec `re` que `student_code`
+  contient `while` et aucun `for` (ce qui exclut aussi les listes en compréhension) ; si ce
+  n'est pas le cas, ne pas lancer les autres tests, pour que le score soit 0 (voir la banque
+  `python-premiere-while.json`, variable `boucle_ok`). Écrire aussi la référence et le code
+  montré à l'élève avec `while`.
 
 ### Indices (clé `hints`)
 - L'élève dispose de plusieurs essais (3 par défaut) ; après chaque erreur il reçoit l'indice
