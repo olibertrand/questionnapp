@@ -285,7 +285,7 @@ demande la solution. Score enregistré : score du dernier essai × 100 % (1er es
 
 ## Fichier d'import et questions d'exemple
 
-Le fichier à produire a exactement cette structure (`format`, `version`, `title` et `description` de la banque, puis la liste `questions`). Chaque question : `title`, `chapter`, `difficulty` (1 facile, 2 moyen, 3 difficile), `skills` (liste), `template`. Voici les 91 questions de la banque fournie avec l'application, toutes testées : elles montrent les bons usages de chaque type de champ.
+Le fichier à produire a exactement cette structure (`format`, `version`, `title` et `description` de la banque, puis la liste `questions`). Chaque question : `title`, `chapter`, `difficulty` (1 facile, 2 moyen, 3 difficile), `skills` (liste), `template`. Voici les 96 questions de la banque fournie avec l'application, toutes testées : elles montrent les bons usages de chaque type de champ.
 
 ```json
 {
@@ -616,6 +616,67 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
       }
     },
     {
+      "uid": "ARB-08",
+      "title": "Parcours d'un arbre binaire : qu'affiche ce programme ?",
+      "chapter": "Structures de données",
+      "difficulty": 2,
+      "skills": [
+        "Arbres binaires",
+        "Récursivité",
+        "Parcours d'arbre",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "ARBRE = \"class Arbre:\\n    def __init__(self, unevaleur, noeud1=None, noeud2=None):\\n        self.valeur = unevaleur  # l'étiquette\\n        self.gauche = noeud1     # le noeud accroché à gauche\\n        self.droit = noeud2      # le noeud accroché à droite\"\n_ns = {}\nrun(ARBRE, namespace=_ns)\nArbre = _ns[\"Arbre\"]\n\ndef tirage(n, hmax=4, valeurs=None):\n    \"\"\"Arbre aléatoire de n noeuds et de hauteur au plus hmax (triplets).\"\"\"\n    vals = list(valeurs) if valeurs else sample(range(1, 30), n)\n    def gen(n, h):\n        if n == 0:\n            return None\n        cap = 2 ** (h - 1) - 1\n        k = randint(max(0, n - 1 - cap), min(n - 1, cap))\n        return (vals.pop(), gen(k, h - 1), gen(n - 1 - k, h - 1))\n    return gen(n, hmax)\n\ndef construit(t):\n    return None if t is None else Arbre(t[0], construit(t[1]), construit(t[2]))\n\ndef expr(t):\n    \"\"\"Écriture Python de l'arbre, en une expression.\"\"\"\n    if t is None:\n        return \"None\"\n    if t[1] is None and t[2] is None:\n        return f\"Arbre({t[0]!r})\"\n    return f\"Arbre({t[0]!r}, {expr(t[1])}, {expr(t[2])})\"\n\ndef taille_t(t):\n    return 0 if t is None else 1 + taille_t(t[1]) + taille_t(t[2])\n\ndef hauteur_t(t):\n    return 0 if t is None else 1 + max(hauteur_t(t[1]), hauteur_t(t[2]))\n\ndef valeurs_t(t):\n    return [] if t is None else [t[0]] + valeurs_t(t[1]) + valeurs_t(t[2])\n\ndef feuilles_t(t):\n    if t is None:\n        return []\n    if t[1] is None and t[2] is None:\n        return [t[0]]\n    return feuilles_t(t[1]) + feuilles_t(t[2])\n\ndef dessin(t):\n    \"\"\"Dessin de l'arbre en caractères (hauteur 4 au plus).\"\"\"\n    H = hauteur_t(t)\n    if H == 0:\n        return \"(arbre vide)\"\n    W = 4 * 2 ** (H - 1)\n    lignes = []\n    niveau = [(t, 0)]\n    for prof in range(H):\n        ligne = [\" \"] * (W + 4)\n        liens = [\" \"] * (W + 4)\n        suivant = []\n        for noeud, k in niveau:\n            if noeud is None:\n                continue\n            c = int((k + 0.5) * W / 2 ** prof)\n            s = str(noeud[0])\n            for i, ch in enumerate(s):\n                ligne[c - len(s) // 2 + i] = ch\n            for j, fils in ((0, noeud[1]), (1, noeud[2])):\n                if fils is not None:\n                    cf = int((2 * k + j + 0.5) * W / 2 ** (prof + 1))\n                    liens[(c + cf) // 2] = \"/\" if j == 0 else \"\\\\\"\n                    suivant.append((fils, 2 * k + j))\n        lignes.append(\"\".join(ligne).rstrip())\n        if suivant:\n            lignes.append(\"\".join(liens).rstrip())\n        niveau = suivant\n    return \"\\n\".join(lignes)\n\ndef creation(t, nom=\"a\"):\n    \"\"\"Programme qui crée l'arbre comme en classe : noeuds nommés, feuilles parfois écrites directement.\"\"\"\n    lignes = []\n    compteur = [0]\n    def ecrit(t):\n        if t is None:\n            return \"None\"\n        g, dr = ecrit(t[1]), ecrit(t[2])\n        if t[1] is None and t[2] is None and coin(0.5):\n            return f\"Arbre({t[0]})\"\n        compteur[0] += 1\n        n = f\"n{compteur[0]}\"\n        lignes.append(f\"{n} = Arbre({t[0]}, {g}, {dr})\" if (g, dr) != (\"None\", \"None\") else f\"{n} = Arbre({t[0]})\")\n        return n\n    racine = ecrit(t)\n    lignes.append(f\"{nom} = {racine}\")\n    return \"\\n\".join(lignes)\nt = tirage(randint(6, 8))\nrequire(hauteur_t(t) >= 3)\nordre = choice([\"prefixe\", \"infixe\", \"suffixe\", \"prefixe_droite\"])\nfname = choice([\"parcours\", \"affiche\", \"mystere\"])\ncorps = {\n    \"prefixe\": [\"print(a.valeur)\", f\"{fname}(a.gauche)\", f\"{fname}(a.droit)\"],\n    \"infixe\": [f\"{fname}(a.gauche)\", \"print(a.valeur)\", f\"{fname}(a.droit)\"],\n    \"suffixe\": [f\"{fname}(a.gauche)\", f\"{fname}(a.droit)\", \"print(a.valeur)\"],\n    \"prefixe_droite\": [\"print(a.valeur)\", f\"{fname}(a.droit)\", f\"{fname}(a.gauche)\"],\n}[ordre]\nsrc = f\"def {fname}(a):\\n    if a is not None:\\n\" + \"\\n\".join(\"        \" + l for l in corps)\ndef visite(x):\n    if x is None:\n        return []\n    g, d = visite(x[1]), visite(x[2])\n    return {\"prefixe\": [x[0]] + g + d, \"infixe\": g + [x[0]] + d, \"suffixe\": g + d + [x[0]],\n            \"prefixe_droite\": [x[0]] + d + g}[ordre]\nvals = [str(v) for v in visite(t)]\nrep = \" \".join(vals)\nnom = {\"prefixe\": \"préfixe\", \"infixe\": \"infixe\", \"suffixe\": \"suffixe (ou postfixe)\",\n       \"prefixe_droite\": \"préfixe, mais en visitant le sous-arbre **droit** avant le gauche\"}[ordre]",
+        "statement": "On considère l'arbre `a` suivant (classe `Arbre` du cours : attributs `valeur`, `gauche`, `droit` ; arbre vide `None`) :\n\n{{ code_block(dessin(t), \"text\") }}\n\net la fonction :\n\n{{ code_block(src) }}\n\nQu'affiche `{{ fname }}(a)` ? Écrire les valeurs **dans l'ordre d'affichage, séparées par des espaces**.",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Valeurs affichées",
+            "answer": "[rep, rep.replace(' ', ', '), rep.replace(' ', ','), rep.replace(' ', chr(10))]"
+          }
+        ],
+        "solution": "C'est un parcours **{{ nom }}** : la fonction affiche **{{ rep }}**.\n\n{{ \"La valeur du noeud est affichée **avant** ses sous-arbres.\" if ordre in (\"prefixe\", \"prefixe_droite\") else (\"La valeur du noeud est affichée **entre** le sous-arbre gauche et le sous-arbre droit.\" if ordre == \"infixe\" else \"La valeur du noeud est affichée **après** ses deux sous-arbres.\") }}",
+        "hints": [
+          "Regardez où se trouve le `print` par rapport aux deux appels récursifs : avant, entre ou après ? Un appel récursif traite **tout** un sous-arbre avant de passer à la ligne suivante.",
+          "Appliquez la règle à la racine, puis à chaque sous-arbre comme si c'était un petit arbre. Vérifiez aussi l'ordre des appels : `{{ corps[1] if ordre in ('prefixe', 'prefixe_droite') else corps[0] }}` vient en premier."
+        ]
+      }
+    },
+    {
+      "uid": "ARB-09",
+      "title": "Fonction récursive sur un arbre : suivre les appels",
+      "chapter": "Structures de données",
+      "difficulty": 3,
+      "skills": [
+        "Arbres binaires",
+        "Récursivité",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "ARBRE = \"class Arbre:\\n    def __init__(self, unevaleur, noeud1=None, noeud2=None):\\n        self.valeur = unevaleur  # l'étiquette\\n        self.gauche = noeud1     # le noeud accroché à gauche\\n        self.droit = noeud2      # le noeud accroché à droite\"\n_ns = {}\nrun(ARBRE, namespace=_ns)\nArbre = _ns[\"Arbre\"]\n\ndef tirage(n, hmax=4, valeurs=None):\n    \"\"\"Arbre aléatoire de n noeuds et de hauteur au plus hmax (triplets).\"\"\"\n    vals = list(valeurs) if valeurs else sample(range(1, 30), n)\n    def gen(n, h):\n        if n == 0:\n            return None\n        cap = 2 ** (h - 1) - 1\n        k = randint(max(0, n - 1 - cap), min(n - 1, cap))\n        return (vals.pop(), gen(k, h - 1), gen(n - 1 - k, h - 1))\n    return gen(n, hmax)\n\ndef construit(t):\n    return None if t is None else Arbre(t[0], construit(t[1]), construit(t[2]))\n\ndef expr(t):\n    \"\"\"Écriture Python de l'arbre, en une expression.\"\"\"\n    if t is None:\n        return \"None\"\n    if t[1] is None and t[2] is None:\n        return f\"Arbre({t[0]!r})\"\n    return f\"Arbre({t[0]!r}, {expr(t[1])}, {expr(t[2])})\"\n\ndef taille_t(t):\n    return 0 if t is None else 1 + taille_t(t[1]) + taille_t(t[2])\n\ndef hauteur_t(t):\n    return 0 if t is None else 1 + max(hauteur_t(t[1]), hauteur_t(t[2]))\n\ndef valeurs_t(t):\n    return [] if t is None else [t[0]] + valeurs_t(t[1]) + valeurs_t(t[2])\n\ndef feuilles_t(t):\n    if t is None:\n        return []\n    if t[1] is None and t[2] is None:\n        return [t[0]]\n    return feuilles_t(t[1]) + feuilles_t(t[2])\n\ndef dessin(t):\n    \"\"\"Dessin de l'arbre en caractères (hauteur 4 au plus).\"\"\"\n    H = hauteur_t(t)\n    if H == 0:\n        return \"(arbre vide)\"\n    W = 4 * 2 ** (H - 1)\n    lignes = []\n    niveau = [(t, 0)]\n    for prof in range(H):\n        ligne = [\" \"] * (W + 4)\n        liens = [\" \"] * (W + 4)\n        suivant = []\n        for noeud, k in niveau:\n            if noeud is None:\n                continue\n            c = int((k + 0.5) * W / 2 ** prof)\n            s = str(noeud[0])\n            for i, ch in enumerate(s):\n                ligne[c - len(s) // 2 + i] = ch\n            for j, fils in ((0, noeud[1]), (1, noeud[2])):\n                if fils is not None:\n                    cf = int((2 * k + j + 0.5) * W / 2 ** (prof + 1))\n                    liens[(c + cf) // 2] = \"/\" if j == 0 else \"\\\\\"\n                    suivant.append((fils, 2 * k + j))\n        lignes.append(\"\".join(ligne).rstrip())\n        if suivant:\n            lignes.append(\"\".join(liens).rstrip())\n        niveau = suivant\n    return \"\\n\".join(lignes)\n\ndef creation(t, nom=\"a\"):\n    \"\"\"Programme qui crée l'arbre comme en classe : noeuds nommés, feuilles parfois écrites directement.\"\"\"\n    lignes = []\n    compteur = [0]\n    def ecrit(t):\n        if t is None:\n            return \"None\"\n        g, dr = ecrit(t[1]), ecrit(t[2])\n        if t[1] is None and t[2] is None and coin(0.5):\n            return f\"Arbre({t[0]})\"\n        compteur[0] += 1\n        n = f\"n{compteur[0]}\"\n        lignes.append(f\"{n} = Arbre({t[0]}, {g}, {dr})\" if (g, dr) != (\"None\", \"None\") else f\"{n} = Arbre({t[0]})\")\n        return n\n    racine = ecrit(t)\n    lignes.append(f\"{nom} = {racine}\")\n    return \"\\n\".join(lignes)\nt = tirage(randint(4, 5), hmax=3)\nrequire(hauteur_t(t) == 3)\nmesure = choice([\"taille\", \"hauteur\", \"somme\"])\ncalc = {\"taille\": \"1 + taille(a.gauche) + taille(a.droit)\",\n        \"hauteur\": \"1 + max(hauteur(a.gauche), hauteur(a.droit))\",\n        \"somme\": \"a.valeur + somme(a.gauche) + somme(a.droit)\"}[mesure]\nsrc = (f\"def {mesure}(a):\\n    if a is None:\\n        return 0\\n    r = {calc}\\n\"\n       f\"    print(a.valeur, r)\\n    return r\")\nprog = src + \"\\n\\n\" + creation(t) + f\"\\n{mesure}(a)\"\nout = run(ARBRE + \"\\n\\n\" + prog)\nlignes = out.split(\"\\n\")\nnb_appels = 2 * taille_t(t) + 1",
+        "statement": "On considère l'arbre `a` suivant :\n\n{{ code_block(dessin(t), \"text\") }}\n\nOn exécute `{{ mesure }}(a)` avec la version ci-dessous, qui affiche la valeur de chaque noeud et le résultat calculé pour ce noeud **juste avant de le renvoyer** :\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "1. Lignes affichées, dans l'ordre (une par ligne, sous la forme `valeur résultat`)",
+            "answer": "out",
+            "multiline": true
+          },
+          {
+            "type": "number",
+            "label": "2. Nombre total d'appels à `{{ mesure }}` (en comptant le premier, et les appels sur un arbre vide `None`)",
+            "answer": "nb_appels"
+          }
+        ],
+        "solution": "{{ code_block(out, \"text\") }}\n\nUn noeud n'affiche sa ligne qu'**après** avoir reçu les résultats de ses deux sous-arbres : on voit donc d'abord les feuilles, et la racine en dernier (c'est l'ordre suffixe).\n\nChaque noeud provoque un appel, et chaque enfant absent provoque un appel sur `None` (qui renvoie 0 sans rien afficher) : avec {{ taille_t(t) }} noeuds, il y a {{ taille_t(t) }} + {{ taille_t(t) + 1 }} = **{{ nb_appels }}** appels.",
+        "hints": [
+          "Commencez par les feuilles : pour une feuille, les deux appels sur `None` renvoient 0. Notez le résultat de chaque noeud au-dessus de lui sur le dessin.",
+          "L'ordre d'affichage suit l'ordre des retours : le sous-arbre gauche est terminé entièrement, puis le droit, puis le noeud lui-même. Pour compter les appels : un par noeud, plus un par enfant absent."
+        ]
+      }
+    },
+    {
       "uid": "BDD-01",
       "title": "SQL : sélection avec condition",
       "chapter": "Bases de données",
@@ -905,6 +966,96 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
         "hints": [
           "`ajoute_en_tete(e)` crée un maillon dont le suivant est l'ancien début : la valeur ajoutée en **dernier** se retrouve donc en **premier**.",
           "Écrivez la chaîne après chaque ligne. `c.debut = c.debut.suivant` retire le premier maillon ; `m.suivant = m.suivant.suivant` « saute » le maillon qui suit `m`."
+        ]
+      }
+    },
+    {
+      "uid": "LC-08",
+      "title": "Liste chaînée : que renvoie cette méthode (minimum, maximum) ?",
+      "chapter": "Structures de données",
+      "difficulty": 2,
+      "skills": [
+        "Listes chaînées",
+        "Recherche de max/min",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nsens = choice([\"min\", \"max\"])\nop = \"<\" if sens == \"min\" else \">\"\nversion = choice([\"juste\", \"juste\", \"zero\", \"avant_dernier\", \"depart\"])\nlignes = [\"    def calcul(self):\"]\nif version == \"zero\":\n    lignes += [\"        m = 0\", \"        courant = self.debut\"]\nelif version == \"depart\":\n    lignes += [\"        m = self.debut.valeur\", \"        courant = self.debut.suivant\"]\nelse:\n    lignes += [\"        m = self.debut.valeur\", \"        courant = self.debut\"]\nlignes += [\"        while courant.suivant != None:\" if version == \"avant_dernier\" else \"        while courant != None:\",\n           f\"            if courant.valeur {op} m:\", \"                m = courant.valeur\",\n           \"            courant = courant.suivant\", \"        return m\"]\nmethode = \"\\n\".join(lignes)\nclasse = CHAINE + \"\\n\\n\" + methode\ndef resultat(L):\n    ns = {}\n    run(MAILLON + \"\\n\\n\" + classe, namespace=ns)\n    c = ns[\"Chaine\"]()\n    for v in reversed(L):\n        c.debut = ns[\"Maillon\"](v, c.debut)\n    return c.calcul()\n# deux chaînes : la seconde a sa valeur extrême à la fin, et des valeurs toutes du même signe\nL1 = randlist(randint(4, 5), 1, 40, distinct=True)\nL2 = randlist(randint(4, 5), -40, -1, distinct=True) if (sens == \"max\") else randlist(randint(4, 5), 1, 40, distinct=True)\next = (min if sens == \"min\" else max)(L2)\nL2.remove(ext)\nL2.append(ext)\nr1, r2 = resultat(L1), resultat(L2)\nvrai1, vrai2 = (min if sens == \"min\" else max)(L1), ext\nmot = \"la plus petite\" if sens == \"min\" else \"la plus grande\"\nif version == \"juste\" or version == \"depart\":\n    avis = f\"Cette méthode renvoie bien {mot} valeur de la chaîne (supposée non vide).\"\nelif version == \"zero\":\n    avis = (f\"Cette méthode part de `m = 0` : elle se trompe quand toutes les valeurs sont \"\n            + (\"positives (elle renvoie alors 0).\" if sens == \"min\" else \"négatives (elle renvoie alors 0).\") +\n            \" Il faut partir de la première valeur : `m = self.debut.valeur`.\")\nelse:\n    avis = (\"La boucle `while courant.suivant != None` s'arrête **sur** le dernier maillon sans le traiter : \"\n            \"la dernière valeur n'est jamais comparée.\")",
+        "statement": "On ajoute à la classe `Chaine` du cours (maillons d'attributs `valeur` et `suivant`) la méthode suivante :\n\n{{ code_block(classe) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "1. Que renvoie `c.calcul()` si `c` contient {{ ' → '.join(map(str, L1)) }} ?",
+            "answer": "r1"
+          },
+          {
+            "type": "number",
+            "label": "2. Que renvoie `c.calcul()` si `c` contient {{ ' → '.join(map(str, L2)) }} ?",
+            "answer": "r2"
+          }
+        ],
+        "solution": "1. `c.calcul()` renvoie **{{ r1 }}**{{ \"\" if r1 == vrai1 else \" (alors que \" + mot + \" valeur est \" + str(vrai1) + \")\" }}.\n2. `c.calcul()` renvoie **{{ r2 }}**{{ \"\" if r2 == vrai2 else \" (alors que \" + mot + \" valeur est \" + str(vrai2) + \")\" }}.\n\n{{ avis }}",
+        "hints": [
+          "Faites un tableau avec les colonnes `courant.valeur` et `m` : notez la valeur de départ de `m`, puis une ligne par tour de boucle.",
+          "Regardez précisément la valeur de départ de `m`, le premier maillon visité et la condition d'arrêt du `while` : le dernier maillon est-il traité ?"
+        ]
+      }
+    },
+    {
+      "uid": "LC-09",
+      "title": "Liste chaînée : compléter la méthode minimum ou maximum",
+      "chapter": "Structures de données",
+      "difficulty": 2,
+      "skills": [
+        "Listes chaînées",
+        "Recherche de max/min",
+        "POO : écrire une méthode",
+        "Boucle while"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nsens = choice([\"minimum\", \"maximum\"])\nmname = sens\nop = \"<\" if sens == \"minimum\" else \">\"\nmot = \"la plus petite\" if sens == \"minimum\" else \"la plus grande\"\ntrous = (f\"    def {mname}(self):\\n        \\\"\\\"\\\"renvoie {mot} valeur de la chaîne (supposée non vide)\\\"\\\"\\\"\\n\"\n         \"        m = ...\\n        courant = self.debut\\n        while ...:\\n            if ...:\\n\"\n         \"                m = ...\\n            courant = ...\\n        return m\")\nstarter = MAILLON + \"\\n\\n\" + CHAINE + \"\\n\\n\" + trous\nref = (MAILLON + \"\\n\\n\" + CHAINE + f\"\\n\\n    def {mname}(self):\\n        m = self.debut.valeur\\n        courant = self.debut\\n\"\n       f\"        while courant != None:\\n            if courant.valeur {op} m:\\n                m = courant.valeur\\n\"\n       \"            courant = courant.suivant\\n        return m\")\nf = min if sens == \"minimum\" else max\nlistes = [randlist(5, 1, 40), randlist(4, -40, -1), randlist(6, -20, 30), [randint(-9, 9)]]\n# la valeur cherchée en première, puis en dernière position\nL = randlist(5, 1, 40, distinct=True); x = f(L); L.remove(x); listes.append([x] + L)\nL = randlist(5, 1, 40, distinct=True); x = f(L); L.remove(x); listes.append(L + [x])\ncases = [(L, (), (\"val\", f(L)), L) for L in listes]\nex = listes[2]",
+        "statement": "Compléter la méthode `{{ mname }}` de la classe `Chaine` : elle renvoie {{ mot }} valeur de la chaîne, supposée **non vide**. Remplacez chaque `...` par le code qui convient.\n\n*Exemple : si `c` contient {{ ' → '.join(map(str, ex)) }}, `c.{{ mname }}()` renvoie {{ f(ex) }}.*",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre code",
+            "starter": "{{ starter }}",
+            "reference": "{{ ref }}",
+            "tests": "if '...' in student_code:\n    check(False, \"Il reste des `...` : remplacez-les tous par du code.\")\nelse:\n    M, C = student.get(\"Maillon\"), student.get(\"Chaine\")\n    def construit(L):\n        c = C()\n        c.debut = None\n        i = len(L) - 1\n        while i >= 0:\n            m = M(L[i])\n            m.suivant = c.debut\n            c.debut = m\n            i = i - 1\n        return c\n    def valeurs(c):\n        res, m = [], getattr(c, \"debut\", None)\n        while m is not None:\n            if len(res) > 200:\n                return None  # la chaîne boucle sur elle-même\n            res.append(getattr(m, \"valeur\", None))\n            m = getattr(m, \"suivant\", None)\n        return res\n    def montre(L):\n        if L is None:\n            return \"une chaîne qui tourne en rond (un maillon pointe vers un maillon déjà rencontré)\"\n        return \"la chaîne \" + (\" → \".join(str(v) for v in L) if L else \"vide\")\n    if not isinstance(M, type) or not isinstance(C, type):\n        check(False, \"les classes `Maillon` et `Chaine` doivent être définies (gardez le code de départ)\")\n    elif not callable(getattr(C, mname, None)):\n        check(False, f\"la classe `Chaine` doit avoir une méthode `{mname}`\")\n    else:\n        for L, args, ret, apres in cases:\n            c = construit(L)\n            appel = f\"`c.{mname}(\" + \", \".join(repr(a) for a in args) + f\")` avec c = {montre(L)}\"\n            try:\n                r = getattr(c, mname)(*args)\n            except Exception as e:\n                if type(e).__name__ == \"TimeLimit\":\n                    raise\n                check(False, f\"{appel} provoque une erreur : {erreur(e)}\")\n                continue\n            if ret[0] == \"chaine\":\n                if type(r).__name__ != \"Chaine\":\n                    check(False, f\"{appel} doit renvoyer une **Chaine**, et non `{r!r}`\")\n                else:\n                    check_equal(valeurs(r), ret[1], f\"{appel} renvoie {montre(valeurs(r))} au lieu de {montre(ret[1])}\")\n            else:\n                check_equal(r, ret[1], f\"{appel} renvoie `{r!r}` au lieu de `{ret[1]!r}`\")\n            check_equal(valeurs(c), apres, f\"après {appel}, c est devenue {montre(valeurs(c))} au lieu de {montre(apres)}\")"
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn garde dans `m` {{ mot }} valeur **vue jusqu'ici** : on part de la première valeur (et non de 0, faux si toutes les valeurs sont {{ \"positives\" if sens == \"minimum\" else \"négatives\" }}), puis on parcourt toute la chaîne jusqu'à `None`.",
+        "hints": [
+          "`m` doit partir d'une vraie valeur de la chaîne : la première, `self.debut.valeur`. La boucle continue tant que `courant` n'est pas `None`.",
+          "Dans la boucle : si `courant.valeur` est {{ 'plus petite' if sens == 'minimum' else 'plus grande' }} que `m`, elle devient le nouveau `m` ; puis on avance avec `courant = courant.suivant`."
+        ]
+      }
+    },
+    {
+      "uid": "LC-10",
+      "title": "Liste chaînée : interpréter une méthode d'insertion",
+      "chapter": "Structures de données",
+      "difficulty": 2,
+      "skills": [
+        "Listes chaînées",
+        "POO : méthodes",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nbase = (CHAINE + \"\\n\\n    def ajoute_en_tete(self, e):\\n        self.debut = Maillon(e, self.debut)\\n\\n\"\n        \"    def elements(self):\\n        t = []\\n        courant = self.debut\\n        while courant != None:\\n\"\n        \"            t.append(courant.valeur)\\n            courant = courant.suivant\\n        return t\")\nMETHODES = {\n    \"insere_en_queue\": (\"self, e\",\n        \"        m = Maillon(e)\\n        if self.debut == None:\\n            self.debut = m\\n        else:\\n\"\n        \"            courant = self.debut\\n            while courant.suivant != None:\\n                courant = courant.suivant\\n\"\n        \"            courant.suivant = m\"),\n    \"insere_apres\": (\"self, x, e\",\n        \"        courant = self.debut\\n        while courant != None and courant.valeur != x:\\n            courant = courant.suivant\\n\"\n        \"        if courant != None:\\n            courant.suivant = Maillon(e, courant.suivant)\"),\n    \"insere_position\": (\"self, i, e\",\n        \"        if i == 0:\\n            self.debut = Maillon(e, self.debut)\\n        else:\\n            courant = self.debut\\n\"\n        \"            k = 0\\n            while k < i - 1:\\n                courant = courant.suivant\\n                k = k + 1\\n\"\n        \"            courant.suivant = Maillon(e, courant.suivant)\"),\n    \"insere_trie\": (\"self, e\",\n        \"        if self.debut == None or e <= self.debut.valeur:\\n            self.debut = Maillon(e, self.debut)\\n        else:\\n\"\n        \"            courant = self.debut\\n            while courant.suivant != None and courant.suivant.valeur < e:\\n\"\n        \"                courant = courant.suivant\\n            courant.suivant = Maillon(e, courant.suivant)\"),\n}\nmname = choice(list(METHODES))\nparams, corps = METHODES[mname]\nclasse = base + f\"\\n\\n    def {mname}({params}):\\n\" + corps\nvals = randlist(randint(3, 4), 1, 30, distinct=True)\nlignes = [\"c = Chaine()\"] + [f\"c.ajoute_en_tete({v})\" for v in vals]\nautres = [v for v in range(1, 40) if v not in vals]\nn1, n2 = sample(autres, 2)\nchaine = list(reversed(vals))\nif mname == \"insere_en_queue\":\n    lignes += [f\"c.insere_en_queue({n1})\", f\"c.ajoute_en_tete({n2})\"]\nelif mname == \"insere_apres\":\n    lignes += [f\"c.insere_apres({choice(chaine)}, {n1})\", f\"c.insere_apres({choice([choice(chaine), 99])}, {n2})\"]\nelif mname == \"insere_position\":\n    lignes += [f\"c.insere_position({randint(1, len(chaine))}, {n1})\", f\"c.insere_position({choice([0, 2])}, {n2})\"]\nelse:\n    if coin():\n        lignes = [\"c = Chaine()\"] + [f\"c.insere_trie({v})\" for v in vals]\n    lignes += [f\"c.insere_trie({n1})\", f\"c.insere_trie({n2})\"]\nlignes.append(\"print(c.elements())\")\nsrc = \"\\n\".join(lignes)\nout = run(MAILLON + \"\\n\\n\" + classe + \"\\n\\n\" + src)",
+        "statement": "On complète la classe `Chaine` du cours ainsi :\n\n{{ code_block(MAILLON + chr(10) + chr(10) + classe) }}\n\nQu'affiche le programme suivant ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Affichage",
+            "answer": "out",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "Le programme affiche `{{ out }}`.\n\nPour insérer un maillon **après** un maillon `courant`, on crée `Maillon(e, courant.suivant)` (le nouveau maillon pointe vers l'ancien suivant) puis on fait `courant.suivant = ...` : aucun maillon n'est perdu.",
+        "hints": [
+          "Dessinez la chaîne après chaque ligne. `ajoute_en_tete` place la valeur **devant** ; la dernière ligne affiche les valeurs dans l'ordre, depuis `c.debut`.",
+          "Pour la méthode `{{ mname }}`, repérez sur quel maillon `courant` s'arrête, puis où le nouveau maillon est accroché (`courant.suivant = Maillon(e, courant.suivant)` l'insère juste **après** `courant`)."
         ]
       }
     },
