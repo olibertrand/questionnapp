@@ -88,7 +88,10 @@ export function renderMarkdown(src) {
         while (i < lines.length && /^\s{2,}\S/.test(lines[i]) && !/^\s*([-*]|\d+[.)])\s+/.test(lines[i])) item += ' ' + lines[i++].trim();
         items.push(`<li>${inline(item)}</li>`);
       }
-      out.push(ordered ? `<ol>${items.join('')}</ol>` : `<ul>${items.join('')}</ul>`);
+      // une liste numérotée garde son premier numéro (« 2. … » ne doit pas s'afficher « 1. »)
+      const start = ordered ? parseInt(li[1], 10) : 1;
+      const ol = start === 1 ? '<ol>' : `<ol start="${start}">`;
+      out.push(ordered ? `${ol}${items.join('')}</ol>` : `<ul>${items.join('')}</ul>`);
       continue;
     }
     const para = [];

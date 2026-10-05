@@ -53,7 +53,7 @@ Un compte créé (ou dont le mot de passe est réinitialisé) par un prof ou un 
 ## Questions (professeurs)
 | Méthode | Route | |
 |---|---|---|
-| GET | `/questions?chapter_id=&class_id=&q=&archived=1` | liste avec compétences, classes, nb de réponses, score moyen |
+| GET | `/questions?chapter_id=&class_id=&q=&archived=1` | liste avec compétences, classes, nb de réponses, score moyen ; `q` : recherche par mots-clés (voir ci-dessous) |
 | POST | `/questions` | `{title, chapter_id \| chapter_name, difficulty (1-3), skills: [noms], class_ids, template}` |
 | GET | `/questions/:id` | `{question: {..., template, skills, class_ids}}` |
 | PUT | `/questions/:id` | idem POST (+ `archived`) ; un modèle modifié crée une nouvelle version |
@@ -75,6 +75,7 @@ Un compte créé (ou dont le mot de passe est réinitialisé) par un prof ou un 
 | Méthode | Route | |
 |---|---|---|
 | GET | `/banks` | `{dir, banks: [{id, title, description, count, new, imported, modified}]}` (ou `error` si le fichier est illisible) |
+| GET | `/banks?q=…` | en plus : `results` = questions de toutes les banques qui correspondent à la recherche `q` : `[{bank_id, bank_title, uid, title, chapter, skills, difficulty, template, status, question_id}]` |
 | GET | `/banks/:id` | `{bank: {id, title, description, questions: [{..., status: new \| imported \| modified, question_id}]}}` |
 | POST | `/banks/:id/import` | `{titles, update, class_ids}` : importe les questions nouvelles `titles` et met à jour (nouvelle version) les questions `update` modifiées dans le fichier ; chaque question passe l'auto-test → `{created, updated, skipped, errors, warnings}` |
 
@@ -106,3 +107,12 @@ Un compte créé (ou dont le mot de passe est réinitialisé) par un prof ou un 
 | `/stats/classes/:id/assignments` | matrice élève × séance |
 | `/stats/students/:id` | profil, connexions, tentatives une par une, maîtrise par compétence et par chapitre |
 | `/stats/classes/:id/export.csv` | toutes les réponses (séparateur `;`, UTF-8 avec BOM pour Excel) |
+
+### Recherche par mots-clés (`q`)
+
+Utilisée par `GET /questions?q=` et `GET /banks?q=` (code : `app/search.py`). Une question
+correspond si elle contient **tous** les mots de `q`, dans son titre, son identifiant, son
+chapitre, ses compétences, son énoncé, les intitulés de ses champs, sa correction, ses indices
+ou les chaînes de son générateur. Majuscules, accents et tirets bas sont ignorés ; un mot peut
+être un morceau d'un mot plus long (`min` trouve `minimum`). `-mot` exclut les questions qui
+contiennent `mot` ; `"plusieurs mots"` cherche l'expression exacte.

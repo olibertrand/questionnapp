@@ -9,7 +9,7 @@ import json
 import os
 import re
 
-from .. import config, db, security
+from .. import config, db, search, security
 from ..web import HttpError, int_list, json_response, router
 from .questions import _import_items, _selftest_messages, clean_uid, find_existing, save_question, selftest
 
@@ -90,7 +90,25 @@ def list_banks(req):
             counts[_status(req.db, item)[0]] += 1
         banks.append({"id": bid, "title": b["title"], "description": b["description"],
                       "count": len(b["questions"]), **counts})
-    return json_response({"dir": config.BANK_DIR, "banks": banks})
+    out = {"dir": config.BANK_DIR, "banks": banks}
+    if req.arg("q"):
+        # recherche par mots-clés dans toutes les banques (voir app/search.py)
+        results = []
+        for bid in bank_ids():
+            try:
+                b = load_bank(bid)
+            except (ValueError, OSError):
+                continue
+            for item in b["questions"]:
+                skills = item.get("skills") if isinstance(item.get("skills"), list) else []
+                text = search.question_text(item.get("uid"), item["title"], item.get("chapter"), skills, item.get("template"))
+                if search.matches(text, req.arg("q")):
+                    status, qid = _status(req.db, item)
+                    results.append({"bank_id": bid, "bank_title": b["title"], "uid": item.get("uid"), "title": item["title"],
+                                    "chapter": item.get("chapter"), "skills": skills, "difficulty": item.get("difficulty"),
+                                    "template": item.get("template"), "status": status, "question_id": qid})
+        out["results"] = results
+    return json_response(out)
 
 
 @router.get("/api/banks/:id")

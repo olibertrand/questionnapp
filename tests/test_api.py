@@ -3,6 +3,7 @@
 import datetime
 import http.cookiejar
 import json
+from urllib.parse import quote
 import os
 import sys
 import tempfile
@@ -262,6 +263,18 @@ class ApiTest(unittest.TestCase):
         q_poo = prof.ok("GET", f"/api/questions/{r1['created'][0]}")["question"]
         self.assertEqual(q_poo["uid"], "POO-01")
         self.assertEqual(prof.ok("GET", "/api/questions?q=POO-02")["questions"][0]["uid"], "POO-02")
+        # recherche par plusieurs mots-clés : tous les mots, sans accents, avec exclusion
+        found = [q["uid"] for q in prof.ok("GET", "/api/questions?q=" + quote("ecrire METHODE"))["questions"]]
+        self.assertIn("POO-07", found)
+        self.assertTrue(all(u.startswith("POO") for u in found), found)
+        found = [q["uid"] for q in prof.ok("GET", "/api/questions?q=" + quote("methode -contrainte"))["questions"]]
+        self.assertIn("POO-07", found)
+        self.assertNotIn("POO-06", found)
+        res = prof.ok("GET", "/api/banks?q=" + quote("liste chainee taille"))["results"]
+        self.assertTrue(res and all(r["bank_id"] == "listes-chainees" for r in res), res)
+        res = prof.ok("GET", "/api/banks?q=" + quote('"compte(x, L)" while'))["results"]
+        self.assertEqual([r["uid"] for r in res], ["NSI1-13"])
+        self.assertEqual(prof.ok("GET", "/api/banks?q=zzzintrouvable")["results"], [])
         # une question créée dans l'app reçoit un identifiant Q-xxxx
         new_id = prof.ok("POST", "/api/questions", {"title": "Doublon", "template": TEMPLATE})["id"]
         self.assertEqual(prof.ok("GET", f"/api/questions/{new_id}")["question"]["uid"], f"Q-{new_id:04d}")

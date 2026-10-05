@@ -10,7 +10,9 @@ l'essayer avec **Aperçu**, puis l'importer (ou la mettre à jour) et l'affecter
 | `python-bases.json` | variables, types, conditions, boucles, entrées/sorties |
 | `python-listes-chaines.json` | indices et tranches, parcours, compréhensions |
 | `python-dictionnaires.json` | accès, `keys`/`values`/`items`, max/min, calculs cumulatifs, données imbriquées |
-| `poo.json` | classes, attributs, méthodes, références |
+| `poo.json` | créer un objet, attributs, appeler et écrire des méthodes (classes `Duree`, `Fraction`, `Rectangle`, `Compte`), références |
+| `listes-chainees.json` | listes chaînées (classes `Maillon`/`Chaine`, répertoire `Fiche`/`Repertoire`) : liens, création, parcours, méthodes |
+| `arbres-binaires.json` | arbres binaires (classe `Arbre`, arbre vide = `None`) : lire et créer un arbre, `taille`, `hauteur`, somme, minimum/maximum en récursif |
 | `algorithmique.json` | tris, dichotomie, complexité |
 | `representation-donnees.json` | bases 2 et 16, complément à deux, booléens |
 | `bases-de-donnees.json` | modèle relationnel, SQL |

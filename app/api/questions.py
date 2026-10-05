@@ -3,7 +3,7 @@ import re
 import secrets
 from concurrent.futures import ThreadPoolExecutor
 
-from .. import db, engine_client, security
+from .. import db, engine_client, search, security
 from ..web import HttpError, Response, int_list, json_response, require_str, router, to_int
 
 MAX_TEMPLATE_SIZE = 200_000
@@ -155,10 +155,6 @@ def list_questions(req):
     if req.arg("class_id"):
         where.append("q.id IN (SELECT question_id FROM class_questions WHERE class_id = ?)")
         args.append(req.int_arg("class_id"))
-    if req.arg("q"):
-        where.append("(q.title LIKE ? OR q.uid LIKE ? OR q.id IN (SELECT qs.question_id FROM question_skills qs "
-                     "JOIN skills s ON s.id = qs.skill_id WHERE s.name LIKE ?))")
-        args += [f"%{req.arg('q')}%"] * 3
     rows = db.all_(req.db, f"""
         SELECT q.id, q.uid, q.title, q.chapter_id, c.name AS chapter, q.difficulty, q.archived, q.updated_at,
                (SELECT v.sample FROM question_versions v WHERE v.id = q.version_id) AS sample,
@@ -173,7 +169,20 @@ def list_questions(req):
         r["skills"] = r["skills"].split(" | ") if r["skills"] else []
         r["class_ids"] = [int(x) for x in r["class_ids"].split(",")] if r["class_ids"] else []
         r["sample"] = json.loads(r["sample"]) if r["sample"] else None
+    if req.arg("q"):
+        # recherche par mots-clés (tous les mots, sans tenir compte des accents) : voir app/search.py
+        templates = {r["id"]: r["template"] for r in db.all_(req.db, """
+            SELECT q.id, v.template FROM questions q JOIN question_versions v ON v.id = q.version_id""")}
+        rows = [r for r in rows if search.matches(search.question_text(
+            r["uid"], r["title"], r["chapter"], r["skills"], _loads(templates.get(r["id"])), r["sample"]), req.arg("q"))]
     return json_response({"questions": rows})
+
+
+def _loads(text):
+    try:
+        return json.loads(text) if text else None
+    except ValueError:
+        return None
 
 
 def _sample_of(public):
