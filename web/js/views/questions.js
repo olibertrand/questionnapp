@@ -18,7 +18,8 @@ export async function listPage({ query }) {
     api.get('/chapters'), api.get('/classes')]);
   const className = Object.fromEntries(classes.map((c) => [c.id, c.name]));
   const setQuery = (k, v) => navigate('/questions' + qs({ ...query, [k]: v }));
-  const search = h('input', { type: 'search', placeholder: 'Rechercher (titre, compétence)…', value: query.q || '' });
+  const search = h('input', { type: 'search', placeholder: 'Rechercher : plusieurs mots, ex. somme arbre…', value: query.q || '',
+    title: SEARCH_HELP });
   search.addEventListener('change', () => setQuery('q', search.value));
   const chapterSel = h('select', { onchange: (e) => setQuery('chapitre', e.target.value) },
     h('option', { value: '' }, 'Tous les chapitres'), chapters.map((c) => h('option', { value: c.id, selected: String(c.id) === query.chapitre }, c.name)));
@@ -132,14 +133,24 @@ const BANK_STATUS = {
   modified: ['pill bad', 'modifiée dans le fichier'],
 };
 
-export async function banksPage() {
-  const { dir, banks } = await api.get('/banks');
+// Aide de la recherche par mots-clés (voir app/search.py)
+const SEARCH_HELP = 'Tous les mots doivent apparaître (titre, n°, chapitre, compétences, énoncé, correction). '
+  + 'Majuscules et accents ne comptent pas ; « min » trouve aussi « minimum ». '
+  + '-mot exclut les questions qui contiennent ce mot ; "des mots entre guillemets" cherchent l\'expression exacte.';
+
+export async function banksPage({ query = {} } = {}) {
+  const { dir, banks, results } = await api.get('/banks' + qs({ q: query.q }));
+  const search = h('input', { type: 'search', placeholder: 'Rechercher dans toutes les banques : plusieurs mots, ex. somme arbre…',
+    value: query.q || '', title: SEARCH_HELP });
+  search.addEventListener('change', () => navigate('/banques' + qs({ q: search.value.trim() || undefined })));
   return h('div', {},
     h('p', {}, h('a', { href: '#/questions' }, '← Banque de questions de l\'application')),
     h('h1', {}, 'Banques de questions'),
     h('p', { class: 'muted' }, 'Chaque fichier JSON du répertoire ', h('code', {}, dir),
       " est une banque thématique. Déposez-y de nouveaux fichiers (par exemple ceux produits par votre projet Claude) : ils apparaissent ici. Importez les questions qui vous intéressent ; celles modifiées dans le fichier depuis l'import peuvent être mises à jour."),
-    banks.length ? h('div', { class: 'grid' }, banks.map((b) => h('div', { class: 'card' },
+    h('div', { class: 'field' }, search, h('div', { class: 'small muted' }, SEARCH_HELP)),
+    results ? searchResults(results, query.q) : null,
+    results ? null : banks.length ? h('div', { class: 'grid' }, banks.map((b) => h('div', { class: 'card' },
       h('h3', {}, b.error ? b.title : h('a', { href: `#/banques/${encodeURIComponent(b.id)}` }, b.title)),
       b.error ? h('div', { class: 'alert error' }, b.error) : [
         h('p', { class: 'small muted' }, b.description),
@@ -150,6 +161,53 @@ export async function banksPage() {
         h('div', { style: { marginTop: '.6rem' } }, h('a', { class: 'btn small', href: `#/banques/${encodeURIComponent(b.id)}` }, 'Ouvrir')),
       ])))
       : h('div', { class: 'empty' }, 'Aucun fichier dans le répertoire des banques.'));
+}
+
+// Résultats d'une recherche dans toutes les banques, avec import de la sélection
+function searchResults(results, q) {
+  if (!results.length) return h('div', { class: 'empty' }, `Aucune question ne contient tous les mots « ${q} ».`);
+  const checks = [];
+  const rows = results.map((r) => {
+    const cb = h('input', { type: 'checkbox', checked: false, disabled: r.status === 'imported', 'aria-label': 'Sélectionner' });
+    checks.push([cb, r]);
+    const [cls, label] = BANK_STATUS[r.status];
+    return h('tr', {},
+      h('td', {}, cb),
+      h('td', {}, uidBadge(r.uid)),
+      h('td', {}, r.status !== 'new' ? h('a', { href: `#/questions/${r.question_id}` }, r.title) : r.title,
+        h('div', { class: 'small muted' }, [r.chapter, ...(r.skills || [])].filter(Boolean).join(' · '))),
+      h('td', { class: 'small' }, h('a', { href: `#/banques/${encodeURIComponent(r.bank_id)}` }, r.bank_title)),
+      h('td', {}, h('span', { class: cls }, label)),
+      h('td', { class: 'num' }, h('button', { class: 'small', onclick: () => previewModal(r.title, r.template, r.uid) }, 'Aperçu')));
+  });
+  const out = h('div');
+  const btn = h('button', { class: 'primary' }, 'Importer / mettre à jour la sélection');
+  btn.addEventListener('click', async () => {
+    const sel = checks.filter(([c]) => c.checked && !c.disabled).map(([, r]) => r);
+    if (!sel.length) return mount(out, h('div', { class: 'alert error' }, 'Aucune question sélectionnée.'));
+    btn.disabled = true;
+    mount(out, h('div', { class: 'alert info' }, `Chaque question est testée sur 20 tirages avant import (${sel.length} question(s))…`));
+    // un import par fichier de banque, puis un seul compte rendu
+    const total = { created: [], updated: [], restored: [], skipped: [], errors: [], warnings: [] };
+    try {
+      for (const bid of [...new Set(sel.map((r) => r.bank_id))]) {
+        const mine = sel.filter((r) => r.bank_id === bid);
+        const r = await api.post(`/banks/${encodeURIComponent(bid)}/import`, {
+          titles: mine.filter((x) => x.status === 'new' || x.status === 'archived').map((x) => x.title),
+          update: mine.filter((x) => x.status === 'modified').map((x) => x.title), class_ids: [] });
+        for (const k of Object.keys(total)) total[k].push(...(r[k] || []));
+      }
+      importReport(total);
+      render();
+    } catch (e) { mount(out, errorBox(e)); btn.disabled = false; }
+  });
+  return h('div', {},
+    h('p', {}, `${results.length} question(s) trouvée(s). `, h('a', { href: '#/banques' }, 'Effacer la recherche')),
+    h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
+      h('thead', {}, h('tr', {}, h('th', {}, ''), h('th', {}, 'N°'), h('th', {}, 'Question'), h('th', {}, 'Banque'), h('th', {}, 'État'), h('th', {}, ''))),
+      h('tbody', {}, rows))),
+    h('p', { class: 'small muted' }, 'Les questions importées d\'ici ne sont affectées à aucune classe : affectez-les ensuite depuis la page Questions (ou importez-les depuis la page de leur banque).'),
+    out, h('div', { style: { marginTop: '.6rem' } }, btn));
 }
 
 export async function bankPage({ params }) {
