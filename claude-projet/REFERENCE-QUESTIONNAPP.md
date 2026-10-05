@@ -285,7 +285,7 @@ demande la solution. Score enregistré : score du dernier essai × 100 % (1er es
 
 ## Fichier d'import et questions d'exemple
 
-Le fichier à produire a exactement cette structure (`format`, `version`, `title` et `description` de la banque, puis la liste `questions`). Chaque question : `title`, `chapter`, `difficulty` (1 facile, 2 moyen, 3 difficile), `skills` (liste), `template`. Voici les 77 questions de la banque fournie avec l'application, toutes testées : elles montrent les bons usages de chaque type de champ.
+Le fichier à produire a exactement cette structure (`format`, `version`, `title` et `description` de la banque, puis la liste `questions`). Chaque question : `title`, `chapter`, `difficulty` (1 facile, 2 moyen, 3 difficile), `skills` (liste), `template`. Voici les 84 questions de la banque fournie avec l'application, toutes testées : elles montrent les bons usages de chaque type de champ.
 
 ```json
 {
@@ -492,6 +492,207 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
           }
         ],
         "solution": "Il s'agit d'un·e **{{ terme }}**."
+      }
+    },
+    {
+      "uid": "LC-01",
+      "title": "Liste chaînée : suivre les liens",
+      "chapter": "Structures de données",
+      "difficulty": 1,
+      "skills": [
+        "Listes chaînées",
+        "POO : classes et attributs",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nn = randint(4, 5)\nvals = randlist(n, 1, 60, distinct=True)\nnoms = [f\"m{i + 1}\" for i in range(n)]\nordre = shuffled(list(range(n)))          # ordre[k] = indice du maillon en position k dans la chaîne\npos = {i: k for k, i in enumerate(ordre)}   # position de chaque maillon dans la chaîne\nsucc = {ordre[k]: ordre[k + 1] for k in range(n - 1)}\n# création des maillons par numéro ; le suivant est donné au constructeur s'il existe déjà\nlignes, liens = [], []\nfor i in range(n):\n    j = succ.get(i)\n    if j is not None and j < i and coin(0.6):\n        lignes.append(f\"{noms[i]} = Maillon({vals[i]}, {noms[j]})\")\n    else:\n        lignes.append(f\"{noms[i]} = Maillon({vals[i]})\")\n        if j is not None:\n            liens.append(f\"{noms[i]}.suivant = {noms[j]}\")\nsrc = \"\\n\".join(lignes + shuffled(liens) + [\"\", \"c = Chaine()\", f\"c.debut = {noms[ordre[0]]}\"])\nchaine = [vals[i] for i in ordre]\np = randint(2, n - 1)\nexpr = \"c.debut\" + \".suivant\" * p + \".valeur\"\nrep_expr = chaine[p]\nrep = \" \".join(str(v) for v in chaine)",
+        "statement": "On utilise les classes du cours :\n\n{{ code_block(MAILLON + chr(10) + chr(10) + CHAINE) }}\n\nOn exécute :\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "1. Valeurs de la chaîne `c`, dans l'ordre en partant de `c.debut`, séparées par des espaces",
+            "answer": "[rep, rep.replace(' ', ', '), '[' + rep.replace(' ', ', ') + ']', rep.replace(' ', ' -> '), rep.replace(' ', ' → ')]"
+          },
+          {
+            "type": "number",
+            "label": "2. Valeur de `{{ expr }}`",
+            "answer": "rep_expr"
+          }
+        ],
+        "solution": "En partant de `c.debut` et en suivant les attributs `suivant`, on obtient : **{{ rep.replace(' ', ' → ') }}** (le dernier maillon a `suivant` égal à `None`).\n\n`{{ expr }}` avance de {{ p }} maillon(s) à partir du premier : sa valeur est **{{ rep_expr }}**.",
+        "hints": [
+          "Dessinez chaque maillon comme une case contenant sa valeur, puis une flèche vers son `suivant`. `Maillon(v, m)` crée un maillon dont le suivant est `m` ; `m1.suivant = m2` ajoute une flèche de `m1` vers `m2`.",
+          "Partez de `c.debut`, puis suivez les flèches jusqu'à `None`. Chaque `.suivant` dans `{{ expr }}` avance d'un maillon."
+        ]
+      }
+    },
+    {
+      "uid": "LC-02",
+      "title": "Liste chaînée : créer les objets",
+      "chapter": "Structures de données",
+      "difficulty": 1,
+      "skills": [
+        "Listes chaînées",
+        "POO : créer un objet"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nn = randint(3, 4)\nvals = randlist(n, 1, 50, distinct=True)\nref = \"\\n\".join([\"c = Chaine()\"] + [f\"m{i + 1} = Maillon({vals[i]})\" for i in range(n)]\n                + [f\"m{i + 1}.suivant = m{i + 2}\" for i in range(n - 1)] + [\"c.debut = m1\"])",
+        "statement": "On utilise les classes du cours, **déjà définies** (inutile de les recopier) :\n\n{{ code_block(MAILLON + chr(10) + chr(10) + CHAINE) }}\n\nÉcrire un programme qui crée une instance `c` de `Chaine` et {{ n }} instances de `Maillon` de façon que la chaîne `c` contienne, dans l'ordre, les valeurs **{{ ' → '.join(str(v) for v in vals) }}**.",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre programme",
+            "given": "{'Maillon': Maillon, 'Chaine': Chaine}",
+            "reference": "{{ ref }}",
+            "tests": "c = student.get(\"c\")\nif type(c).__name__ != \"Chaine\":\n    check(False, \"il faut créer `c`, instance de `Chaine` : `c = Chaine()`.\")\nelse:\n    res, m, types_ok = [], c.debut, True\n    while m is not None and len(res) <= 20:\n        types_ok = types_ok and type(m).__name__ == \"Maillon\"\n        res.append(getattr(m, \"valeur\", None))\n        m = getattr(m, \"suivant\", None)\n    if not types_ok:\n        check(False, \"chaque élément de la chaîne doit être une instance de `Maillon`.\")\n    elif not res:\n        check(False, \"la chaîne est vide : `c.debut` doit désigner le premier maillon.\")\n    else:\n        check_equal(res, vals, \"en partant de `c.debut`, on obtient \" + \" → \".join(map(str, res))\n                    + \" au lieu de \" + \" → \".join(map(str, vals)) + \".\")"
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nOn peut aussi donner le suivant au constructeur, en partant de la fin : `m{{ n }} = Maillon({{ vals[-1] }})`, puis `m{{ n - 1 }} = Maillon({{ vals[-2] }}, m{{ n }})`, etc.",
+        "hints": [
+          "Créez d'abord les maillons (`m1 = Maillon(...)`), puis reliez-les avec l'attribut `suivant`, et enfin faites pointer `c.debut` vers le premier.",
+          "Le dernier maillon n'a pas de suivant : son attribut `suivant` reste à `None`. Vérifiez le sens des liens : `m1.suivant = m2` signifie que `m2` vient **après** `m1`."
+        ]
+      }
+    },
+    {
+      "uid": "LC-03",
+      "title": "Parcourir une liste chaînée : qu'affiche ce programme ?",
+      "chapter": "Structures de données",
+      "difficulty": 2,
+      "skills": [
+        "Listes chaînées",
+        "Boucle while",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nvals = randlist(randint(5, 6), 1, 20)\nk = choice(vals)\ncreation = \"c = Chaine()\\n\" + \"\\n\".join(f\"c.debut = Maillon({v}, c.debut)\" for v in reversed(vals))\nforme = choice([\"somme\", \"compte\", \"dernier\", \"pairs\"])\nif forme == \"somme\":\n    corps = [\"s = 0\", \"courant = c.debut\", \"while courant != None:\", \"    s = s + courant.valeur\", \"    courant = courant.suivant\", \"print(s)\"]\nelif forme == \"compte\":\n    corps = [\"n = 0\", \"courant = c.debut\", \"while courant != None:\", f\"    if courant.valeur > {k}:\", \"        n = n + 1\", \"    courant = courant.suivant\", \"print(n)\"]\nelif forme == \"dernier\":\n    corps = [\"courant = c.debut\", \"while courant.suivant != None:\", \"    courant = courant.suivant\", \"print(courant.valeur)\"]\nelse:\n    corps = [\"s = 0\", \"courant = c.debut.suivant\", \"while courant != None:\", \"    s = s + courant.valeur\", \"    courant = courant.suivant\", \"print(s)\"]\nsrc = creation + \"\\n\\n\" + \"\\n\".join(corps)\nrep = int(run(MAILLON + \"\\n\\n\" + CHAINE + \"\\n\\n\" + src))",
+        "statement": "Avec les classes `Maillon` et `Chaine` du cours :\n\n{{ code_block(MAILLON + chr(10) + chr(10) + CHAINE) }}\n\nQu'affiche le programme suivant ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "number",
+            "label": "Valeur affichée",
+            "answer": "rep"
+          }
+        ],
+        "solution": "La chaîne vaut **{{ ' → '.join(str(v) for v in vals) }}** : chaque `Maillon(v, c.debut)` ajoute `v` **en tête**, donc le dernier ajouté est le premier. Le programme affiche **{{ rep }}**.\n\nLe parcours type : `courant = c.debut`, puis `while courant != None:` … `courant = courant.suivant`.",
+        "hints": [
+          "Commencez par écrire la chaîne : `c.debut = Maillon(v, c.debut)` place `v` **devant** les maillons déjà présents. La dernière ligne de création donne donc le premier élément.",
+          "Suivez ensuite la boucle : `courant` désigne un maillon, `courant.valeur` sa valeur, et `courant = courant.suivant` passe au maillon suivant. Regardez bien où commence `courant` et quand la boucle s'arrête."
+        ]
+      }
+    },
+    {
+      "uid": "LC-04",
+      "title": "Quelle boucle parcourt toute la liste chaînée ?",
+      "chapter": "Structures de données",
+      "difficulty": 1,
+      "skills": [
+        "Listes chaînées",
+        "Boucle while"
+      ],
+      "template": {
+        "code": "bonne = (\"courant = c.debut\\nwhile courant != None:\\n    print(courant.valeur)\\n    courant = courant.suivant\",\n         \"affiche bien toutes les valeurs, de la première à la dernière.\")\nmauvaises = [\n    (\"courant = c.debut\\nwhile courant.suivant != None:\\n    print(courant.valeur)\\n    courant = courant.suivant\",\n     \"oublie la **dernière** valeur : la boucle s'arrête quand `courant` est sur le dernier maillon, avant de l'afficher.\"),\n    (\"courant = c.debut.suivant\\nwhile courant != None:\\n    print(courant.valeur)\\n    courant = courant.suivant\",\n     \"oublie la **première** valeur : on commence au deuxième maillon.\"),\n    (\"courant = c.debut\\nwhile courant != None:\\n    print(courant.valeur)\\n    courant = c.debut.suivant\",\n     \"ne s'arrête jamais : `courant` revient toujours au deuxième maillon au lieu d'avancer.\"),\n    (\"courant = c.debut\\nwhile courant != None:\\n    print(courant)\\n    courant = courant.suivant\",\n     \"affiche les **maillons** (des objets, par exemple `<__main__.Maillon object at …>`) et non leurs valeurs.\"),\n    (\"courant = c.debut\\nwhile courant != None:\\n    courant = courant.suivant\\n    print(courant.valeur)\",\n     \"oublie la première valeur, puis provoque une erreur `AttributeError` : à la fin, `courant` vaut `None`, qui n'a pas d'attribut `valeur`.\"),\n    (\"courant = c\\nwhile courant != None:\\n    print(courant.valeur)\\n    courant = courant.suivant\",\n     \"provoque une erreur `AttributeError` : `c` est la chaîne, pas un maillon ; elle n'a pas d'attribut `valeur` (le premier maillon est `c.debut`).\"),\n]\nchoisis = shuffled([bonne] + sample(mauvaises, 3))\noptions = [(\"```python\\n\" + x + \"\\n```\", x == bonne[0]) for x, _ in choisis]\nexpl = \"\\n\\n\".join(\"```python\\n\" + x + \"\\n```\\n\" + (\"**Bonne réponse** : ce programme \" if x == bonne[0] else \"Ce programme \") + e\n                   for x, e in choisis)\nvaleurs = randlist(randint(3, 4), 1, 30, distinct=True)",
+        "statement": "`c` est une instance de `Chaine` (attribut `debut`) dont les maillons ont les attributs `valeur` et `suivant`. Elle contient par exemple {{ ' → '.join(str(v) for v in valeurs) }}.\n\nQuel programme affiche **toutes** les valeurs de la chaîne `c`, une par ligne ?",
+        "fields": [
+          {
+            "type": "choice",
+            "label": "",
+            "options": "options",
+            "shuffle": false
+          }
+        ],
+        "solution": "{{ expl }}",
+        "hints": [
+          "Faites tourner chaque programme à la main sur la chaîne {{ ' → '.join(str(v) for v in valeurs) }} : par quel maillon commence `courant`, et que vaut `courant` quand la boucle s'arrête ?",
+          "Le schéma correct : `courant = c.debut`, condition `courant != None`, et `courant = courant.suivant` **après** avoir traité `courant.valeur`."
+        ],
+        "max_tries": 2
+      }
+    },
+    {
+      "uid": "LC-05",
+      "title": "Liste chaînée : écrire une méthode de Chaine",
+      "chapter": "Structures de données",
+      "difficulty": 2,
+      "skills": [
+        "Listes chaînées",
+        "POO : écrire une méthode",
+        "Boucle while"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nMETHODES = {\n    \"est_vide\": (\"self\", \"renvoie `True` si la chaîne est vide, `False` sinon\",\n                 \"        return self.debut == None\", lambda L, a: (\"val\", L == []), lambda L, a: L, False),\n    \"ajoute_en_tete\": (\"self, e\", \"insère un nouveau maillon de valeur `e` **en tête** de la chaîne (elle ne renvoie rien)\",\n                       \"        self.debut = Maillon(e, self.debut)\", lambda L, a: (\"val\", None), lambda L, a: [a[0]] + L, True),\n    \"tete\": (\"self\", \"renvoie la **valeur** du premier élément (on suppose la chaîne non vide)\",\n             \"        return self.debut.valeur\", lambda L, a: (\"val\", L[0]), lambda L, a: L, False),\n    \"deuxieme\": (\"self\", \"renvoie la **valeur** du deuxième élément (on suppose qu'il existe)\",\n                 \"        return self.debut.suivant.valeur\", lambda L, a: (\"val\", L[1]), lambda L, a: L, False),\n    \"taille\": (\"self\", \"renvoie le nombre d'éléments de la chaîne\",\n               \"        n = 0\\n        courant = self.debut\\n        while courant != None:\\n            n = n + 1\\n            courant = courant.suivant\\n        return n\",\n               lambda L, a: (\"val\", len(L)), lambda L, a: L, True),\n    \"elements\": (\"self\", \"renvoie un **tableau** (liste Python) contenant les valeurs de la chaîne, dans l'ordre\",\n                 \"        t = []\\n        courant = self.debut\\n        while courant != None:\\n            t.append(courant.valeur)\\n            courant = courant.suivant\\n        return t\",\n                 lambda L, a: (\"val\", list(L)), lambda L, a: L, True),\n    \"somme\": (\"self\", \"renvoie la somme des valeurs de la chaîne (0 si elle est vide)\",\n              \"        s = 0\\n        courant = self.debut\\n        while courant != None:\\n            s = s + courant.valeur\\n            courant = courant.suivant\\n        return s\",\n              lambda L, a: (\"val\", sum(L)), lambda L, a: L, True),\n    \"contient\": (\"self, x\", \"renvoie `True` si la valeur `x` est dans la chaîne, `False` sinon\",\n                 \"        courant = self.debut\\n        while courant != None:\\n            if courant.valeur == x:\\n                return True\\n            courant = courant.suivant\\n        return False\",\n                 lambda L, a: (\"val\", a[0] in L), lambda L, a: L, True),\n    \"dernier\": (\"self\", \"renvoie la **valeur** du dernier élément (on suppose la chaîne non vide)\",\n                \"        courant = self.debut\\n        while courant.suivant != None:\\n            courant = courant.suivant\\n        return courant.valeur\",\n                lambda L, a: (\"val\", L[-1]), lambda L, a: L, True),\n    \"reste\": (\"self\", \"renvoie une **nouvelle** `Chaine` privée du premier élément, sans modifier la chaîne de départ (on suppose la chaîne non vide)\",\n              \"        r = Chaine()\\n        r.debut = self.debut.suivant\\n        return r\",\n              lambda L, a: (\"chaine\", L[1:]), lambda L, a: L, False),\n}\nmname = choice(list(METHODES))\nparams, doc, corps, f_ret, f_apres, vide_ok = METHODES[mname]\nmini = {\"tete\": 1, \"dernier\": 1, \"reste\": 1, \"deuxieme\": 2}.get(mname, 0)\nlistes = [randlist(randint(max(mini, 3), 6), 1, 30) for _ in range(4)] + [randlist(max(mini, 1), 1, 30)]\nif mini == 0:\n    listes.append([])\ncases = []\nfor L in listes:\n    if mname == \"ajoute_en_tete\":\n        args = (randint(1, 30),)\n    elif mname == \"contient\":\n        args = (choice(L) if L and coin() else randint(31, 40),)\n    else:\n        args = ()\n    cases.append((L, args, f_ret(L, args), f_apres(L, args)))\nstarter = MAILLON + \"\\n\\n\" + CHAINE + f\"\\n\\n    def {mname}({params}):\\n        \"\nref = MAILLON + \"\\n\\n\" + CHAINE + f\"\\n\\n    def {mname}({params}):\\n\" + corps\nex_L, ex_args, ex_ret, ex_apres = cases[0]\nif mname == \"ajoute_en_tete\":\n    ex = f\"`c.ajoute_en_tete({ex_args[0]})` transforme la chaîne en {' → '.join(map(str, ex_apres))}\"\nelif ex_ret[0] == \"chaine\":\n    ex = f\"`c.{mname}()` renvoie la chaîne {' → '.join(map(str, ex_ret[1]))}\"\nelse:\n    ex = f\"`c.{mname}(\" + \", \".join(map(repr, ex_args)) + f\")` renvoie `{ex_ret[1]!r}`\"",
+        "statement": "Compléter la classe `Chaine` du cours avec une méthode `{{ mname }}({{ params }})` qui {{ doc }}.\n\n*Exemple : si `c` contient {{ ' → '.join(str(v) for v in ex_L) }}, {{ ex }}.*",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre code",
+            "starter": "{{ starter }}",
+            "tests": "M, C = student.get(\"Maillon\"), student.get(\"Chaine\")\ndef construit(L):\n    c = C()\n    c.debut = None\n    i = len(L) - 1\n    while i >= 0:\n        m = M(L[i])\n        m.suivant = c.debut\n        c.debut = m\n        i = i - 1\n    return c\ndef valeurs(c):\n    res, m = [], getattr(c, \"debut\", None)\n    while m is not None:\n        if len(res) > 200:\n            return None  # la chaîne boucle sur elle-même\n        res.append(getattr(m, \"valeur\", None))\n        m = getattr(m, \"suivant\", None)\n    return res\ndef montre(L):\n    if L is None:\n        return \"une chaîne qui tourne en rond (un maillon pointe vers un maillon déjà rencontré)\"\n    return \"la chaîne \" + (\" → \".join(str(v) for v in L) if L else \"vide\")\nif not isinstance(M, type) or not isinstance(C, type):\n    check(False, \"les classes `Maillon` et `Chaine` doivent être définies (gardez le code de départ)\")\nelif not callable(getattr(C, mname, None)):\n    check(False, f\"la classe `Chaine` doit avoir une méthode `{mname}`\")\nelse:\n    for L, args, ret, apres in cases:\n        c = construit(L)\n        appel = f\"`c.{mname}(\" + \", \".join(repr(a) for a in args) + f\")` avec c = {montre(L)}\"\n        try:\n            r = getattr(c, mname)(*args)\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"{appel} provoque une erreur : {erreur(e)}\")\n            continue\n        if ret[0] == \"chaine\":\n            if type(r).__name__ != \"Chaine\":\n                check(False, f\"{appel} doit renvoyer une **Chaine**, et non `{r!r}`\")\n            else:\n                check_equal(valeurs(r), ret[1], f\"{appel} renvoie {montre(valeurs(r))} au lieu de {montre(ret[1])}\")\n        else:\n            check_equal(r, ret[1], f\"{appel} renvoie `{r!r}` au lieu de `{ret[1]!r}`\")\n        check_equal(valeurs(c), apres, f\"après {appel}, c est devenue {montre(valeurs(c))} au lieu de {montre(apres)}\")",
+            "reference": "{{ ref }}"
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\n{{ \"On parcourt la chaîne avec une variable `courant` : elle part de `self.debut`, et `courant = courant.suivant` la fait avancer jusqu'à `None`.\" if vide_ok else \"Le premier maillon est `self.debut` ; on lit sa valeur avec `.valeur` et on passe au suivant avec `.suivant`.\" }}",
+        "hints": [
+          "Dans une méthode de `Chaine`, le premier maillon est `self.debut` (ou `None` si la chaîne est vide). Un maillon `m` a deux attributs : `m.valeur` et `m.suivant`.",
+          "{{ 'Pour parcourir : `courant = self.debut`, puis `while courant != None:`, et dans la boucle `courant = courant.suivant`. Le `return` vient après la boucle (sauf si on a trouvé ce qu’on cherche).' if vide_ok and mname != 'ajoute_en_tete' else ('Le nouveau maillon doit avoir pour suivant l’**ancien** premier maillon : `Maillon(e, self.debut)`, puis il devient le début.' if mname == 'ajoute_en_tete' else 'Attention à renvoyer la **valeur** (`.valeur`) et non le maillon lui-même.' if mname != 'reste' else 'Créez une nouvelle chaîne `r = Chaine()` et faites commencer `r.debut` au **deuxième** maillon.') }}"
+        ]
+      }
+    },
+    {
+      "uid": "LC-06",
+      "title": "Répertoire en liste chaînée : écrire une méthode",
+      "chapter": "Structures de données",
+      "difficulty": 3,
+      "skills": [
+        "Listes chaînées",
+        "POO : écrire une méthode",
+        "Boucle while"
+      ],
+      "template": {
+        "code": "FICHE = 'class Fiche:\\n    def __init__(self, unnom, untel):\\n        self.nom = unnom\\n        self.tel = untel\\n        self.suivant = None'\nREPERTOIRE = 'class Repertoire:\\n    def __init__(self):\\n        # à la création, le répertoire est vide\\n        self.premier = None'\ndef tel():\n    return \"06\" + \"\".join(str(randint(0, 9)) for _ in range(8))\ndef repertoire(n):\n    return [(nom, tel()) for nom in sample(PRENOMS, n)]\nMETHODES = {\n    \"taille\": (\"self\", \"renvoie le nombre de fiches du répertoire\",\n               \"        n = 0\\n        courant = self.premier\\n        while courant != None:\\n            n = n + 1\\n            courant = courant.suivant\\n        return n\"),\n    \"ajoute_en_tete\": (\"self, f\", \"ajoute la fiche `f` (une instance de `Fiche`) **en tête** du répertoire\",\n                       \"        f.suivant = self.premier\\n        self.premier = f\"),\n    \"cherche\": (\"self, nom\", \"renvoie le numéro de téléphone de la personne `nom`, ou `None` si elle n'est pas dans le répertoire\",\n                \"        courant = self.premier\\n        while courant != None:\\n            if courant.nom == nom:\\n                return courant.tel\\n            courant = courant.suivant\\n        return None\"),\n    \"supprime\": (\"self, num_tel\", \"supprime du répertoire la fiche dont le numéro est `num_tel` (si aucune fiche n'a ce numéro, le répertoire ne change pas)\",\n                 \"        if self.premier == None:\\n            return\\n        if self.premier.tel == num_tel:\\n            # le 2e passe premier\\n            self.premier = self.premier.suivant\\n        else:\\n            courant = self.premier\\n            while courant.suivant != None and courant.suivant.tel != num_tel:\\n                courant = courant.suivant\\n            if courant.suivant != None:\\n                courant.suivant = courant.suivant.suivant\"),\n}\nmname = choice(list(METHODES))\nparams, doc, corps = METHODES[mname]\ncases = []\nfor n in (4, 3, 5, 1, 0):\n    L = repertoire(n)\n    if mname == \"taille\":\n        cases.append((L, (), len(L), L))\n    elif mname == \"cherche\":\n        nom = choice(L)[0] if L and n != 3 else choice([p for p in PRENOMS if p not in [x for x, _ in L]])\n        cases.append((L, (nom,), dict(L).get(nom), L))\n    elif mname == \"ajoute_en_tete\":\n        nom, t = choice([p for p in PRENOMS if p not in [x for x, _ in L]]), tel()\n        cases.append((L, ((\"fiche\", nom, t),), None, [(nom, t)] + L))\n    elif mname == \"supprime\":\n        if n == 3 or not L:\n            t = \"0700000000\"\n            cases.append((L, (t,), None, L))\n        else:\n            k = {4: 0, 5: 4, 1: 0}[n] if n != 4 else choice([0, 2])\n            t = L[k][1]\n            cases.append((L, (t,), None, L[:k] + L[k + 1:]))\nif mname == \"supprime\":\n    L = repertoire(5)\n    cases.append((L, (L[2][1],), None, L[:2] + L[3:]))\nex_L, ex_args, ex_ret, ex_apres = cases[0]\nnoms_ex = \" → \".join(f\"{x} ({t})\" for x, t in ex_L)\nif mname == \"taille\":\n    ex = f\"`R.taille()` renvoie `{ex_ret}`\"\nelif mname == \"cherche\":\n    ex = f\"`R.cherche({ex_args[0]!r})` renvoie `{ex_ret!r}`\"\nelif mname == \"ajoute_en_tete\":\n    ex = f\"après `R.ajoute_en_tete(Fiche({ex_args[0][1]!r}, {ex_args[0][2]!r}))`, le répertoire commence par {ex_args[0][1]}\"\nelse:\n    ex = f\"après `R.supprime({ex_args[0]!r})`, le répertoire contient \" + (\" → \".join(x for x, t in ex_apres) or \"plus aucune fiche\")\nstarter = FICHE + \"\\n\\n\" + REPERTOIRE + f\"\\n\\n    def {mname}({params}):\\n        \"\nref = FICHE + \"\\n\\n\" + REPERTOIRE + f\"\\n\\n    def {mname}({params}):\\n\" + corps",
+        "statement": "Un répertoire téléphonique est une liste chaînée de fiches :\n\n{{ code_block(FICHE + chr(10) + chr(10) + REPERTOIRE) }}\n\nCompléter la classe `Repertoire` avec une méthode `{{ mname }}({{ params }})` qui {{ doc }}.\n\n*Exemple : si le répertoire `R` contient {{ noms_ex }}, {{ ex }}.*",
+        "fields": [
+          {
+            "type": "code",
+            "label": "Votre code",
+            "starter": "{{ starter }}",
+            "reference": "{{ ref }}",
+            "tests": "F, R = student.get(\"Fiche\"), student.get(\"Repertoire\")\ndef construit(L):\n    r = R()\n    r.premier = None\n    i = len(L) - 1\n    while i >= 0:\n        f = F(L[i][0], L[i][1])\n        f.suivant = r.premier\n        r.premier = f\n        i = i - 1\n    return r\ndef fiches(r):\n    res, f = [], getattr(r, \"premier\", None)\n    while f is not None:\n        if len(res) > 200:\n            return None  # le répertoire boucle sur lui-même\n        res.append((getattr(f, \"nom\", None), getattr(f, \"tel\", None)))\n        f = getattr(f, \"suivant\", None)\n    return res\ndef montre(L):\n    if L is None:\n        return \"une suite de fiches qui tourne en rond (une fiche pointe vers elle-même ou vers une fiche déjà rencontrée)\"\n    return \"[\" + \", \".join(str(n) for n, t in L) + \"]\"\nif not isinstance(F, type) or not isinstance(R, type):\n    check(False, \"les classes `Fiche` et `Repertoire` doivent être définies (gardez le code de départ)\")\nelif not callable(getattr(R, mname, None)):\n    check(False, f\"la classe `Repertoire` doit avoir une méthode `{mname}`\")\nelse:\n    for L, args, ret, apres in cases:\n        r = construit(L)\n        objs = [F(a[1], a[2]) if isinstance(a, tuple) and a[0] == \"fiche\" else a for a in args]\n        appel = f\"`R.{mname}(\" + \", \".join(f\"Fiche({a[1]!r}, {a[2]!r})\" if isinstance(a, tuple) else repr(a) for a in args) + f\")` avec le répertoire {montre(L)}\"\n        try:\n            res = getattr(r, mname)(*objs)\n        except Exception as e:\n            if type(e).__name__ == \"TimeLimit\":\n                raise\n            check(False, f\"{appel} provoque une erreur : {erreur(e)}\")\n            continue\n        check_equal(res, ret, f\"{appel} renvoie `{res!r}` au lieu de `{ret!r}`\")\n        check_equal(fiches(r), apres, f\"après {appel}, le répertoire contient {montre(fiches(r))} au lieu de {montre(apres)}\")"
+          }
+        ],
+        "solution": "{{ code_block(ref) }}\n\nLes fiches sont reliées par leur attribut `suivant` ; le parcours part de `self.premier` et s'arrête à `None`.",
+        "hints": [
+          "Le répertoire commence à `self.premier`. Chaque fiche `f` a les attributs `f.nom`, `f.tel` et `f.suivant` (la fiche suivante, ou `None`).",
+          "{{ 'Pour supprimer une fiche qui n’est pas la première, il faut s’arrêter sur la fiche **précédente** (`courant.suivant.tel == num_tel`) et « sauter » la fiche : `courant.suivant = courant.suivant.suivant`.' if mname == 'supprime' else ('La fiche ajoutée doit pointer vers l’ancien premier : `f.suivant = self.premier`, puis `self.premier = f` (dans cet ordre).' if mname == 'ajoute_en_tete' else 'Parcourez avec `courant = self.premier` et `while courant != None:` ; n’oubliez pas `courant = courant.suivant`.') }}"
+        ]
+      }
+    },
+    {
+      "uid": "LC-07",
+      "title": "Ajouts en tête : quelle chaîne obtient-on ?",
+      "chapter": "Structures de données",
+      "difficulty": 1,
+      "skills": [
+        "Listes chaînées",
+        "POO : méthodes",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "MAILLON = 'class Maillon:\\n    def __init__(self, lavaleur, lesuivant=None):\\n        self.valeur = lavaleur\\n        self.suivant = lesuivant'\nCHAINE = 'class Chaine:\\n    def __init__(self):\\n        self.debut = None'\n_ns = {}\nrun(MAILLON + \"\\n\\n\" + CHAINE, namespace=_ns)\nMaillon, Chaine = _ns[\"Maillon\"], _ns[\"Chaine\"]\nclasse = (MAILLON + \"\\n\\n\" + CHAINE + \"\\n\\n    def ajoute_en_tete(self, e):\\n        self.debut = Maillon(e, self.debut)\\n\\n\"\n          \"    def elements(self):\\n        t = []\\n        courant = self.debut\\n        while courant != None:\\n\"\n          \"            t.append(courant.valeur)\\n            courant = courant.suivant\\n        return t\")\nvals = randlist(randint(3, 4), 1, 50, distinct=True)\nlignes = [\"c = Chaine()\"] + [f\"c.ajoute_en_tete({v})\" for v in vals]\nfin = choice([\"print(c.elements())\", \"print(c.debut.valeur, c.debut.suivant.valeur)\", \"c.debut = c.debut.suivant\\nprint(c.elements())\",\n              \"c.debut.suivant = c.debut.suivant.suivant\\nprint(c.elements())\"])\nsrc = \"\\n\".join(lignes) + \"\\n\" + fin\nout = run(classe + \"\\n\\n\" + src)",
+        "statement": "On complète la classe `Chaine` du cours ainsi :\n\n{{ code_block(classe) }}\n\nQu'affiche le programme suivant ?\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Affichage",
+            "answer": "out",
+            "ignore_spaces": true
+          }
+        ],
+        "solution": "Chaque `ajoute_en_tete` place la valeur **devant** les autres : après les ajouts, la chaîne vaut {{ ' → '.join(str(v) for v in reversed(vals)) }}.\n\nLe programme affiche `{{ out }}`.",
+        "hints": [
+          "`ajoute_en_tete(e)` crée un maillon dont le suivant est l'ancien début : la valeur ajoutée en **dernier** se retrouve donc en **premier**.",
+          "Écrivez la chaîne après chaque ligne. `c.debut = c.debut.suivant` retire le premier maillon ; `m.suivant = m.suivant.suivant` « saute » le maillon qui suit `m`."
+        ]
       }
     },
     {

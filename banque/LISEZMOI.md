@@ -11,6 +11,7 @@ l'essayer avec **Aperçu**, puis l'importer (ou la mettre à jour) et l'affecter
 | `python-listes-chaines.json` | indices et tranches, parcours, compréhensions |
 | `python-dictionnaires.json` | accès, `keys`/`values`/`items`, max/min, calculs cumulatifs, données imbriquées |
 | `poo.json` | créer un objet, attributs, appeler et écrire des méthodes (classes `Duree`, `Fraction`, `Rectangle`, `Compte`), références |
+| `listes-chainees.json` | listes chaînées (classes `Maillon`/`Chaine`, répertoire `Fiche`/`Repertoire`) : liens, création, parcours, méthodes |
 | `algorithmique.json` | tris, dichotomie, complexité |
 | `representation-donnees.json` | bases 2 et 16, complément à deux, booléens |
 | `bases-de-donnees.json` | modèle relationnel, SQL |
