@@ -285,7 +285,7 @@ demande la solution. Score enregistré : score du dernier essai × 100 % (1er es
 
 ## Fichier d'import et questions d'exemple
 
-Le fichier à produire a exactement cette structure (`format`, `version`, `title` et `description` de la banque, puis la liste `questions`). Chaque question : `title`, `chapter`, `difficulty` (1 facile, 2 moyen, 3 difficile), `skills` (liste), `template`. Voici les 94 questions de la banque fournie avec l'application, toutes testées : elles montrent les bons usages de chaque type de champ.
+Le fichier à produire a exactement cette structure (`format`, `version`, `title` et `description` de la banque, puis la liste `questions`). Chaque question : `title`, `chapter`, `difficulty` (1 facile, 2 moyen, 3 difficile), `skills` (liste), `template`. Voici les 96 questions de la banque fournie avec l'application, toutes testées : elles montrent les bons usages de chaque type de champ.
 
 ```json
 {
@@ -613,6 +613,67 @@ Le fichier à produire a exactement cette structure (`format`, `version`, `title
           "Une fonction sans cas de base pour `None` finit par appeler `a.gauche` sur `None` et provoque une erreur. {{ 'La taille additionne les deux sous-arbres ; la hauteur prend le plus grand des deux.' }}"
         ],
         "max_tries": 2
+      }
+    },
+    {
+      "uid": "ARB-08",
+      "title": "Parcours d'un arbre binaire : qu'affiche ce programme ?",
+      "chapter": "Structures de données",
+      "difficulty": 2,
+      "skills": [
+        "Arbres binaires",
+        "Récursivité",
+        "Parcours d'arbre",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "ARBRE = \"class Arbre:\\n    def __init__(self, unevaleur, noeud1=None, noeud2=None):\\n        self.valeur = unevaleur  # l'étiquette\\n        self.gauche = noeud1     # le noeud accroché à gauche\\n        self.droit = noeud2      # le noeud accroché à droite\"\n_ns = {}\nrun(ARBRE, namespace=_ns)\nArbre = _ns[\"Arbre\"]\n\ndef tirage(n, hmax=4, valeurs=None):\n    \"\"\"Arbre aléatoire de n noeuds et de hauteur au plus hmax (triplets).\"\"\"\n    vals = list(valeurs) if valeurs else sample(range(1, 30), n)\n    def gen(n, h):\n        if n == 0:\n            return None\n        cap = 2 ** (h - 1) - 1\n        k = randint(max(0, n - 1 - cap), min(n - 1, cap))\n        return (vals.pop(), gen(k, h - 1), gen(n - 1 - k, h - 1))\n    return gen(n, hmax)\n\ndef construit(t):\n    return None if t is None else Arbre(t[0], construit(t[1]), construit(t[2]))\n\ndef expr(t):\n    \"\"\"Écriture Python de l'arbre, en une expression.\"\"\"\n    if t is None:\n        return \"None\"\n    if t[1] is None and t[2] is None:\n        return f\"Arbre({t[0]!r})\"\n    return f\"Arbre({t[0]!r}, {expr(t[1])}, {expr(t[2])})\"\n\ndef taille_t(t):\n    return 0 if t is None else 1 + taille_t(t[1]) + taille_t(t[2])\n\ndef hauteur_t(t):\n    return 0 if t is None else 1 + max(hauteur_t(t[1]), hauteur_t(t[2]))\n\ndef valeurs_t(t):\n    return [] if t is None else [t[0]] + valeurs_t(t[1]) + valeurs_t(t[2])\n\ndef feuilles_t(t):\n    if t is None:\n        return []\n    if t[1] is None and t[2] is None:\n        return [t[0]]\n    return feuilles_t(t[1]) + feuilles_t(t[2])\n\ndef dessin(t):\n    \"\"\"Dessin de l'arbre en caractères (hauteur 4 au plus).\"\"\"\n    H = hauteur_t(t)\n    if H == 0:\n        return \"(arbre vide)\"\n    W = 4 * 2 ** (H - 1)\n    lignes = []\n    niveau = [(t, 0)]\n    for prof in range(H):\n        ligne = [\" \"] * (W + 4)\n        liens = [\" \"] * (W + 4)\n        suivant = []\n        for noeud, k in niveau:\n            if noeud is None:\n                continue\n            c = int((k + 0.5) * W / 2 ** prof)\n            s = str(noeud[0])\n            for i, ch in enumerate(s):\n                ligne[c - len(s) // 2 + i] = ch\n            for j, fils in ((0, noeud[1]), (1, noeud[2])):\n                if fils is not None:\n                    cf = int((2 * k + j + 0.5) * W / 2 ** (prof + 1))\n                    liens[(c + cf) // 2] = \"/\" if j == 0 else \"\\\\\"\n                    suivant.append((fils, 2 * k + j))\n        lignes.append(\"\".join(ligne).rstrip())\n        if suivant:\n            lignes.append(\"\".join(liens).rstrip())\n        niveau = suivant\n    return \"\\n\".join(lignes)\n\ndef creation(t, nom=\"a\"):\n    \"\"\"Programme qui crée l'arbre comme en classe : noeuds nommés, feuilles parfois écrites directement.\"\"\"\n    lignes = []\n    compteur = [0]\n    def ecrit(t):\n        if t is None:\n            return \"None\"\n        g, dr = ecrit(t[1]), ecrit(t[2])\n        if t[1] is None and t[2] is None and coin(0.5):\n            return f\"Arbre({t[0]})\"\n        compteur[0] += 1\n        n = f\"n{compteur[0]}\"\n        lignes.append(f\"{n} = Arbre({t[0]}, {g}, {dr})\" if (g, dr) != (\"None\", \"None\") else f\"{n} = Arbre({t[0]})\")\n        return n\n    racine = ecrit(t)\n    lignes.append(f\"{nom} = {racine}\")\n    return \"\\n\".join(lignes)\nt = tirage(randint(6, 8))\nrequire(hauteur_t(t) >= 3)\nordre = choice([\"prefixe\", \"infixe\", \"suffixe\", \"prefixe_droite\"])\nfname = choice([\"parcours\", \"affiche\", \"mystere\"])\ncorps = {\n    \"prefixe\": [\"print(a.valeur)\", f\"{fname}(a.gauche)\", f\"{fname}(a.droit)\"],\n    \"infixe\": [f\"{fname}(a.gauche)\", \"print(a.valeur)\", f\"{fname}(a.droit)\"],\n    \"suffixe\": [f\"{fname}(a.gauche)\", f\"{fname}(a.droit)\", \"print(a.valeur)\"],\n    \"prefixe_droite\": [\"print(a.valeur)\", f\"{fname}(a.droit)\", f\"{fname}(a.gauche)\"],\n}[ordre]\nsrc = f\"def {fname}(a):\\n    if a is not None:\\n\" + \"\\n\".join(\"        \" + l for l in corps)\ndef visite(x):\n    if x is None:\n        return []\n    g, d = visite(x[1]), visite(x[2])\n    return {\"prefixe\": [x[0]] + g + d, \"infixe\": g + [x[0]] + d, \"suffixe\": g + d + [x[0]],\n            \"prefixe_droite\": [x[0]] + d + g}[ordre]\nvals = [str(v) for v in visite(t)]\nrep = \" \".join(vals)\nnom = {\"prefixe\": \"préfixe\", \"infixe\": \"infixe\", \"suffixe\": \"suffixe (ou postfixe)\",\n       \"prefixe_droite\": \"préfixe, mais en visitant le sous-arbre **droit** avant le gauche\"}[ordre]",
+        "statement": "On considère l'arbre `a` suivant (classe `Arbre` du cours : attributs `valeur`, `gauche`, `droit` ; arbre vide `None`) :\n\n{{ code_block(dessin(t), \"text\") }}\n\net la fonction :\n\n{{ code_block(src) }}\n\nQu'affiche `{{ fname }}(a)` ? Écrire les valeurs **dans l'ordre d'affichage, séparées par des espaces**.",
+        "fields": [
+          {
+            "type": "text",
+            "label": "Valeurs affichées",
+            "answer": "[rep, rep.replace(' ', ', '), rep.replace(' ', ','), rep.replace(' ', chr(10))]"
+          }
+        ],
+        "solution": "C'est un parcours **{{ nom }}** : la fonction affiche **{{ rep }}**.\n\n{{ \"La valeur du noeud est affichée **avant** ses sous-arbres.\" if ordre in (\"prefixe\", \"prefixe_droite\") else (\"La valeur du noeud est affichée **entre** le sous-arbre gauche et le sous-arbre droit.\" if ordre == \"infixe\" else \"La valeur du noeud est affichée **après** ses deux sous-arbres.\") }}",
+        "hints": [
+          "Regardez où se trouve le `print` par rapport aux deux appels récursifs : avant, entre ou après ? Un appel récursif traite **tout** un sous-arbre avant de passer à la ligne suivante.",
+          "Appliquez la règle à la racine, puis à chaque sous-arbre comme si c'était un petit arbre. Vérifiez aussi l'ordre des appels : `{{ corps[1] if ordre in ('prefixe', 'prefixe_droite') else corps[0] }}` vient en premier."
+        ]
+      }
+    },
+    {
+      "uid": "ARB-09",
+      "title": "Fonction récursive sur un arbre : suivre les appels",
+      "chapter": "Structures de données",
+      "difficulty": 3,
+      "skills": [
+        "Arbres binaires",
+        "Récursivité",
+        "Tracer l'exécution d'un programme"
+      ],
+      "template": {
+        "code": "ARBRE = \"class Arbre:\\n    def __init__(self, unevaleur, noeud1=None, noeud2=None):\\n        self.valeur = unevaleur  # l'étiquette\\n        self.gauche = noeud1     # le noeud accroché à gauche\\n        self.droit = noeud2      # le noeud accroché à droite\"\n_ns = {}\nrun(ARBRE, namespace=_ns)\nArbre = _ns[\"Arbre\"]\n\ndef tirage(n, hmax=4, valeurs=None):\n    \"\"\"Arbre aléatoire de n noeuds et de hauteur au plus hmax (triplets).\"\"\"\n    vals = list(valeurs) if valeurs else sample(range(1, 30), n)\n    def gen(n, h):\n        if n == 0:\n            return None\n        cap = 2 ** (h - 1) - 1\n        k = randint(max(0, n - 1 - cap), min(n - 1, cap))\n        return (vals.pop(), gen(k, h - 1), gen(n - 1 - k, h - 1))\n    return gen(n, hmax)\n\ndef construit(t):\n    return None if t is None else Arbre(t[0], construit(t[1]), construit(t[2]))\n\ndef expr(t):\n    \"\"\"Écriture Python de l'arbre, en une expression.\"\"\"\n    if t is None:\n        return \"None\"\n    if t[1] is None and t[2] is None:\n        return f\"Arbre({t[0]!r})\"\n    return f\"Arbre({t[0]!r}, {expr(t[1])}, {expr(t[2])})\"\n\ndef taille_t(t):\n    return 0 if t is None else 1 + taille_t(t[1]) + taille_t(t[2])\n\ndef hauteur_t(t):\n    return 0 if t is None else 1 + max(hauteur_t(t[1]), hauteur_t(t[2]))\n\ndef valeurs_t(t):\n    return [] if t is None else [t[0]] + valeurs_t(t[1]) + valeurs_t(t[2])\n\ndef feuilles_t(t):\n    if t is None:\n        return []\n    if t[1] is None and t[2] is None:\n        return [t[0]]\n    return feuilles_t(t[1]) + feuilles_t(t[2])\n\ndef dessin(t):\n    \"\"\"Dessin de l'arbre en caractères (hauteur 4 au plus).\"\"\"\n    H = hauteur_t(t)\n    if H == 0:\n        return \"(arbre vide)\"\n    W = 4 * 2 ** (H - 1)\n    lignes = []\n    niveau = [(t, 0)]\n    for prof in range(H):\n        ligne = [\" \"] * (W + 4)\n        liens = [\" \"] * (W + 4)\n        suivant = []\n        for noeud, k in niveau:\n            if noeud is None:\n                continue\n            c = int((k + 0.5) * W / 2 ** prof)\n            s = str(noeud[0])\n            for i, ch in enumerate(s):\n                ligne[c - len(s) // 2 + i] = ch\n            for j, fils in ((0, noeud[1]), (1, noeud[2])):\n                if fils is not None:\n                    cf = int((2 * k + j + 0.5) * W / 2 ** (prof + 1))\n                    liens[(c + cf) // 2] = \"/\" if j == 0 else \"\\\\\"\n                    suivant.append((fils, 2 * k + j))\n        lignes.append(\"\".join(ligne).rstrip())\n        if suivant:\n            lignes.append(\"\".join(liens).rstrip())\n        niveau = suivant\n    return \"\\n\".join(lignes)\n\ndef creation(t, nom=\"a\"):\n    \"\"\"Programme qui crée l'arbre comme en classe : noeuds nommés, feuilles parfois écrites directement.\"\"\"\n    lignes = []\n    compteur = [0]\n    def ecrit(t):\n        if t is None:\n            return \"None\"\n        g, dr = ecrit(t[1]), ecrit(t[2])\n        if t[1] is None and t[2] is None and coin(0.5):\n            return f\"Arbre({t[0]})\"\n        compteur[0] += 1\n        n = f\"n{compteur[0]}\"\n        lignes.append(f\"{n} = Arbre({t[0]}, {g}, {dr})\" if (g, dr) != (\"None\", \"None\") else f\"{n} = Arbre({t[0]})\")\n        return n\n    racine = ecrit(t)\n    lignes.append(f\"{nom} = {racine}\")\n    return \"\\n\".join(lignes)\nt = tirage(randint(4, 5), hmax=3)\nrequire(hauteur_t(t) == 3)\nmesure = choice([\"taille\", \"hauteur\", \"somme\"])\ncalc = {\"taille\": \"1 + taille(a.gauche) + taille(a.droit)\",\n        \"hauteur\": \"1 + max(hauteur(a.gauche), hauteur(a.droit))\",\n        \"somme\": \"a.valeur + somme(a.gauche) + somme(a.droit)\"}[mesure]\nsrc = (f\"def {mesure}(a):\\n    if a is None:\\n        return 0\\n    r = {calc}\\n\"\n       f\"    print(a.valeur, r)\\n    return r\")\nprog = src + \"\\n\\n\" + creation(t) + f\"\\n{mesure}(a)\"\nout = run(ARBRE + \"\\n\\n\" + prog)\nlignes = out.split(\"\\n\")\nnb_appels = 2 * taille_t(t) + 1",
+        "statement": "On considère l'arbre `a` suivant :\n\n{{ code_block(dessin(t), \"text\") }}\n\nOn exécute `{{ mesure }}(a)` avec la version ci-dessous, qui affiche la valeur de chaque noeud et le résultat calculé pour ce noeud **juste avant de le renvoyer** :\n\n{{ code_block(src) }}",
+        "fields": [
+          {
+            "type": "text",
+            "label": "1. Lignes affichées, dans l'ordre (une par ligne, sous la forme `valeur résultat`)",
+            "answer": "out",
+            "multiline": true
+          },
+          {
+            "type": "number",
+            "label": "2. Nombre total d'appels à `{{ mesure }}` (en comptant le premier, et les appels sur un arbre vide `None`)",
+            "answer": "nb_appels"
+          }
+        ],
+        "solution": "{{ code_block(out, \"text\") }}\n\nUn noeud n'affiche sa ligne qu'**après** avoir reçu les résultats de ses deux sous-arbres : on voit donc d'abord les feuilles, et la racine en dernier (c'est l'ordre suffixe).\n\nChaque noeud provoque un appel, et chaque enfant absent provoque un appel sur `None` (qui renvoie 0 sans rien afficher) : avec {{ taille_t(t) }} noeuds, il y a {{ taille_t(t) }} + {{ taille_t(t) + 1 }} = **{{ nb_appels }}** appels.",
+        "hints": [
+          "Commencez par les feuilles : pour une feuille, les deux appels sur `None` renvoient 0. Notez le résultat de chaque noeud au-dessus de lui sur le dessin.",
+          "L'ordre d'affichage suit l'ordre des retours : le sous-arbre gauche est terminé entièrement, puis le droit, puis le noeud lui-même. Pour compter les appels : un par noeud, plus un par enfant absent."
+        ]
       }
     },
     {
