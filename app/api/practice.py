@@ -283,7 +283,7 @@ def my_assignment(req):
     a = _load_assignment_for_student(req.db, user, to_int(req.params["id"]))
     a["questions"] = assignment_questions(req.db, a["id"])
     a["progress"] = progress(req.db, a["id"], user["id"])
-    return json_response({"assignment": a})
+    return json_response({"assignment": a, "today": db.today()})
 
 
 @router.get("/api/me/history")

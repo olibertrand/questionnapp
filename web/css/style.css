@@ -255,3 +255,14 @@ details.help dd { margin: 0 0 0 1rem; font-size: .85rem; color: var(--text-2); }
   .topbar { flex-wrap: wrap; }
   .user-menu { width: 100%; justify-content: flex-end; }
 }
+
+/* Date limite des séances datées (tableau de bord élève) */
+.deadline { font-weight: 700; padding: .45rem .7rem; border-radius: 8px; margin: .5rem 0 .2rem; border-left: 5px solid var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+.deadline.soon { border-left-color: #e0a100; background: var(--warn-soft); color: var(--text); }
+.deadline.late { border-left-color: var(--bad); background: var(--bad-soft); color: var(--bad-ink); }
+.deadline.done { border-left-color: var(--good-ink); background: var(--good-soft); color: var(--good-ink); font-weight: 600; }
+.card.dated.late { border-color: var(--bad); }
+.card.dated.soon { border-color: #e0a100; }
+.due-list ul { margin: .2rem 0 0; padding-left: 1.2rem; }
+.due-list li { margin: .35rem 0; }
+.pill.warn { background: var(--warn-soft); color: var(--text); border: 1px solid #e0a100; }
