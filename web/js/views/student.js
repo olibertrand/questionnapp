@@ -11,15 +11,42 @@ function progressLine(p) {
     h('div', { class: 'small muted' }, `${p.done}/${p.total} traitée(s) · ${p.mastered} réussie(s) · score ${pct(p.score)}`));
 }
 
+// Nombre de jours entre deux dates « AAAA-MM-JJ » (b - a)
+function daysBetween(a, b) {
+  return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
+}
+
+// Date limite d'une séance datée : texte et niveau d'urgence (le jour de la séance sert de date limite)
+function deadlineInfo(a, today) {
+  const finished = a.progress.total > 0 && a.progress.done >= a.progress.total;
+  const n = daysBetween(today, a.day);
+  let when;
+  if (n === 0) when = "aujourd'hui";
+  else if (n === 1) when = 'demain';
+  else if (n > 1) when = `dans ${n} jours`;
+  else when = n === -1 ? 'depuis hier' : `depuis ${-n} jours`;
+  if (finished) return { level: 'done', when, finished };
+  if (n < 0) return { level: 'late', when, finished };
+  return { level: n <= 2 ? 'soon' : 'later', when, finished };
+}
+
+function deadlineBox(a, today) {
+  const d = deadlineInfo(a, today);
+  const label = d.level === 'late' ? `⚠ Date limite dépassée ${d.when} : ${fmtDay(a.day)}`
+    : `📅 À faire pour le ${fmtDay(a.day)}` + (d.finished ? '' : ` · ${d.when}`);
+  return h('div', { class: `deadline ${d.level}` }, label, d.finished ? h('span', { class: 'small' }, ' · ✓ terminé') : null);
+}
+
 function assignmentCard(a, today) {
   const theme = a.kind === 'theme';
   const late = !theme && a.day < today && a.progress.done < a.progress.total;
-  return h('div', { class: 'card' },
+  return h('div', { class: 'card' + (theme ? '' : ` dated ${deadlineInfo(a, today).level}`) },
     h('div', { class: 'row between' }, h('strong', {}, a.title),
       h('div', { class: 'row' },
-        theme ? h('span', { class: 'pill accent' }, 'thématique') : a.day === today ? h('span', { class: 'pill accent' }, "aujourd'hui") : null,
+        theme ? h('span', { class: 'pill accent' }, 'thématique') : null,
         late ? h('span', { class: 'pill bad' }, 'à terminer') : a.progress.mastered === a.progress.total ? h('span', { class: 'pill good' }, '✓ terminé') : null)),
-    h('div', { class: 'small muted', style: { margin: '.2rem 0 .6rem' } }, theme ? `${a.class_name} · à faire quand vous voulez` : `${a.class_name} · ${fmtDay(a.day)}`),
+    theme ? null : deadlineBox(a, today),
+    h('div', { class: 'small muted', style: { margin: '.2rem 0 .6rem' } }, theme ? `${a.class_name} · à faire quand vous voulez` : a.class_name),
     progressLine(a.progress),
     h('div', { class: 'row', style: { marginTop: '.8rem' } },
       h('a', { class: 'btn primary', href: `#/jouer?mode=assignment&a=${a.id}` }, a.progress.done ? 'Continuer' : 'Commencer'),
@@ -36,6 +63,9 @@ export async function homePage() {
     ...d.assignments.filter((a) => a.kind === 'theme').sort((x, y) => x.title.localeCompare(y.title)),
   ];
   const past = d.assignments.filter((a) => a.kind !== 'theme' && a.day < today).reverse();
+  // à rendre : séances datées non terminées, les retards d'abord puis par date limite
+  const todo = d.assignments.filter((a) => a.kind !== 'theme' && a.progress.done < a.progress.total)
+    .sort((x, y) => x.day.localeCompare(y.day) || x.id - y.id);
   const chapterSelect = h('select', { 'aria-label': 'Limiter à un chapitre' },
     h('option', { value: '' }, 'Tous les chapitres'), d.chapters.map((c) => h('option', { value: c.id ?? '' }, c.name)));
 
@@ -46,6 +76,18 @@ export async function homePage() {
       tile(d.totals.answered || 0, 'questions traitées'),
       tile(d.totals.week || 0, 'cette semaine'),
       tile(pct(d.totals.avg), 'score moyen')),
+
+    todo.length ? h('div', { class: 'card due-list' },
+      h('h2', { style: { marginTop: 0 } }, '⏰ À rendre'),
+      h('ul', {}, todo.map((a) => {
+        const info = deadlineInfo(a, today);
+        return h('li', { class: `deadline-item ${info.level}` },
+          h('a', { href: `#/jouer?mode=assignment&a=${a.id}` }, a.title),
+          ' — ', h('strong', {}, fmtDay(a.day)), ' ',
+          h('span', { class: `pill ${info.level === 'late' ? 'bad' : info.level === 'soon' ? 'warn' : ''}` },
+            info.level === 'late' ? `en retard ${info.when}` : info.when),
+          h('span', { class: 'small muted' }, ` · ${a.progress.done}/${a.progress.total} question(s) traitée(s)`));
+      }))) : null,
 
     h('h2', {}, 'Séances prévues'),
     planned.length ? h('div', { class: 'grid' }, planned.map((a) => assignmentCard(a, today)))
@@ -120,12 +162,12 @@ function attemptsTable(rows) {
 }
 
 export async function assignmentPage({ params }) {
-  const { assignment: a } = await api.get(`/me/assignments/${params.id}`);
+  const { assignment: a, today } = await api.get(`/me/assignments/${params.id}`);
   const byQ = Object.fromEntries(a.progress.questions.map((p) => [p.question_id, p]));
   return h('div', {},
     h('p', {}, h('a', { href: '#/' }, '← Accueil')),
     h('h1', {}, a.title),
-    h('p', { class: 'muted' }, a.kind === 'theme' ? 'Séance thématique' : fmtDay(a.day)),
+    a.kind === 'theme' ? h('p', { class: 'muted' }, 'Séance thématique') : h('div', { style: { maxWidth: '720px' } }, deadlineBox(a, today)),
     h('div', { class: 'card', style: { maxWidth: '720px' } },
       progressLine(a.progress),
       h('table', { class: 'data', style: { marginTop: '1rem' } }, h('tbody', {}, a.questions.map((q, i) => {
