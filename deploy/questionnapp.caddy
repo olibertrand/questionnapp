@@ -1,0 +1,34 @@
+# Site Caddy de QuestionnApp sur le VPS (à copier dans /etc/caddy/questionnapp.caddy).
+#
+# Remplacer DOMAINE par le sous-domaine de l'appli. Ce nom doit déjà pointer vers le VPS
+# (enregistrement DNS de type A) : Caddy obtient et renouvelle alors tout seul le certificat
+# HTTPS. Ce fichier est séparé du Caddyfile principal, qui l'inclut avec la ligne :
+#     import /etc/caddy/questionnapp.caddy
+# Les en-têtes de sécurité (Content-Security-Policy, etc.) sont posés par l'appli elle-même.
+
+DOMAINE {
+	encode zstd gzip
+
+	# L'appli n'écoute qu'en local ; Caddy assure le HTTPS. Caddy remplace l'en-tête
+	# X-Forwarded-For envoyé par le navigateur par la vraie adresse du visiteur.
+	reverse_proxy 127.0.0.1:8000
+
+	# Taille maximale d'une requête (l'appli refuse elle-même au-delà de 2 Mo)
+	request_body {
+		max_size 3MB
+	}
+
+	header {
+		# Toujours en HTTPS pendant un an
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# Journal des visites (contient les adresses IP : 5 fichiers de 10 Mo au plus)
+	log {
+		output file /var/log/caddy/questionnapp.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}

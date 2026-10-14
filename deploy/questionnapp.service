@@ -1,6 +1,6 @@
 # Service systemd de QuestionnApp (à copier dans /etc/systemd/system/questionnapp.service).
 # L'appli démarre avec le serveur et redémarre seule en cas de plantage.
-# Elle n'écoute que sur 127.0.0.1 : seul nginx (HTTPS) est joignable depuis Internet.
+# Elle n'écoute que sur 127.0.0.1 : seul le proxy HTTPS (Caddy sur le VPS) est joignable depuis Internet.
 
 [Unit]
 Description=QuestionnApp (questionnaires à données aléatoires)
