@@ -106,8 +106,9 @@ préviens-moi immédiatement.
   l'import refait un auto-test de chaque question.
 - La version en cours (commit) s'affiche en bas de chaque page de l'appli.
 - Hébergement : migration prévue de l'Odroid (chez moi) vers un VPS Hostinger (formule KVM 2,
-  datacenter UE, Ubuntu LTS), avec nginx + certbot et SQLite conservé ; les sauvegardes du VPS
-  sont copiées chaque jour sur l'Odroid (c'est l'Odroid qui va les chercher). L'Odroid garde
+  datacenter UE, Ubuntu LTS), avec Caddy (déjà utilisé par une autre appli du VPS ; HTTPS
+  automatique) et SQLite conservé ; les sauvegardes du VPS sont copiées chaque jour sur l'Odroid
+  (c'est l'Odroid qui va les chercher). L'Odroid garde
   `chat` (Open WebUI et IA locale) et devient la machine de sauvegarde. Plan et fichiers :
   `docs/MIGRATION_VPS.md`, `deploy/`.
 - Projet futur : une forge Git (GitLab, ou Forgejo, plus léger) sur le VPS.
