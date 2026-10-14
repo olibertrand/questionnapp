@@ -24,7 +24,8 @@ quatre briques indépendantes, reliées par des contrats documentés.
 
 Aucune dépendance externe : Python ≥ 3.11 suffit (serveur `http.server`, `sqlite3`,
 `hashlib.scrypt`). Le front n'a ni framework ni étape de compilation ; seule la coloration
-syntaxique (highlight.js, CDN) est optionnelle.
+syntaxique (highlight.js, copie locale dans `web/vendor/highlight/`) est optionnelle. Le navigateur
+ne contacte aucun serveur extérieur : tout est servi par l'appli.
 
 ## Pourquoi un moteur en Python ?
 

@@ -97,6 +97,8 @@ préviens-moi immédiatement.
 ## Conventions et décisions prises
 - Pas de dépendance externe : tout fonctionne avec Python seul, pour rester facile à installer
   et portable vers une autre technologie (contrats documentés dans `docs/`).
+- Aucune ressource chargée depuis un serveur extérieur (polices, scripts, styles) : tout est
+  servi par l'appli (RGPD et sécurité ; ex. highlight.js copié dans `web/vendor/`).
 - Les questions sont des modèles écrits en Python (format : `docs/QUESTION_FORMAT.md`) ;
   plusieurs essais avec indices avant d'afficher la solution ; score retenu 100/75/50 %.
 - Les questions vivent dans `banque/` ; la base de l'appli reste la version de travail.
