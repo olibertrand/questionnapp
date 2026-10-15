@@ -10,7 +10,8 @@ set -e
 DEST="${DEST:-$HOME/sauvegardes-questionnapp}"
 KEY="${KEY:-$HOME/.ssh/questionnapp_sauvegardes}"
 mkdir -p "$DEST"
-rsync -a -e "ssh -i $KEY -o BatchMode=yes" "$VPS:" "$DEST/"
+# seulement les copies terminées (pas les fichiers .partiel d'une sauvegarde en cours)
+rsync -a --exclude '*.partiel*' -e "ssh -i $KEY -o BatchMode=yes" "$VPS:" "$DEST/"
 # on garde 60 jours de copies à la maison
 find "$DEST" -name 'questionnapp-*.db' -mtime +60 -delete
 echo "$(date '+%F %T') sauvegardes récupérées dans $DEST ($(ls "$DEST" | wc -l) fichiers)"

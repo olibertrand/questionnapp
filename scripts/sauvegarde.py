@@ -6,7 +6,8 @@
 
 - La copie est sûre même pendant que l'application tourne (API de sauvegarde de SQLite,
   et non une simple copie de fichier).
-- Chaque copie est vérifiée (contrôle d'intégrité) avant d'être gardée.
+- Chaque copie est vérifiée (contrôle d'intégrité) avant d'être gardée. C'est un fichier
+  unique (mode de journal « DELETE », sans fichiers annexes -wal / -shm).
 - Rotation : on garde la dernière copie de chacun des 14 derniers jours et de chacun des
   12 derniers mois (réglable avec --jours et --mois) ; seules les copies plus anciennes,
   reconnues à leur nom (questionnapp-AAAA-MM-JJ_HHMMSS.db), sont supprimées.
@@ -29,6 +30,7 @@ sys.path.insert(0, ROOT)
 from app import config  # noqa: E402
 
 NAME_RE = re.compile(r"^questionnapp-(\d{4})-(\d{2})-(\d{2})_(\d{6})\.db$")
+PARTIAL_RE = re.compile(r"^questionnapp-\d{4}-\d{2}-\d{2}_\d{6}\.db\.partiel(-wal|-shm|-journal)?$")
 
 
 def default_dir():
@@ -65,6 +67,9 @@ def backup(db_path, dest_dir, now=None):
     dst = sqlite3.connect(tmp)
     try:
         src.backup(dst)
+        # la copie hérite du mode WAL de la base : on la ramène à un fichier unique, sinon le
+        # contrôle en lecture seule laisserait des fichiers annexes (.partiel-wal, .partiel-shm)
+        dst.execute("PRAGMA journal_mode = DELETE")
     finally:
         dst.close()
         src.close()
@@ -75,6 +80,16 @@ def backup(db_path, dest_dir, now=None):
         raise
     os.replace(tmp, final)
     return final, counts
+
+
+def clean_partial(dest_dir):
+    """Supprime les restes de copies inachevées ou leurs fichiers annexes ; renvoie leurs noms."""
+    removed = []
+    for name in sorted(os.listdir(dest_dir)) if os.path.isdir(dest_dir) else []:
+        if PARTIAL_RE.match(name):
+            os.remove(os.path.join(dest_dir, name))
+            removed.append(name)
+    return removed
 
 
 def rotate(dest_dir, keep_days=14, keep_months=12, protect=()):
@@ -109,6 +124,7 @@ def main(argv=None):
     dest = args.dossier or default_dir()
     stamp = f"{datetime.datetime.now():%Y-%m-%d %H:%M:%S}"
     try:
+        clean_partial(dest)
         path, counts = backup(config.DB_PATH, dest)
         removed = rotate(dest, args.jours, args.mois, protect=[path])
     except Exception as exc:  # noqa: BLE001
