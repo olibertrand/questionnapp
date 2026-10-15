@@ -42,7 +42,21 @@ class BackupTest(unittest.TestCase):
         conn.close()
         self.assertTrue(os.path.exists(path))
         self.assertEqual(counts["users"], 3)
-        self.assertFalse([f for f in os.listdir(self.backups) if f.endswith(".partiel")])
+        # un seul fichier par copie : ni .partiel, ni fichiers annexes -wal / -shm
+        self.assertEqual(os.listdir(self.backups), [os.path.basename(path)])
+        check = sqlite3.connect(path)
+        self.assertEqual(check.execute("PRAGMA journal_mode").fetchone()[0], "delete")
+        check.close()
+
+    def test_leftover_partial_files_are_cleaned(self):
+        os.makedirs(self.backups)
+        old = ["questionnapp-2026-10-14_053005.db.partiel-wal", "questionnapp-2026-10-14_053005.db.partiel-shm",
+               "questionnapp-2026-10-14_053005.db.partiel"]
+        keep = ["questionnapp-2026-10-14_053005.db", "notes.txt"]
+        for name in old + keep:
+            open(os.path.join(self.backups, name), "w").close()
+        self.assertEqual(sorted(sauvegarde.clean_partial(self.backups)), sorted(old))
+        self.assertEqual(sorted(os.listdir(self.backups)), sorted(keep))
 
     def test_damaged_copy_is_detected(self):
         bad = os.path.join(self.dir, "abime.db")
