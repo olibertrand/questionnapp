@@ -10,7 +10,7 @@ l'essayer avec **Aperçu**, puis l'importer (ou la mettre à jour) et l'affecter
 | `python-bases.json` | variables, types, conditions, boucles, entrées/sorties |
 | `python-listes-chaines.json` | indices et tranches, parcours, compréhensions |
 | `python-dictionnaires.json` | accès, `keys`/`values`/`items`, max/min, calculs cumulatifs, données imbriquées |
-| `fondamentaux-parcours.json` | séries « Comptage » et « Recherche » : fonctions à compléter ou à écrire avec `while`, `for` sur les éléments ou `for` sur les indices ; listes de nombres et de dictionnaires |
+| `fondamentaux-parcours.json` | séries « Comptage » et « Recherche » : fonctions à compléter ou à écrire, uniquement avec `for` (sur les éléments, sur les indices ou au choix) ; listes de nombres et de dictionnaires |
 | `poo.json` | créer un objet, attributs, appeler et écrire des méthodes (classes `Duree`, `Fraction`, `Rectangle`, `Compte`), références |
 | `listes-chainees.json` | listes chaînées (classes `Maillon`/`Chaine`, répertoire `Fiche`/`Repertoire`) : liens, création, parcours, méthodes |
 | `arbres-binaires.json` | arbres binaires (classe `Arbre`, arbre vide = `None`) : lire et créer un arbre, `taille`, `hauteur`, somme, minimum/maximum en récursif |
