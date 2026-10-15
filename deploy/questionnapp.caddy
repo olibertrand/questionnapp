@@ -5,6 +5,8 @@
 # HTTPS. Ce fichier est séparé du Caddyfile principal, qui l'inclut avec la ligne :
 #     import /etc/caddy/questionnapp.caddy
 # Les en-têtes de sécurité (Content-Security-Policy, etc.) sont posés par l'appli elle-même.
+# Le fichier de journal doit exister et appartenir à l'utilisateur caddy avant l'activation :
+#     sudo touch /var/log/caddy/questionnapp.log && sudo chown caddy:caddy /var/log/caddy/questionnapp.log
 
 DOMAINE {
 	encode zstd gzip

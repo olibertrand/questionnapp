@@ -1,5 +1,9 @@
 # Migration de QuestionnApp de l'Odroid vers un VPS
 
+> **Faite le 15/10/2026** : l'appli tourne sur le VPS depuis ce jour (voir le
+> [journal de la migration](#journal-de-la-migration-15102026) en fin de document). Ce plan reste
+> la référence pour refaire une installation (nouveau serveur, restauration après incident).
+
 Objectif : faire tourner QuestionnApp sur un VPS (serveur loué, dans un datacenter de l'Union
 européenne), sans perdre aucune donnée des élèves, en gardant l'Odroid comme solution de
 retour pendant une semaine, puis comme machine de sauvegarde (et pour `chat`).
@@ -123,6 +127,10 @@ Toutes les commandes de cette phase se tapent sur le VPS.
    ```sh
    sudo cp /opt/questionnapp/deploy/questionnapp.caddy /etc/caddy/questionnapp.caddy
    sudo sed -i 's/^DOMAINE {/le.sous-domaine.de.l.appli {/' /etc/caddy/questionnapp.caddy
+   # le journal des visites doit exister et appartenir à Caddy (sinon : « permission denied »)
+   sudo touch /var/log/caddy/questionnapp.log
+   sudo chown caddy:caddy /var/log/caddy/questionnapp.log
+   sudo chmod 640 /var/log/caddy/questionnapp.log
    ```
    Attention : le Caddyfile principal (`/etc/caddy/Caddyfile`) est réécrit par le script
    d'installation de l'autre appli (`audio`). Si on relance ce script, il faudra remettre la
@@ -187,8 +195,13 @@ le même que sur l'Odroid.
 
 ## Phase 5 — Bascule (hors cours, environ 30 minutes)
 
-1. Sur l'Odroid : **arrêter l'appli** (plus personne ne peut répondre pendant la bascule).
-2. Dernière sauvegarde sur l'Odroid, copie vers le VPS, restauration (comme en phase 4).
+1. Sur l'Odroid : **arrêter l'appli** (plus personne ne peut répondre pendant la bascule). Sur
+   l'Odroid, l'appli tourne dans Docker : `cd ~/questionnapp && docker compose stop questionnapp`.
+2. Dernière sauvegarde sur l'Odroid, copie vers le VPS, restauration (comme en phase 4). Le
+   conteneur étant arrêté, la sauvegarde se lance dans un conteneur temporaire :
+   `docker compose run --rm questionnapp python3 /app/scripts/sauvegarde.py --dossier /data/migration`.
+   La copie passe par ton ordinateur (`scp` depuis l'Odroid, puis vers le VPS) : la clé de
+   l'Odroid ne sait que **lire** les sauvegardes du VPS.
 3. Chez ChangeIP : remplacer l'enregistrement de l'appli (alias `CNAME` vers `jeangi.org`) par
    un enregistrement **`A` vers `IP_DU_VPS`**. Ne toucher ni à `jeangi.org`, ni à `chat`.
 4. Attendre que le nom pointe vers le VPS (`ping DOMAINE` affiche `IP_DU_VPS`), puis sur le VPS,
@@ -207,20 +220,44 @@ le même que sur l'Odroid.
    prof, connexion élève, réponse à une question, la version en bas de page.
 
 **Plan de retour** (en cas de problème pendant ou après la bascule) : remettre chez ChangeIP
-l'alias `CNAME` vers `jeangi.org` et redémarrer l'appli sur l'Odroid. Attention : les réponses
+l'alias `CNAME` vers `jeangi.org` et redémarrer l'appli sur l'Odroid
+(`cd ~/questionnapp && docker compose start questionnapp`). Attention : les réponses
 données sur le VPS entre-temps ne seront pas sur l'Odroid (on peut les récupérer en copiant la
 base du VPS vers l'Odroid avec les mêmes scripts).
 
 ## Phase 6 — Après la bascule
 
-1. Pendant une semaine : l'Odroid garde l'ancienne base et sa configuration, sans servir l'appli.
-2. Ensuite : retirer la partie de l'appli de la configuration nginx **de l'Odroid** (garder `chat`),
-   remettre le TTL à sa valeur habituelle.
-3. Mettre à jour `AGENTS.md` (« Où on en est » : l'appli tourne sur le VPS) et les
-   instructions de mise à jour : désormais, après chaque fusion sur GitHub,
+1. Pendant une semaine : le conteneur de l'Odroid reste **arrêté** (sans être supprimé), avec
+   l'ancienne base : c'est le plan de retour.
+2. Ensuite :
+   - sur l'Odroid : `cd ~/questionnapp && docker compose down` (le dossier `data/` reste, comme
+     archive), retirer l'hôte `questionnaire` de Nginx Proxy Manager (garder `chat`), et
+     effacer `~/questionnapp/data/migration/` (copies de la base : données d'élèves) ;
+   - sur le VPS : `sudo rm /var/lib/questionnapp/avant-restauration-*.db` ;
+   - chez ChangeIP : le TTL peut remonter (par exemple 3600).
+3. `AGENTS.md` mis à jour : l'appli tourne sur le VPS ; après chaque fusion sur GitHub,
    `sudo sh /opt/questionnapp/deploy/mettre_a_jour.sh` sur le VPS (sauvegarde, `git pull`,
    redémarrage).
 4. Lancer le prompt de vérification de la stack (preuves à l'appui).
+
+## Journal de la migration (15/10/2026)
+
+- Phase 0 : TTL du sous-domaine déjà à 30 s ; DNS dynamique sans effet sur les sous-domaines
+  (le sous-domaine de l'autre appli pointait déjà vers le VPS).
+- Phase 1 : compte d'administration créé, connexion `root` et mots de passe SSH interdits,
+  pare-feu `ufw` (22, 80, 443 en TCP et UDP).
+- Phase 2 : VPS sous Ubuntu 26.04, Python 3.14 ; le serveur web est **Caddy**, qui servait déjà
+  une autre appli : QuestionnApp a son propre fichier (`/etc/caddy/questionnapp.caddy`), inclus
+  par le Caddyfile principal.
+- Phase 3 : sauvegarde chaque nuit à 2 h 17 sur le VPS, copiée chaque matin à 6 h 30 par l'Odroid ;
+  correction en route : les sauvegardes laissaient des fichiers annexes `.partiel-wal/-shm`.
+- Phase 4 : sur l'Odroid, l'appli tournait dans **Docker** (`docker compose`, base dans
+  `~/questionnapp/data`) : sauvegarde et test de restauration lancés dans le conteneur
+  (`docker exec questionnapp python3 /app/scripts/…`). Restauration de test réussie.
+- Phase 5 : 40 comptes, 95 questions, 510 réponses transférés à l'identique. Seul accroc : Caddy
+  ne pouvait pas créer son fichier de journal (`permission denied`) ; corrigé en créant le fichier
+  à l'avance (étape ajoutée en phase 2). Certificat HTTPS obtenu automatiquement ; vérifié :
+  redirection HTTP → HTTPS, HSTS, `Content-Security-Policy`, port 8000 fermé depuis Internet.
 
 ## Pour plus tard
 - `chat` passe par le VPS à travers un tunnel chiffré ouvert par l'Odroid : plus aucun port

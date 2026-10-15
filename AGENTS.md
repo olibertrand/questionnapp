@@ -38,8 +38,9 @@
   incompatible). Exemple : `feat: séances thématiques pour certains élèves`. Je n'en écris
   jamais moi-même : c'est ton travail, à chaque fois.
 - Circuit de mise en ligne : tu travailles sur une branche, tu ouvres une demande de fusion vers
-  `main`, je la relis et je la fusionne, puis je fais `git pull` et je redémarre l'appli sur le
-  serveur. Tu ne pousses jamais directement sur `main` et tu ne fusionnes jamais toi-même.
+  `main`, je la relis et je la fusionne, puis je lance la mise à jour sur le VPS
+  (`sudo sh /opt/questionnapp/deploy/mettre_a_jour.sh` : sauvegarde, `git pull`, redémarrage).
+  Tu ne pousses jamais directement sur `main` et tu ne fusionnes jamais toi-même.
 - Des élèves utilisent l'appli en classe : une mise à jour ne doit jamais rendre la base
   existante inutilisable (les migrations sont automatiques et sans perte de données).
 
@@ -105,26 +106,25 @@ préviens-moi immédiatement.
 - Les nouvelles questions se créent avec le projet Claude (`claude-projet/`), puis s'importent ;
   l'import refait un auto-test de chaque question.
 - La version en cours (commit) s'affiche en bas de chaque page de l'appli.
-- Hébergement : migration prévue de l'Odroid (chez moi) vers un VPS Hostinger (formule KVM 2,
-  datacenter UE, Ubuntu LTS), avec Caddy (déjà utilisé par une autre appli du VPS ; HTTPS
-  automatique) et SQLite conservé ; les sauvegardes du VPS sont copiées chaque jour sur l'Odroid
-  (c'est l'Odroid qui va les chercher). L'Odroid garde
-  `chat` (Open WebUI et IA locale) et devient la machine de sauvegarde. Plan et fichiers :
-  `docs/MIGRATION_VPS.md`, `deploy/`.
+- Hébergement : VPS Hostinger (formule KVM 2, datacenter UE, Ubuntu LTS), derrière Caddy
+  (partagé avec une autre appli du VPS ; HTTPS automatique) ; service systemd, code dans
+  `/opt/questionnapp`, données dans `/var/lib/questionnapp`, SQLite conservé. Les sauvegardes du
+  VPS sont copiées chaque jour sur l'Odroid (c'est l'Odroid qui va les chercher). L'Odroid garde
+  `chat` (Open WebUI et IA locale) et sert de machine de sauvegarde. Plan, fichiers et journal
+  de la migration : `docs/MIGRATION_VPS.md`, `deploy/`.
 - Projet futur : une forge Git (GitLab, ou Forgejo, plus léger) sur le VPS.
 
 ## Où on en est
-- L'appli est en production sur mon serveur et des élèves l'utilisent déjà. Le serveur est en
-  HTTPS.
-- Sauvegardes : scripts ajoutés ; copies gardées sur le même serveur pour l'instant. Reste à
-  faire de mon côté : planifier la sauvegarde chaque nuit (cron) et faire une première
-  restauration de test (`docs/SAUVEGARDE.md`). Plus tard : copier aussi les sauvegardes sur une
-  autre machine.
-- Prochaine étape qui m'importe : la création de nouvelles questions.
-- Migration vers le VPS : plan prêt (`docs/MIGRATION_VPS.md`). Avant de commencer, je dois
-  vérifier si un programme de DNS dynamique (box, Odroid, ChangeIP) met à jour le sous-domaine
-  de l'appli. Pour piloter le VPS directement, il faudra une session Claude Code lancée sur mon
-  ordinateur (une session cloud n'a pas accès au serveur).
+- L'appli est en production **sur le VPS depuis le 15/10/2026** (HTTPS par Caddy) et des élèves
+  l'utilisent. L'ancienne installation de l'Odroid (Docker) reste arrêtée une semaine comme
+  solution de retour, puis sera démontée (`docs/MIGRATION_VPS.md`, phase 6).
+- Sauvegardes : chaque nuit à 2 h 17 sur le VPS (rotation 14 jours / 12 mois), copiées chaque
+  matin à 6 h 30 sur l'Odroid ; restauration testée le 15/10/2026 (`docs/SAUVEGARDE.md`).
+- Prochaine étape qui m'importe : la création de nouvelles questions (séries « Fondamentaux » :
+  comptage, recherche, maximum faites ; suivantes : cumul, dictionnaire des occurrences).
+- Pour piloter le VPS directement, il faudrait une session Claude Code lancée sur mon ordinateur
+  (une session cloud n'a pas accès au serveur) ; sinon je tape les commandes et je colle les
+  résultats.
 - Proposé, pas encore décidé : vérification automatique des tests sur GitHub à chaque demande de
   fusion ; protection de la branche `main` sur GitHub ; ne faire confiance à l'en-tête
   `X-Forwarded-For` que derrière le proxy ; limites de fréquence au-delà de la connexion.
