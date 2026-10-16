@@ -6,6 +6,8 @@ Deux sortes de séances :
     jusqu'à ce qu'il le désactive.
 Une séance s'adresse à toute la classe (aucun destinataire) ou à des groupes et/ou des élèves.
 Une séance désactivée n'est plus visible des élèves (leurs réponses restent dans les statistiques).
+Le prof peut demander à certains élèves de retravailler une séance pour une date donnée : pour eux,
+seuls comptent alors les essais faits depuis la demande.
 """
 
 import datetime
@@ -105,18 +107,33 @@ def assignment_questions(conn, aid):
                             WHERE aq.assignment_id = ? ORDER BY aq.position""", aid)
 
 
-def progress(conn, aid, user_id):
-    """Meilleur score par question de la séance pour un élève."""
+def progress(conn, aid, user_id, since=None):
+    """Meilleur score par question de la séance pour un élève (seulement les réponses données
+    après `since` si cette date est indiquée)."""
     rows = db.all_(conn, """SELECT aq.question_id, max(a.score) AS best, count(a.score) AS tries
                             FROM assignment_questions aq
                             LEFT JOIN attempts a ON a.question_id = aq.question_id AND a.assignment_id = aq.assignment_id
-                                 AND a.user_id = ? AND a.score IS NOT NULL
-                            WHERE aq.assignment_id = ? GROUP BY aq.question_id ORDER BY aq.position""", user_id, aid)
+                                 AND a.user_id = ? AND a.score IS NOT NULL AND a.answered_at > ?
+                            WHERE aq.assignment_id = ? GROUP BY aq.question_id ORDER BY aq.position""",
+                   user_id, since or "", aid)
     total = len(rows)
     done = sum(1 for r in rows if r["tries"])
     best = [r["best"] or 0 for r in rows]
     return {"total": total, "done": done, "mastered": sum(1 for b in best if b >= 1),
             "score": round(sum(best) / total, 3) if total else 0, "questions": rows}
+
+
+def rework(conn, aid, user_id):
+    """Demande de retravail de la séance pour cet élève : {"day", "since"} ou None."""
+    r = db.one(conn, "SELECT day, created_at FROM assignment_reworks WHERE assignment_id = ? AND user_id = ?", aid, user_id)
+    return {"day": r["day"], "since": r["created_at"]} if r else None
+
+
+def student_progress(conn, aid, user_id):
+    """Ce que voit l'élève : (progression, demande de retravail). S'il doit retravailler la séance,
+    sa progression repart de la demande."""
+    rw = rework(conn, aid, user_id)
+    return progress(conn, aid, user_id, rw["since"] if rw else None), rw
 
 
 @router.get("/api/classes/:id/assignments")
@@ -183,6 +200,9 @@ def get(req):
     students = audience(req.db, a)
     for s in students:
         s["progress"] = progress(req.db, a["id"], s["id"])
+        s["rework"] = rework(req.db, a["id"], s["id"])
+        if s["rework"]:
+            s["rework"]["progress"] = progress(req.db, a["id"], s["id"], s["rework"]["since"])
     a["students"] = students
     return json_response({"assignment": a})
 
@@ -213,4 +233,35 @@ def update(req):
 def delete(req):
     a = _load(req)
     req.db.execute("DELETE FROM assignments WHERE id = ?", (a["id"],))
+    return json_response({"ok": True})
+
+
+@router.post("/api/assignments/:id/reworks")
+def request_rework(req):
+    """Demande à des élèves (user_ids) de retravailler la séance pour le jour `day`. Pour un élève
+    qui avait déjà une demande, seule la date change (le travail déjà refait reste compté)."""
+    a = _load(req)
+    user = security.require_staff(req)
+    data = req.json
+    day = _check_day(data.get("day"))
+    user_ids = set(int_list(data, "user_ids"))
+    if not user_ids:
+        raise HttpError(400, "Choisissez au moins un élève")
+    if not user_ids <= {s["id"] for s in audience(req.db, a)}:
+        raise HttpError(400, "Élève introuvable parmi les destinataires de cette séance")
+    with db.Tx(req.db):
+        for uid in user_ids:
+            req.db.execute("""INSERT INTO assignment_reworks(assignment_id, user_id, day, created_by, created_at)
+                              VALUES (?, ?, ?, ?, ?)
+                              ON CONFLICT(assignment_id, user_id) DO UPDATE SET day = excluded.day""",
+                           (a["id"], uid, day, user["id"], db.now()))
+    return json_response({"ok": True})
+
+
+@router.delete("/api/assignments/:id/reworks/:user_id")
+def cancel_rework(req):
+    """Annule la demande : l'élève retrouve sa progression complète sur la séance."""
+    a = _load(req)
+    req.db.execute("DELETE FROM assignment_reworks WHERE assignment_id = ? AND user_id = ?",
+                   (a["id"], to_int(req.params["user_id"])))
     return json_response({"ok": True})

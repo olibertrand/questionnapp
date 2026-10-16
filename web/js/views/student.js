@@ -16,10 +16,17 @@ function daysBetween(a, b) {
   return Math.round((Date.parse(b + 'T12:00:00Z') - Date.parse(a + 'T12:00:00Z')) / 86400000);
 }
 
-// Date limite d'une séance datée : texte et niveau d'urgence (le jour de la séance sert de date limite)
+// Date limite : celle de la séance à retravailler s'il y en a une, sinon le jour d'une séance datée
+// (aucune pour une séance thématique)
+function dueDay(a) {
+  if (a.rework) return a.rework.day;
+  return a.kind === 'theme' ? null : a.day;
+}
+
+// Date limite d'une séance : texte et niveau d'urgence
 function deadlineInfo(a, today) {
   const finished = a.progress.total > 0 && a.progress.done >= a.progress.total;
-  const n = daysBetween(today, a.day);
+  const n = daysBetween(today, dueDay(a));
   let when;
   if (n === 0) when = "aujourd'hui";
   else if (n === 1) when = 'demain';
@@ -32,20 +39,22 @@ function deadlineInfo(a, today) {
 
 function deadlineBox(a, today) {
   const d = deadlineInfo(a, today);
-  const label = d.level === 'late' ? `⚠ Date limite dépassée ${d.when} : ${fmtDay(a.day)}`
-    : `📅 À faire pour le ${fmtDay(a.day)}` + (d.finished ? '' : ` · ${d.when}`);
+  const day = fmtDay(dueDay(a));
+  const label = d.level === 'late' ? `⚠ ${a.rework ? 'À retravailler : date' : 'Date'} limite dépassée ${d.when} : ${day}`
+    : `${a.rework ? '🔁 À retravailler' : '📅 À faire'} pour le ${day}` + (d.finished ? '' : ` · ${d.when}`);
   return h('div', { class: `deadline ${d.level}` }, label, d.finished ? h('span', { class: 'small' }, ' · ✓ terminé') : null);
 }
 
 function assignmentCard(a, today) {
   const theme = a.kind === 'theme';
-  const late = !theme && a.day < today && a.progress.done < a.progress.total;
-  return h('div', { class: 'card' + (theme ? '' : ` dated ${deadlineInfo(a, today).level}`) },
+  const due = dueDay(a);
+  const late = due !== null && due < today && a.progress.done < a.progress.total;
+  return h('div', { class: 'card' + (due === null ? '' : ` dated ${deadlineInfo(a, today).level}`) },
     h('div', { class: 'row between' }, h('strong', {}, a.title),
       h('div', { class: 'row' },
         theme ? h('span', { class: 'pill accent' }, 'thématique') : null,
         late ? h('span', { class: 'pill bad' }, 'à terminer') : a.progress.mastered === a.progress.total ? h('span', { class: 'pill good' }, '✓ terminé') : null)),
-    theme ? null : deadlineBox(a, today),
+    due === null ? null : deadlineBox(a, today),
     h('div', { class: 'small muted', style: { margin: '.2rem 0 .6rem' } }, theme ? `${a.class_name} · à faire quand vous voulez` : a.class_name),
     progressLine(a.progress),
     h('div', { class: 'row', style: { marginTop: '.8rem' } },
@@ -58,14 +67,15 @@ export async function homePage() {
   const today = d.today;
   // séances prévues : datées d'aujourd'hui et à venir (de la plus proche à la plus lointaine),
   // puis les séances thématiques, actives tant que le professeur ne les a pas désactivées
+  // (une séance à retravailler compte pour sa nouvelle date limite)
+  const byDue = (x, y) => dueDay(x).localeCompare(dueDay(y)) || x.id - y.id;
   const planned = [
-    ...d.assignments.filter((a) => a.kind !== 'theme' && a.day >= today).sort((x, y) => x.day.localeCompare(y.day) || x.id - y.id),
+    ...d.assignments.filter((a) => a.kind !== 'theme' && dueDay(a) >= today).sort(byDue),
     ...d.assignments.filter((a) => a.kind === 'theme').sort((x, y) => x.title.localeCompare(y.title)),
   ];
-  const past = d.assignments.filter((a) => a.kind !== 'theme' && a.day < today).reverse();
-  // à rendre : séances datées non terminées, les retards d'abord puis par date limite
-  const todo = d.assignments.filter((a) => a.kind !== 'theme' && a.progress.done < a.progress.total)
-    .sort((x, y) => x.day.localeCompare(y.day) || x.id - y.id);
+  const past = d.assignments.filter((a) => a.kind !== 'theme' && dueDay(a) < today).sort(byDue).reverse();
+  // à rendre : séances avec une date limite (datées ou à retravailler) non terminées, les retards d'abord
+  const todo = d.assignments.filter((a) => dueDay(a) !== null && a.progress.done < a.progress.total).sort(byDue);
   const chapterSelect = h('select', { 'aria-label': 'Limiter à un chapitre' },
     h('option', { value: '' }, 'Tous les chapitres'), d.chapters.map((c) => h('option', { value: c.id ?? '' }, c.name)));
 
@@ -83,7 +93,8 @@ export async function homePage() {
         const info = deadlineInfo(a, today);
         return h('li', { class: `deadline-item ${info.level}` },
           h('a', { href: `#/jouer?mode=assignment&a=${a.id}` }, a.title),
-          ' — ', h('strong', {}, fmtDay(a.day)), ' ',
+          a.rework ? h('span', { class: 'pill accent', style: { marginLeft: '.4rem' } }, '🔁 à retravailler') : null,
+          ' — ', h('strong', {}, fmtDay(dueDay(a))), ' ',
           h('span', { class: `pill ${info.level === 'late' ? 'bad' : info.level === 'soon' ? 'warn' : ''}` },
             info.level === 'late' ? `en retard ${info.when}` : info.when),
           h('span', { class: 'small muted' }, ` · ${a.progress.done}/${a.progress.total} question(s) traitée(s)`));
@@ -167,7 +178,9 @@ export async function assignmentPage({ params }) {
   return h('div', {},
     h('p', {}, h('a', { href: '#/' }, '← Accueil')),
     h('h1', {}, a.title),
-    a.kind === 'theme' ? h('p', { class: 'muted' }, 'Séance thématique') : h('div', { style: { maxWidth: '720px' } }, deadlineBox(a, today)),
+    dueDay(a) === null ? h('p', { class: 'muted' }, 'Séance thématique') : h('div', { style: { maxWidth: '720px' } }, deadlineBox(a, today)),
+    a.rework ? h('p', { class: 'small muted', style: { maxWidth: '720px' } },
+      `Votre professeur vous demande de retravailler cette séance : refaites ses questions (avec de nouvelles données). Seules comptent les réponses données depuis le ${fmtDay(a.rework.since.slice(0, 10))}.`) : null,
     h('div', { class: 'card', style: { maxWidth: '720px' } },
       progressLine(a.progress),
       h('table', { class: 'data', style: { marginTop: '1rem' } }, h('tbody', {}, a.questions.map((q, i) => {
@@ -211,7 +224,9 @@ export async function playPage({ query }) {
     side.replaceChildren();
     if (ctx.assignment) {
       const p = progress || ctx.progress;
-      side.append(h('div', { class: 'card' }, h('h3', {}, ctx.assignment.title), progressLine(p),
+      side.append(h('div', { class: 'card' }, h('h3', {}, ctx.assignment.title),
+        ctx.assignment.rework ? h('p', { class: 'small', style: { marginTop: 0 } }, `🔁 À retravailler pour le ${fmtDay(ctx.assignment.rework.day)}`) : null,
+        progressLine(p),
         h('div', { class: 'qnav', style: { marginTop: '.8rem' } }, p.questions.map((q, i) => h('a', {
           href: `#/jouer?mode=assignment&a=${ctx.assignment.id}&q=${q.question_id}`,
           class: q.question_id === at.question.id ? 'current' : '',

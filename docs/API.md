@@ -83,14 +83,16 @@ Un compte créé (ou dont le mot de passe est réinitialisé) par un prof ou un 
 | Méthode | Route | |
 |---|---|---|
 | POST | `/assignments` | `{class_ids \| class_id, title, kind: dated \| theme, day (séance datée), question_ids, group_ids?, user_ids?}` : une séance par classe ; sans `group_ids` ni `user_ids`, elle s'adresse à toute la classe |
-| GET | `/assignments/:id` | séance + avancement de chaque élève |
+| GET | `/assignments/:id` | séance + avancement de chaque élève (`progress`, depuis le début) et, s'il doit la retravailler, `rework: {day, since, progress}` (avancement depuis la demande) |
 | PUT / DELETE | `/assignments/:id` | mêmes champs, plus `active` (false = désactivée, invisible pour les élèves) |
+| POST | `/assignments/:id/reworks` | `{day, user_ids}` : ces élèves (parmi les destinataires) doivent retravailler la séance pour `day`. Pour eux, seules comptent les réponses données après la demande ; un élève déjà concerné ne change que de date |
+| DELETE | `/assignments/:id/reworks/:user_id` | annule la demande : l'élève retrouve son avancement complet |
 
 ## Travail de l'élève
 | Méthode | Route | |
 |---|---|---|
-| GET | `/me/dashboard` | séances (±45 j) avec avancement, chapitres avec maîtrise, compétences, dernières réponses, totaux |
-| GET | `/me/assignments/:id` | une séance et l'avancement |
+| GET | `/me/dashboard` | séances (±45 j, et celles à retravailler) avec avancement et `rework: {day, since}` ou `null`, chapitres avec maîtrise, compétences, dernières réponses, totaux |
+| GET | `/me/assignments/:id` | une séance, l'avancement et `rework` (à retravailler : l'avancement compte depuis `since`) |
 | GET | `/me/history?limit=` | réponses passées |
 | POST | `/practice/next` | `{mode: "assignment", assignment_id, question_id?}` · `{mode: "chapter", chapter_id}` · `{mode: "adaptive", chapter_id?}` · `{mode: "free", question_id}` → `{attempt: {id, question, instance: {statement, fields}, context}}` ou `{done: true, progress}` |
 | POST | `/attempts/:id/answer` | un essai : `{answers: [...]}` → `{final, tries, max_tries, result, hints?, progress?}`. Tant que `final` est faux, `result` ne contient que `score`, `correct` et `fields: [{score, correct, feedback}]` (ni `expected` ni `solution`) et `hints` les indices débloqués. Final : correction complète, `score` pondéré par l'essai, `raw_score`, `tries`. Réponse vide → 400 sans consommer d'essai |

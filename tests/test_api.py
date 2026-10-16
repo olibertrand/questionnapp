@@ -8,6 +8,7 @@ import os
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.request
@@ -76,6 +77,79 @@ class ApiTest(unittest.TestCase):
     @classmethod
     def tearDownClass(cls):
         cls.httpd.shutdown()
+
+    def test_rework(self):
+        """Séance à retravailler par certains élèves, pour une date donnée."""
+        admin = Client(self.base)
+        admin.login("admin", "admin-pass")
+        admin.ok("POST", "/api/users", {"username": "prof-rw", "password": "prof", "role": "teacher"})
+        admin.ok("POST", "/api/users", {"username": "prof-autre", "password": "prof", "role": "teacher"})
+        prof = Client(self.base)
+        prof.login("prof-rw", "prof")
+        autre = Client(self.base)
+        autre.login("prof-autre", "prof")
+        cid = prof.ok("POST", "/api/classes", {"name": "Retravail"})["id"]
+        prof.ok("POST", "/api/users/import", {"csv": "rw1;pass1;R Un\nrw2;pass2;R Deux", "class_id": cid})
+        members = {m["username"]: m["id"] for m in prof.ok("GET", f"/api/classes/{cid}")["class"]["members"]}
+        qid = prof.ok("POST", "/api/questions", {"title": "Produit", "template": TEMPLATE})["id"]
+        old_day = (datetime.date.today() - datetime.timedelta(days=60)).isoformat()
+        aid = prof.ok("POST", "/api/assignments", {"class_id": cid, "title": "Ancienne séance", "day": old_day,
+                                                   "question_ids": [qid]})["ids"][0]
+        e1, e2 = Client(self.base), Client(self.base)
+        e1.login("rw1", "pass1")
+        e2.login("rw2", "pass2")
+        # e1 répond juste
+        at = e1.ok("POST", "/api/practice/next", {"mode": "assignment", "assignment_id": aid})["attempt"]
+        nums = [int(x) for x in at["instance"]["statement"].split() if x.isdigit()]
+        self.assertEqual(e1.ok("POST", f"/api/attempts/{at['id']}/answer", {"answers": [str(nums[0] * nums[1])]})["progress"]["done"], 1)
+        self.assertTrue(e1.ok("POST", "/api/practice/next", {"mode": "assignment", "assignment_id": aid})["done"])
+        # séance trop ancienne : plus sur la page d'accueil
+        self.assertEqual(e1.ok("GET", "/api/me/dashboard")["assignments"], [])
+
+        time.sleep(1.1)  # les dates sont à la seconde près
+        due = (datetime.date.today() + datetime.timedelta(days=7)).isoformat()
+        # contrôles : élève hors séance, date invalide, prof d'une autre classe
+        self.assertEqual(prof.call("POST", f"/api/assignments/{aid}/reworks", {"day": due, "user_ids": [999999]})[0], 400)
+        self.assertEqual(prof.call("POST", f"/api/assignments/{aid}/reworks", {"day": "bientôt", "user_ids": [members["rw1"]]})[0], 400)
+        self.assertEqual(autre.call("POST", f"/api/assignments/{aid}/reworks", {"day": due, "user_ids": [members["rw1"]]})[0], 403)
+        self.assertEqual(e1.call("POST", f"/api/assignments/{aid}/reworks", {"day": due, "user_ids": [members["rw1"]]})[0], 403)
+        prof.ok("POST", f"/api/assignments/{aid}/reworks", {"day": due, "user_ids": [members["rw1"]]})
+
+        # e1 la voit « à retravailler », progression repartie de zéro ; e2 ne voit rien
+        dash = e1.ok("GET", "/api/me/dashboard")["assignments"]
+        self.assertEqual([a["id"] for a in dash], [aid])
+        self.assertEqual(dash[0]["rework"]["day"], due)
+        self.assertEqual(dash[0]["progress"]["done"], 0)
+        self.assertEqual(e2.ok("GET", "/api/me/dashboard")["assignments"], [])
+        mine = e1.ok("GET", f"/api/me/assignments/{aid}")["assignment"]
+        self.assertEqual((mine["rework"]["day"], mine["progress"]["done"]), (due, 0))
+        self.assertIsNone(e2.ok("GET", f"/api/me/assignments/{aid}")["assignment"]["rework"])
+        at = e1.ok("POST", "/api/practice/next", {"mode": "assignment", "assignment_id": aid})["attempt"]
+        self.assertEqual(at["context"]["assignment"]["rework"]["day"], due)
+
+        # suivi du prof : avancement complet et avancement depuis la demande
+        students = {s["username"]: s for s in prof.ok("GET", f"/api/assignments/{aid}")["assignment"]["students"]}
+        self.assertEqual(students["rw1"]["progress"]["done"], 1)
+        self.assertEqual(students["rw1"]["rework"]["progress"]["done"], 0)
+        self.assertIsNone(students["rw2"]["rework"])
+        # les statistiques gardent toutes les réponses
+        cells = prof.ok("GET", f"/api/stats/classes/{cid}/assignments")["cells"]
+        self.assertEqual(cells[f"{members['rw1']}:{aid}"]["done"], 1)
+
+        time.sleep(1.1)
+        nums = [int(x) for x in at["instance"]["statement"].split() if x.isdigit()]
+        res = e1.ok("POST", f"/api/attempts/{at['id']}/answer", {"answers": [str(nums[0] * nums[1])]})
+        self.assertEqual(res["progress"]["done"], 1)
+        # nouvelle date : le travail déjà refait reste compté
+        later = (datetime.date.today() + datetime.timedelta(days=10)).isoformat()
+        prof.ok("POST", f"/api/assignments/{aid}/reworks", {"day": later, "user_ids": [members["rw1"]]})
+        dash = e1.ok("GET", "/api/me/dashboard")["assignments"]
+        self.assertEqual((dash[0]["rework"]["day"], dash[0]["progress"]["done"]), (later, 1))
+
+        # annulation (un autre prof ne peut pas) : la séance ancienne disparaît de l'accueil
+        self.assertEqual(autre.call("DELETE", f"/api/assignments/{aid}/reworks/{members['rw1']}")[0], 403)
+        prof.ok("DELETE", f"/api/assignments/{aid}/reworks/{members['rw1']}")
+        self.assertEqual(e1.ok("GET", "/api/me/dashboard")["assignments"], [])
 
     def test_full_scenario(self):
         admin = Client(self.base)
