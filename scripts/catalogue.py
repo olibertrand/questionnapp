@@ -167,7 +167,7 @@ function solutionView(ex) {
   const exp = ex.fields.map((f, i) => {
     const num = ex.fields.length > 1 ? `Champ ${i + 1} : ` : '';
     if (f.type === 'choice') return null;  // bonnes options surlignées dans la liste
-    if (f.type === 'code') return f.tests ? num + 'vérifié par des tests (voir la solution).' : null;
+    if (f.type === 'code') return f.tests ? num + (num ? 'vérifié' : 'Vérifié') + ' par des tests (voir la solution).' : null;
     return f.expected ? num + f.expected : null;
   }).filter(Boolean);
   if (exp.length) { box.append($('h4', '', 'Réponse attendue')); exp.forEach((e) => box.append(md(e))); }
