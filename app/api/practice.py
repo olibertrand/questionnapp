@@ -126,9 +126,19 @@ def _load_attempt(req, for_answer=False):
     return user, a
 
 
-def try_factor(tries):
-    """Coefficient appliqué au score selon l'essai : 100 %, 75 %, 50 %, puis 25 %."""
-    return max(0.25, 1 - 0.25 * (max(tries, 1) - 1))
+# Coefficient appliqué au score selon l'essai (le dernier vaut pour tous les essais suivants)
+TRY_FACTORS = (1, 1, 0.75, 0.5, 0.25)    # 100, 100, 75, 50, puis 25 %
+CHOICE_TRY_FACTORS = (1, 0.75, 0.5, 0.25)  # QCM : 100, 75, 50, 25 % (répondre au hasard puis corriger ne rapporte pas tout)
+
+
+def try_factor(tries, choice_only=False):
+    factors = CHOICE_TRY_FACTORS if choice_only else TRY_FACTORS
+    return factors[min(max(tries, 1), len(factors)) - 1]
+
+
+def _choice_only(attempt):
+    fields = json.loads(attempt["instance"])["fields"]
+    return bool(fields) and all(f.get("type") == "choice" for f in fields)
 
 
 def _is_blank(value):
@@ -165,7 +175,7 @@ def _public_feedback(result):
 
 
 def _finalize(req, a, answers, result, raw_score, tries, history, gave_up=False):
-    score = round(raw_score * try_factor(tries), 3)
+    score = round(raw_score * try_factor(tries, _choice_only(a)), 3)
     # score = score retenu (pondéré par l'essai) ; raw_score = réussite du dernier essai
     result = dict(result, score=score, raw_score=raw_score, tries=tries, gave_up=gave_up)
     cur = req.db.execute("UPDATE attempts SET answers = ?, result = ?, score = ?, tries = ?, history = ?, answered_at = ? "

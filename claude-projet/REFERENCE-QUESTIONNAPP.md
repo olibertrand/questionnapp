@@ -169,7 +169,7 @@ SQL…), **mais pas la solution**. Les champs justes sont verrouillés.
 
 | clé | défaut | rôle |
 |---|---|---|
-| `max_tries` | 3 (1 pour un QCM à deux options) | nombre d'essais avant que la solution ne s'affiche |
+| `max_tries` | 6 ; pour un QCM 3, et 1 s'il n'a que deux propositions | nombre d'essais avant que la solution ne s'affiche |
 | `hints` | [] | liste d'indices (Markdown, `{{ }}` autorisés) : le 1er après la 1re erreur, le 2e après la 2e… |
 
 Sans `hints`, un conseil générique adapté au type des champs faux est affiché. Un bon indice
@@ -177,8 +177,9 @@ s'appuie sur les données du tirage (« `range({{ a }}, {{ b }})` s'arrête avan
 oriente vers la méthode sans donner la réponse ; le dernier peut être plus précis.
 
 La question se termine sur une bonne réponse, quand les essais sont épuisés, ou si l'élève
-demande la solution. Score enregistré : score du dernier essai × 100 % (1er essai), 75 % (2e),
-50 % (3e), 25 % ensuite. Une réponse vide n'est pas comptée comme un essai, ni un code de départ
+demande la solution. Score enregistré : score du dernier essai × 100 % (1er ou 2e essai), 75 % (3e),
+50 % (4e), 25 % ensuite ; pour un QCM (uniquement des champs `choice`) : 100 % (1er essai), 75 % (2e),
+50 % (3e), 25 % ensuite, pour que répondre au hasard puis corriger ne rapporte pas tout. Une réponse vide n'est pas comptée comme un essai, ni un code de départ
 validé alors qu'il reste des `...` à remplacer (l'élève reçoit « Il reste des ... dans votre code (ligne N) »).
 
 ### 4. Variété et « jamais deux fois la même question »

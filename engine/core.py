@@ -259,7 +259,8 @@ def _build(template, seed):
                         "code") from last_retry
 
 
-DEFAULT_MAX_TRIES = 3
+DEFAULT_MAX_TRIES = 6   # questions à saisir (nombre, texte, code, SQL)
+CHOICE_MAX_TRIES = 3    # QCM : au-delà, on pourrait cocher toutes les propositions l'une après l'autre
 
 # Indices génériques, utilisés quand le modèle n'en propose pas (un par type de champ).
 DEFAULT_HINTS = {
@@ -277,12 +278,14 @@ DEFAULT_HINTS = {
 
 
 def max_tries(template, public_fields):
-    """Nombre d'essais : `max_tries` du modèle, sinon 3 ; un seul pour un QCM à deux options
-    (un deuxième essai donnerait la réponse)."""
+    """Nombre d'essais : `max_tries` du modèle, sinon 6 ; pour un QCM, 3, et un seul s'il n'a que deux
+    propositions (un deuxième essai donnerait la réponse)."""
     if template.get("max_tries"):
         return max(1, min(int(template["max_tries"]), 10))
-    if all(f["type"] == "choice" and len(f["options"]) <= 2 and not f.get("multiple") for f in public_fields):
-        return 1
+    if all(f["type"] == "choice" for f in public_fields):
+        if all(len(f["options"]) <= 2 and not f.get("multiple") for f in public_fields):
+            return 1
+        return CHOICE_MAX_TRIES
     return DEFAULT_MAX_TRIES
 
 

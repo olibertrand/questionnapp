@@ -769,7 +769,7 @@ export async function editorPage({ params }) {
           h('h3', {}, '3. Réponses attendues'), fieldsBox,
           h('h3', {}, '4. Correction affichée à la fin (facultatif)'), solution,
           h('h3', {}, '5. Indices et nombre d\'essais'),
-          h('p', { class: 'small muted', style: { marginTop: 0 } }, "Après une erreur, l'élève peut se corriger : la solution n'est montrée qu'à la fin. Un indice de plus est donné à chaque erreur (Markdown, {{ }} autorisés ; séparer les indices par une ligne ---). Sans indice, un conseil générique adapté au type de question est affiché. Score : 100 % au 1er essai, 75 % au 2e, 50 % au 3e."),
+          h('p', { class: 'small muted', style: { marginTop: 0 } }, "Après une erreur, l'élève peut se corriger : la solution n'est montrée qu'à la fin. Un indice de plus est donné à chaque erreur (Markdown, {{ }} autorisés ; séparer les indices par une ligne ---). Sans indice, un conseil générique adapté au type de question est affiché. 6 essais (3 pour un QCM, 1 s'il n'a que deux propositions). Score : 100 % au 1er ou au 2e essai, 75 % au 3e, 50 % au 4e, puis 25 % ; pour un QCM : 100 %, 75 %, 50 %."),
           hintsArea,
           h('div', { class: 'row', style: { marginTop: '.6rem' } }, h('label', { style: { margin: 0 } }, "Nombre d'essais"), triesSel))),
       h('div', { class: 'card sticky' },

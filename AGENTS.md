@@ -101,7 +101,8 @@ préviens-moi immédiatement.
 - Aucune ressource chargée depuis un serveur extérieur (polices, scripts, styles) : tout est
   servi par l'appli (RGPD et sécurité ; ex. highlight.js copié dans `web/vendor/`).
 - Les questions sont des modèles écrits en Python (format : `docs/QUESTION_FORMAT.md`) ;
-  plusieurs essais avec indices avant d'afficher la solution ; score retenu 100/75/50 %.
+  plusieurs essais avec indices avant d'afficher la solution : 6 (3 pour un QCM) ; score retenu
+  100/100/75/50/25/25 % selon l'essai (QCM : 100/75/50 %).
 - Les questions vivent dans `banque/` ; la base de l'appli reste la version de travail.
 - Les nouvelles questions se créent avec le projet Claude (`claude-projet/`), puis s'importent ;
   l'import refait un auto-test de chaque question.
