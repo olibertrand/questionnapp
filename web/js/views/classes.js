@@ -355,6 +355,43 @@ export async function assignmentModal(cls, existing = null) {
     } }, 'Enregistrer')));
 }
 
+// Demande à des élèves de retravailler la séance pour une date donnée
+function reworkModal(a) {
+  const inWeek = new Date(Date.parse(todayIso() + 'T12:00:00Z') + 7 * 86400000).toISOString().slice(0, 10);
+  const day = h('input', { type: 'date', value: inWeek, style: { width: 'auto' } });
+  const list = studentChecklist(a.students, new Set());
+  const err = h('div');
+  const close = modal('À retravailler', h('div', {},
+    h('p', { class: 'small muted', style: { marginTop: 0 } },
+      "Les élèves choisis voient la séance « à retravailler » avec cette date limite. Ils refont toutes ses questions (avec de nouvelles données) : seules comptent leurs réponses données à partir de maintenant. Leurs réponses précédentes restent dans les statistiques. Pour un élève qui doit déjà la retravailler, seule la date change."),
+    h('div', { class: 'field' }, h('label', {}, 'Pour le'), day),
+    h('div', { class: 'field' }, h('label', {}, 'Élèves'), list),
+    err,
+    h('button', { class: 'primary', onclick: async () => {
+      const ids = list.selected();
+      if (!ids.length) return err.replaceChildren(h('div', { class: 'alert error' }, 'Choisissez au moins un élève.'));
+      try {
+        await api.post(`/assignments/${a.id}/reworks`, { day: day.value, user_ids: ids });
+        close();
+        toast(`${ids.length} élève(s) : séance à retravailler pour le ${fmtDay(day.value)}.`);
+        render();
+      } catch (e) { err.replaceChildren(errorBox(e)); }
+    } }, 'Enregistrer')));
+}
+
+function reworkCell(a, s) {
+  if (!s.rework) return h('td', {}, h('span', { class: 'muted' }, '—'));
+  const p = s.rework.progress;
+  return h('td', { class: 'small' },
+    h('span', { class: 'pill ' + (p.done >= p.total ? 'good' : s.rework.day < todayIso() ? 'bad' : 'warn') }, `pour le ${fmtDay(s.rework.day)}`),
+    h('div', { class: 'muted' }, `${p.done}/${p.total} refaite(s) · score ${pct(p.score)}`),
+    h('button', { class: 'small', title: 'Annuler la demande', onclick: async () => {
+      if (!confirmBox(`Annuler la demande pour ${studentName(s)} ? L'élève retrouve sa progression complète sur la séance.`)) return;
+      await api.del(`/assignments/${a.id}/reworks/${s.id}`);
+      render();
+    } }, 'Annuler'));
+}
+
 export async function assignmentPage({ params }) {
   const { assignment: a } = await api.get(`/assignments/${params.id}`);
   const { class: cls } = await api.get(`/classes/${a.class_id}`);
@@ -372,10 +409,11 @@ export async function assignmentPage({ params }) {
         } }, 'Supprimer'))),
     h('p', { class: 'row muted' }, kindLabel(a), h('span', {}, `· pour : ${a.audience}`),
       a.active ? h('span', { class: 'pill good' }, 'active') : h('span', { class: 'pill' }, 'désactivée (invisible pour les élèves)')),
-    h('h2', {}, 'Avancement des élèves'),
-    h('p', { class: 'small muted' }, 'Pour chaque question : meilleur score obtenu (nombre d\'essais).'),
+    h('div', { class: 'row between' }, h('h2', {}, 'Avancement des élèves'),
+      a.students.length ? h('button', { onclick: () => reworkModal(a) }, '🔁 À retravailler…') : null),
+    h('p', { class: 'small muted' }, 'Pour chaque question : meilleur score obtenu (nombre d\'essais), depuis le début. Colonne « À retravailler » : avancement depuis la demande.'),
     h('div', { class: 'table-wrap' }, h('table', { class: 'data' },
-      h('thead', {}, h('tr', {}, h('th', {}, 'Élève'), qCols.map((q, i) => h('th', { title: q.title }, q.uid || `Q${i + 1}`)), h('th', {}, 'Traitées'), h('th', {}, 'Score'))),
+      h('thead', {}, h('tr', {}, h('th', {}, 'Élève'), qCols.map((q, i) => h('th', { title: q.title }, q.uid || `Q${i + 1}`)), h('th', {}, 'Traitées'), h('th', {}, 'Score'), h('th', {}, 'À retravailler'))),
       h('tbody', {}, a.students.map((s) => {
         const byQ = Object.fromEntries(s.progress.questions.map((p) => [p.question_id, p]));
         return h('tr', {},
@@ -384,7 +422,8 @@ export async function assignmentPage({ params }) {
             const p = byQ[q.id];
             return h('td', {}, p && p.tries ? h('span', { class: 'pill ' + (p.best >= 1 ? 'good' : 'bad') }, `${pct(p.best)} (${p.tries})`) : h('span', { class: 'muted' }, '—'));
           }),
-          h('td', {}, `${s.progress.done}/${s.progress.total}`), h('td', { style: { minWidth: '8rem' } }, meter(s.progress.score)));
+          h('td', {}, `${s.progress.done}/${s.progress.total}`), h('td', { style: { minWidth: '8rem' } }, meter(s.progress.score)),
+          reworkCell(a, s));
       })))),
     h('h2', {}, 'Questions'),
     h('ol', {}, qCols.map((q) => h('li', {}, q.uid ? h('span', { class: 'uid' }, q.uid) : null, h('a', { href: `#/questions/${q.id}` }, q.title), q.chapter ? h('span', { class: 'muted small' }, ` — ${q.chapter}`) : null))));

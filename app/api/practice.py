@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from .. import adaptive, db, engine_client, security
 from ..web import HttpError, json_response, router, to_int
-from .assignments import VISIBLE_SQL, assignment_questions, is_visible, progress
+from .assignments import VISIBLE_SQL, assignment_questions, is_visible, student_progress
 
 
 def _student_class_ids(conn, user_id):
@@ -69,7 +69,7 @@ def next_question(req):
     conn = req.db
     if mode == "assignment":
         a = _load_assignment_for_student(conn, user, to_int(data.get("assignment_id"), "séance"))
-        prog = progress(conn, a["id"], user["id"])
+        prog, rw = student_progress(conn, a["id"], user["id"])
         qids = [r["question_id"] for r in prog["questions"]]
         if data.get("question_id") is not None:
             qid = to_int(data["question_id"])
@@ -83,7 +83,8 @@ def next_question(req):
                                 "AND score IS NOT NULL ORDER BY answered_at DESC LIMIT 1", user["id"], a["id"])
             qid = next((q for q in todo if not last or q != last["question_id"]), todo[0])
         attempt = create_attempt(conn, user, qid, "assignment", a["id"])
-        attempt["context"] = {"assignment": {"id": a["id"], "title": a["title"], "day": a["day"]}, "progress": prog}
+        attempt["context"] = {"assignment": {"id": a["id"], "title": a["title"], "day": a["day"], "rework": rw},
+                              "progress": prog}
         return json_response({"attempt": attempt})
     if mode in ("chapter", "adaptive"):
         chapter_id = data.get("chapter_id")
@@ -184,7 +185,7 @@ def answer(req):
         out["result"] = _public_feedback(result)
         out["hints"] = result["hints"][:tries]  # un indice de plus à chaque essai
     if a["assignment_id"] and out["final"]:
-        out["progress"] = progress(req.db, a["assignment_id"], user["id"])
+        out["progress"] = student_progress(req.db, a["assignment_id"], user["id"])[0]
     return json_response(out)
 
 
@@ -204,7 +205,7 @@ def reveal(req):
     out = {"final": True, "tries": a["tries"] or 0,
            "result": _finalize(req, a, answers, result, last, a["tries"] or 1, history, gave_up=True)}
     if a["assignment_id"]:
-        out["progress"] = progress(req.db, a["assignment_id"], user["id"])
+        out["progress"] = student_progress(req.db, a["assignment_id"], user["id"])[0]
     return json_response(out)
 
 
@@ -228,13 +229,15 @@ def dashboard(req):
     classes = db.all_(conn, """SELECT c.id, c.name FROM classes c JOIN class_members m ON m.class_id = c.id
                                WHERE m.user_id = ? ORDER BY c.name""", uid)
     since = (datetime.date.today() - datetime.timedelta(days=45)).isoformat()
-    # séances actives qui le concernent : thématiques (sans date) et datées des 45 derniers jours ou à venir
+    # séances actives qui le concernent : thématiques (sans date), datées des 45 derniers jours ou à venir,
+    # et celles qu'il doit retravailler
     assigns = conn.execute(f"""SELECT a.id, a.title, a.day, a.kind, a.class_id, c.name AS class_name
                                FROM assignments a JOIN classes c ON c.id = a.class_id
-                               WHERE {VISIBLE_SQL} AND (a.kind = 'theme' OR a.day >= :since)
+                               WHERE {VISIBLE_SQL} AND (a.kind = 'theme' OR a.day >= :since
+                                     OR EXISTS (SELECT 1 FROM assignment_reworks r WHERE r.assignment_id = a.id AND r.user_id = :u))
                                ORDER BY a.day, a.id""", {"u": uid, "since": since}).fetchall()
     for a in assigns:
-        p = progress(conn, a["id"], uid)
+        p, a["rework"] = student_progress(conn, a["id"], uid)
         a["progress"] = {k: p[k] for k in ("total", "done", "mastered", "score")}
 
     available = adaptive.available_questions(conn, uid)
@@ -282,7 +285,7 @@ def my_assignment(req):
     user = security.require_user(req)
     a = _load_assignment_for_student(req.db, user, to_int(req.params["id"]))
     a["questions"] = assignment_questions(req.db, a["id"])
-    a["progress"] = progress(req.db, a["id"], user["id"])
+    a["progress"], a["rework"] = student_progress(req.db, a["id"], user["id"])
     return json_response({"assignment": a, "today": db.today()})
 
 

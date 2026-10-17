@@ -126,6 +126,18 @@ CREATE TABLE IF NOT EXISTS assignment_targets (
 );
 CREATE INDEX IF NOT EXISTS idx_assignment_targets ON assignment_targets(assignment_id);
 
+-- Séance à retravailler par un élève choisi par le prof, pour une date donnée. Seuls comptent alors
+-- les essais faits depuis la demande (created_at) ; les réponses précédentes restent dans les statistiques.
+CREATE TABLE IF NOT EXISTS assignment_reworks (
+    assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
+    user_id       INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day           TEXT NOT NULL,           -- AAAA-MM-JJ : date limite
+    created_by    INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at    TEXT NOT NULL,           -- début du travail à refaire
+    PRIMARY KEY (assignment_id, user_id)
+);
+CREATE INDEX IF NOT EXISTS idx_assignment_reworks_user ON assignment_reworks(user_id);
+
 CREATE TABLE IF NOT EXISTS assignment_questions (
     assignment_id INTEGER NOT NULL REFERENCES assignments(id) ON DELETE CASCADE,
     question_id   INTEGER NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
