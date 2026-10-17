@@ -11,6 +11,7 @@ l'essayer avec **Aperçu**, puis l'importer (ou la mettre à jour) et l'affecter
 | `python-listes-chaines.json` | indices et tranches, parcours, compréhensions |
 | `python-dictionnaires.json` | accès, `keys`/`values`/`items`, max/min, calculs cumulatifs, données imbriquées |
 | `fondamentaux-parcours.json` | séries « Comptage », « Recherche » et « Maximum » : fonctions à compléter ou à écrire, uniquement avec `for` (sur les éléments, sur les indices ou au choix) ; listes de nombres et de dictionnaires |
+| `remediation-parcours.json` | remédiation, très guidée (code à compléter, boucles `for` uniquement) : afficher les éléments d'une liste, afficher une valeur dans une liste de dictionnaires, `somme(L)`, somme d'une clé (ticket de caisse…), `nb_pairs(L)` |
 | `poo.json` | créer un objet, attributs, appeler et écrire des méthodes (classes `Duree`, `Fraction`, `Rectangle`, `Compte`), références |
 | `listes-chainees.json` | listes chaînées (classes `Maillon`/`Chaine`, répertoire `Fiche`/`Repertoire`) : liens, création, parcours, méthodes |
 | `arbres-binaires.json` | arbres binaires (classe `Arbre`, arbre vide = `None`) : lire et créer un arbre, `taille`, `hauteur`, somme, minimum/maximum en récursif |
