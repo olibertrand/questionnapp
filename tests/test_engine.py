@@ -176,6 +176,36 @@ class SandboxTest(unittest.TestCase):
             self.assertIn("ZeroDivisionError", r["result"]["fields"][0]["feedback"])
             self.assertIn("(ligne 3)", r["result"]["fields"][0]["feedback"])
 
+    def test_max_tries(self):
+        """6 essais pour une réponse à saisir, 3 pour un QCM, 1 pour un QCM à deux propositions."""
+        num = {"code": "a = randint(1, 9)", "statement": "{{ a }}", "fields": [{"type": "number", "answer": "a"}]}
+        def qcm(n):
+            return {"code": "", "statement": "?", "fields": [{"type": "choice", "options": [
+                {"text": str(k), "correct": k == 0} for k in range(n)]}]}
+        mixed = {**num, "fields": num["fields"] + qcm(4)["fields"]}
+        for template, expected in ((num, 6), (qcm(4), 3), (qcm(3), 3), (qcm(2), 1), (mixed, 6), ({**num, "max_tries": 2}, 2)):
+            self.assertEqual(core.generate(template, 1)["public"]["max_tries"], expected, template)
+
+    def test_try_factor(self):
+        from app.api.practice import try_factor
+        self.assertEqual([try_factor(t) for t in range(1, 8)], [1, 1, 0.75, 0.5, 0.25, 0.25, 0.25])
+        self.assertEqual([try_factor(t, choice_only=True) for t in range(1, 5)], [1, 0.75, 0.5, 0.25])
+
+    def test_leftover_ellipsis_message(self):
+        """Code de départ validé sans remplacer les `...` : message clair au lieu de l'erreur Python."""
+        t = {"code": "L = [1, 2]", "statement": "", "fields": [{"type": "code", "given": "{'L': L}", "tests": "check(True)"}]}
+        def feedback(code):
+            r = run_engine({"action": "check", "template": t, "seed": 1, "answers": [code]})
+            return r["result"]["fields"][0]["feedback"]
+        self.assertIn("Il reste des `...` dans votre code (ligne 1)", feedback("for ... in L:\n    print(...)"))   # syntaxe
+        self.assertIn("Il reste des `...` dans votre code (ligne 1)", feedback("for i in range(...):\n    print(L[i])"))  # exécution
+        self.assertIn("(ligne 3)", feedback("x = 1\n# rien\nfor ...\n    print(x)"))
+        # sans `...` (ou seulement dans un commentaire ou un texte) : message habituel
+        self.assertIn("Erreur de syntaxe", feedback("for x in L\n    print(x)  # ..."))
+        self.assertIn("TypeError", feedback("print('...' + 1)"))
+        self.assertEqual(core.leftover_ellipsis("s = '...'  # ...\nprint(s)"), None)
+        self.assertEqual(core.leftover_ellipsis("def f():\n    ...\n"), 2)
+
     def test_sql_attach_denied(self):
         t = {"code": "setup = 'CREATE TABLE t(a);'", "fields": [{"type": "sql", "setup": "setup", "answer": "'SELECT a FROM t'"}]}
         r = run_engine({"action": "check", "template": t, "seed": 1, "answers": ["ATTACH DATABASE 'x.db' AS x"]})

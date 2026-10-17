@@ -1,8 +1,10 @@
 """Travail de l'élève : séances du jour, entraînement par chapitre, mode adaptatif."""
 
 import datetime
+import io
 import json
 import secrets
+import tokenize
 from collections import defaultdict
 
 from .. import adaptive, db, engine_client, security
@@ -124,13 +126,46 @@ def _load_attempt(req, for_answer=False):
     return user, a
 
 
-def try_factor(tries):
-    """Coefficient appliqué au score selon l'essai : 100 %, 75 %, 50 %, puis 25 %."""
-    return max(0.25, 1 - 0.25 * (max(tries, 1) - 1))
+# Coefficient appliqué au score selon l'essai (le dernier vaut pour tous les essais suivants)
+TRY_FACTORS = (1, 1, 0.75, 0.5, 0.25)    # 100, 100, 75, 50, puis 25 %
+CHOICE_TRY_FACTORS = (1, 0.75, 0.5, 0.25)  # QCM : 100, 75, 50, 25 % (répondre au hasard puis corriger ne rapporte pas tout)
+
+
+def try_factor(tries, choice_only=False):
+    factors = CHOICE_TRY_FACTORS if choice_only else TRY_FACTORS
+    return factors[min(max(tries, 1), len(factors)) - 1]
+
+
+def _choice_only(attempt):
+    fields = json.loads(attempt["instance"])["fields"]
+    return bool(fields) and all(f.get("type") == "choice" for f in fields)
 
 
 def _is_blank(value):
     return value is None or value == [] or (isinstance(value, str) and not value.strip())
+
+
+def _leftover_ellipsis(code):
+    """Ligne du premier `...` du code (hors commentaires et chaînes), ou None."""
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(code).readline):
+            if tok.type == tokenize.OP and tok.string == "...":
+                return tok.start[0]
+    except (tokenize.TokenError, SyntaxError):
+        pass
+    return None
+
+
+def _check_leftover_ellipsis(fields, answers):
+    """Code de départ à trous validé sans remplacer ses `...` : refusé sans décompter d'essai
+    (comme une réponse vide)."""
+    for i, f in enumerate(fields):
+        if f.get("type") == "code" and _leftover_ellipsis(f.get("starter") or ""):
+            line = _leftover_ellipsis(str(answers[i]))
+            if line:
+                where = f"champ {i + 1}, " if len(fields) > 1 else ""
+                raise HttpError(400, f"Il reste des ... dans votre code ({where}ligne {line}) : remplacez-les par ce qu'il faut, "
+                                     "puis validez. Cet essai n'est pas décompté.")
 
 
 def _public_feedback(result):
@@ -140,7 +175,7 @@ def _public_feedback(result):
 
 
 def _finalize(req, a, answers, result, raw_score, tries, history, gave_up=False):
-    score = round(raw_score * try_factor(tries), 3)
+    score = round(raw_score * try_factor(tries, _choice_only(a)), 3)
     # score = score retenu (pondéré par l'essai) ; raw_score = réussite du dernier essai
     result = dict(result, score=score, raw_score=raw_score, tries=tries, gave_up=gave_up)
     cur = req.db.execute("UPDATE attempts SET answers = ?, result = ?, score = ?, tries = ?, history = ?, answered_at = ? "
@@ -166,6 +201,7 @@ def answer(req):
     instance = json.loads(a["instance"])
     if len(answers) < len(instance["fields"]) or any(_is_blank(x) for x in answers[:len(instance["fields"])]):
         raise HttpError(400, "Répondez à toutes les questions avant de valider (un essai n'est pas décompté).")
+    _check_leftover_ellipsis(instance["fields"], answers)
     result = engine_client.call_or_raise({"action": "check", "template": json.loads(a["template"]),
                                           "seed": a["seed"], "answers": answers}, status=500)
     tries = (a["tries"] or 0) + 1
