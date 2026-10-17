@@ -263,21 +263,24 @@ async function assignmentsTab(cls) {
         h('td', {}, a.active ? h('span', { class: 'pill good' }, 'active') : h('span', { class: 'pill' }, 'désactivée')),
         h('td', { class: 'actions' },
           h('button', { class: 'small', onclick: () => toggleActive(a) }, a.active ? 'Désactiver' : 'Réactiver'),
+          h('button', { class: 'small', onclick: async () => assignmentModal(cls, (await api.get(`/assignments/${a.id}`)).assignment, { copy: true }) }, 'Dupliquer'),
           h('a', { class: 'btn small', href: `#/seances/${a.id}` }, 'Suivi')))))))
       : h('div', { class: 'empty' }, 'Aucune séance.'));
 }
 
-export async function assignmentModal(cls, existing = null) {
+// Création, modification ou duplication (copy : nouvelle séance pré-remplie avec celle-ci) d'une séance
+export async function assignmentModal(cls, existing = null, { copy = false } = {}) {
   const [{ questions }, { classes }, { class: full }, { groups }] = await Promise.all([
     api.get('/questions'), api.get('/classes'), api.get(`/classes/${cls.id}`), api.get(`/classes/${cls.id}/groups`)]);
+  const editing = existing && !copy;
   const students = full.members.filter((m) => m.role === 'student');
-  const title = h('input', { type: 'text', value: existing ? existing.title : '', placeholder: 'ex. Boucles — séance du mardi, ou Révisions : dictionnaires' });
+  const title = h('input', { type: 'text', value: existing ? existing.title + (copy ? ' (copie)' : '') : '', placeholder: 'ex. Boucles — séance du mardi, ou Révisions : dictionnaires' });
 
   // type de séance
   const kind = existing ? existing.kind : 'dated';
   const kindDated = h('input', { type: 'radio', name: 'kind', value: 'dated', checked: kind === 'dated' });
   const kindTheme = h('input', { type: 'radio', name: 'kind', value: 'theme', checked: kind === 'theme' });
-  const day = h('input', { type: 'date', value: existing && existing.kind === 'dated' ? existing.day : todayIso(), style: { width: 'auto' } });
+  const day = h('input', { type: 'date', value: editing && existing.kind === 'dated' ? existing.day : todayIso(), style: { width: 'auto' } });
   const syncKind = () => { day.disabled = !kindDated.checked; };
   kindDated.addEventListener('change', syncKind);
   kindTheme.addEventListener('change', syncKind);
@@ -296,20 +299,48 @@ export async function assignmentModal(cls, existing = null) {
       : h('p', { class: 'small muted' }, "Pas encore de groupe (onglet « Groupes » de la classe) : choisissez les élèves un par un."),
     h('div', { class: 'small muted' }, 'Élèves :'), studentList);
 
-  const selected = new Set(existing ? existing.questions.map((q) => q.id) : []);
+  // questions choisies, dans l'ordre de la séance (une question cochée s'ajoute à la fin)
+  const order = existing ? existing.questions.map((q) => q.id) : [];
+  const byId = Object.fromEntries(questions.map((q) => [q.id, q]));
   const onlyClass = h('input', { type: 'checkbox', checked: !existing });
   const listBox = h('div');
+  const orderBox = h('div');
   const classQ = new Set(full.question_ids);
+  const move = (k, delta) => { [order[k], order[k + delta]] = [order[k + delta], order[k]]; renderOrder(); };
+  const renderOrder = () => {
+    orderBox.replaceChildren(order.length ? h('ol', { class: 'order-list' }, order.map((id, k) => {
+      const q = byId[id] || { title: `Question ${id}` };
+      return h('li', {}, h('div', { class: 'order-item' },
+        h('span', { class: 'grow' }, q.uid ? h('span', { class: 'uid' }, q.uid) : null, ' ', q.title),
+        h('button', { type: 'button', class: 'small', title: 'Monter', 'aria-label': `Monter ${q.title}`, disabled: k === 0, onclick: () => move(k, -1) }, '↑'),
+        h('button', { type: 'button', class: 'small', title: 'Descendre', 'aria-label': `Descendre ${q.title}`, disabled: k === order.length - 1, onclick: () => move(k, 1) }, '↓'),
+        h('button', { type: 'button', class: 'small', title: 'Retirer de la séance', 'aria-label': `Retirer ${q.title}`, onclick: () => {
+          order.splice(k, 1);
+          const box = listBox.querySelector(`input[value="${id}"]`);
+          if (box) box.checked = false;
+          renderOrder();
+        } }, '✕')));
+    })) : h('p', { class: 'small muted' }, 'Aucune question choisie : cochez-les dans la liste ci-dessus.'));
+  };
   const refresh = () => {
-    const qs = onlyClass.checked && classQ.size ? questions.filter((q) => classQ.has(q.id) || selected.has(q.id)) : questions;
-    const list = questionChecklist(qs, selected);
-    list.addEventListener('change', (e) => { if (e.target.type !== 'checkbox') return; const id = Number(e.target.value); if (e.target.checked) selected.add(id); else selected.delete(id); });
+    const chosen = new Set(order);
+    const qs = onlyClass.checked && classQ.size ? questions.filter((q) => classQ.has(q.id) || chosen.has(q.id)) : questions;
+    const list = questionChecklist(qs, chosen);
+    list.addEventListener('change', (e) => {
+      if (e.target.type !== 'checkbox') return;
+      const id = Number(e.target.value);
+      const k = order.indexOf(id);
+      if (e.target.checked && k < 0) order.push(id);
+      if (!e.target.checked && k >= 0) order.splice(k, 1);
+      renderOrder();
+    });
     listBox.replaceChildren(list);
   };
   onlyClass.addEventListener('change', refresh);
   refresh();
+  renderOrder();
   const others = classes.filter((c) => c.id !== cls.id);
-  const alsoBox = !existing && others.length ? h('div', { class: 'field' }, h('label', {}, 'Créer aussi pour les classes'),
+  const alsoBox = !editing && others.length ? h('div', { class: 'field' }, h('label', {}, 'Créer aussi pour les classes'),
     h('div', { class: 'row' }, others.map((c) => h('label', { class: 'inline' }, h('input', { type: 'checkbox', value: c.id }), c.name)))) : null;
   const syncAudience = () => {
     audienceBox.style.display = some.checked ? '' : 'none';
@@ -320,7 +351,8 @@ export async function assignmentModal(cls, existing = null) {
   syncAudience();
 
   const err = h('div');
-  const close = modal(existing ? 'Modifier la séance' : 'Nouvelle séance', h('div', {},
+  const close = modal(editing ? 'Modifier la séance' : copy ? 'Dupliquer la séance' : 'Nouvelle séance', h('div', {},
+    copy ? h('p', { class: 'small muted', style: { marginTop: 0 } }, "Nouvelle séance avec les mêmes questions : changez le titre, la date ou les élèves. La séance d'origine et ses réponses ne changent pas.") : null,
     h('div', { class: 'field' }, h('label', {}, 'Titre'), title),
     h('div', { class: 'field' }, h('label', {}, 'Type de séance'),
       h('label', { class: 'inline' }, kindDated, 'Séance datée, pour le ', day),
@@ -329,12 +361,14 @@ export async function assignmentModal(cls, existing = null) {
       h('label', { class: 'inline' }, allClass, 'Toute la classe'),
       h('label', { class: 'inline' }, some, 'Certains élèves ou groupes'),
       audienceBox),
-    h('div', { class: 'field' }, h('div', { class: 'row between' }, h('label', {}, 'Questions (dans l\'ordre de la liste)'),
+    h('div', { class: 'field' }, h('div', { class: 'row between' }, h('label', {}, 'Questions'),
       classQ.size ? h('label', { class: 'inline small' }, onlyClass, 'seulement celles de la classe') : null), listBox,
     h('div', { class: 'hint' }, "Séance pour toute la classe : ses questions sont aussi affectées à la classe (entraînement). Séance pour certains élèves : seuls ces élèves y ont accès.")),
+    h('div', { class: 'field' }, h('label', {}, 'Ordre dans la séance'), orderBox,
+      h('div', { class: 'hint' }, 'Les élèves voient les questions dans cet ordre : ↑ et ↓ pour les déplacer.')),
     alsoBox, err,
     h('button', { class: 'primary', onclick: async () => {
-      const qids = questions.map((q) => q.id).filter((id) => selected.has(id));
+      const qids = [...order];
       const body = { title: title.value, kind: kindTheme.checked ? 'theme' : 'dated', question_ids: qids,
         group_ids: some.checked ? groupBoxes.map((b) => b.querySelector('input')).filter((x) => x.checked).map((x) => Number(x.value)) : [],
         user_ids: some.checked ? studentList.selected() : [] };
@@ -343,11 +377,16 @@ export async function assignmentModal(cls, existing = null) {
         return err.replaceChildren(h('div', { class: 'alert error' }, 'Choisissez au moins un groupe ou un élève.'));
       }
       try {
-        if (existing) {
+        if (editing) {
           await api.put(`/assignments/${existing.id}`, body);
         } else {
           const extra = alsoBox && !some.checked ? [...alsoBox.querySelectorAll('input:checked')].map((x) => Number(x.value)) : [];
-          await api.post('/assignments', { ...body, class_ids: [cls.id, ...extra] });
+          const r = await api.post('/assignments', { ...body, class_ids: [cls.id, ...extra] });
+          if (copy) {
+            close();
+            toast('Séance dupliquée.');
+            return navigate(`/seances/${r.ids[0]}`);
+          }
         }
         close();
         render();
@@ -402,6 +441,7 @@ export async function assignmentPage({ params }) {
       h('div', { class: 'row' },
         h('button', { onclick: () => toggleActive(a) }, a.active ? 'Désactiver' : 'Réactiver'),
         h('button', { onclick: () => assignmentModal(cls, a) }, 'Modifier'),
+        h('button', { onclick: () => assignmentModal(cls, a, { copy: true }) }, 'Dupliquer'),
         h('button', { class: 'danger', onclick: async () => {
           if (!confirmBox('Supprimer cette séance ? Les réponses des élèves restent dans les statistiques.')) return;
           await api.del(`/assignments/${a.id}`);

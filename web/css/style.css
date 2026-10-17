@@ -263,6 +263,11 @@ details.help dd { margin: 0 0 0 1rem; font-size: .85rem; color: var(--text-2); }
 .deadline.done { border-left-color: var(--good-ink); background: var(--good-soft); color: var(--good-ink); font-weight: 600; }
 .card.dated.late { border-color: var(--bad); }
 .card.dated.soon { border-color: #e0a100; }
+.order-list { margin: .2rem 0; padding-left: 1.6rem; }
+.order-list li { margin: .25rem 0; }
+.order-item { display: flex; align-items: center; gap: .3rem; }
+.order-item .grow { flex: 1; min-width: 0; }
+.order-item button { padding: .1rem .45rem; }
 .due-list ul { margin: .2rem 0 0; padding-left: 1.2rem; }
 .due-list li { margin: .35rem 0; }
 .pill.warn { background: var(--warn-soft); color: var(--text); border: 1px solid #e0a100; }

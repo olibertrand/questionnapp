@@ -151,6 +151,22 @@ class ApiTest(unittest.TestCase):
         prof.ok("DELETE", f"/api/assignments/{aid}/reworks/{members['rw1']}")
         self.assertEqual(e1.ok("GET", "/api/me/dashboard")["assignments"], [])
 
+    def test_assignment_question_order(self):
+        """L'ordre des questions d'une séance est celui choisi par le prof, à la création comme à la modification."""
+        admin = Client(self.base)
+        admin.login("admin", "admin-pass")
+        admin.ok("POST", "/api/users", {"username": "prof-ordre", "password": "prof", "role": "teacher"})
+        prof = Client(self.base)
+        prof.login("prof-ordre", "prof")
+        cid = prof.ok("POST", "/api/classes", {"name": "Ordre"})["id"]
+        q1, q2, q3 = (prof.ok("POST", "/api/questions", {"title": f"Ordre {k}", "template": TEMPLATE})["id"] for k in range(3))
+        aid = prof.ok("POST", "/api/assignments", {"class_id": cid, "title": "S", "kind": "theme",
+                                                   "question_ids": [q3, q1, q2]})["ids"][0]
+        order = lambda: [q["id"] for q in prof.ok("GET", f"/api/assignments/{aid}")["assignment"]["questions"]]
+        self.assertEqual(order(), [q3, q1, q2])
+        prof.ok("PUT", f"/api/assignments/{aid}", {"question_ids": [q1, q2, q3]})
+        self.assertEqual(order(), [q1, q2, q3])
+
     def test_leftover_ellipsis_not_counted(self):
         """Code de départ validé sans remplacer ses `...` : refusé, sans décompter d'essai."""
         admin = Client(self.base)
