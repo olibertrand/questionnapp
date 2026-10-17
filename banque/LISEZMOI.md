@@ -19,6 +19,20 @@ l'essayer avec **Aperçu**, puis l'importer (ou la mettre à jour) et l'affecter
 | `bases-de-donnees.json` | modèle relationnel, SQL |
 | `python-premiere-while.json` | série 1ère NSI : listes, listes de listes et de dictionnaires, dictionnaires, parcours (afficher, compter, cumuler, chercher, « tous »), fonctions simples, portée ; **boucles `while` uniquement** |
 
+## Parcourir toutes les questions
+
+```
+python3 scripts/catalogue.py
+```
+
+Ce script écrit `catalogue-questions.html` : une seule page à ouvrir dans un navigateur, même
+sans connexion. Elle contient toutes les questions de ce répertoire, classées par banque, avec un
+sommaire et une recherche. Chaque question y figure avec un exemple tiré par le moteur :
+l'énoncé et la zone de réponse tels que l'élève les voit, puis, à déplier, la réponse attendue,
+la solution et les indices. Pour obtenir d'autres exemples : `--graine 2` ; pour choisir le
+fichier écrit : `--sortie chemin/catalogue.html`. Relancez le script après chaque ajout de
+questions.
+
 ## Ajouter des questions
 
 - **Déposer un fichier** : copiez ici un fichier au format d'import (par exemple celui produit
