@@ -176,6 +176,21 @@ class SandboxTest(unittest.TestCase):
             self.assertIn("ZeroDivisionError", r["result"]["fields"][0]["feedback"])
             self.assertIn("(ligne 3)", r["result"]["fields"][0]["feedback"])
 
+    def test_leftover_ellipsis_message(self):
+        """Code de départ validé sans remplacer les `...` : message clair au lieu de l'erreur Python."""
+        t = {"code": "L = [1, 2]", "statement": "", "fields": [{"type": "code", "given": "{'L': L}", "tests": "check(True)"}]}
+        def feedback(code):
+            r = run_engine({"action": "check", "template": t, "seed": 1, "answers": [code]})
+            return r["result"]["fields"][0]["feedback"]
+        self.assertIn("Il reste des `...` dans votre code (ligne 1)", feedback("for ... in L:\n    print(...)"))   # syntaxe
+        self.assertIn("Il reste des `...` dans votre code (ligne 1)", feedback("for i in range(...):\n    print(L[i])"))  # exécution
+        self.assertIn("(ligne 3)", feedback("x = 1\n# rien\nfor ...\n    print(x)"))
+        # sans `...` (ou seulement dans un commentaire ou un texte) : message habituel
+        self.assertIn("Erreur de syntaxe", feedback("for x in L\n    print(x)  # ..."))
+        self.assertIn("TypeError", feedback("print('...' + 1)"))
+        self.assertEqual(core.leftover_ellipsis("s = '...'  # ...\nprint(s)"), None)
+        self.assertEqual(core.leftover_ellipsis("def f():\n    ...\n"), 2)
+
     def test_sql_attach_denied(self):
         t = {"code": "setup = 'CREATE TABLE t(a);'", "fields": [{"type": "sql", "setup": "setup", "answer": "'SELECT a FROM t'"}]}
         r = run_engine({"action": "check", "template": t, "seed": 1, "answers": ["ATTACH DATABASE 'x.db' AS x"]})

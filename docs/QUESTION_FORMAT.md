@@ -174,7 +174,8 @@ oriente vers la méthode sans donner la réponse ; le dernier peut être plus pr
 
 La question se termine sur une bonne réponse, quand les essais sont épuisés, ou si l'élève
 demande la solution. Score enregistré : score du dernier essai × 100 % (1er essai), 75 % (2e),
-50 % (3e), 25 % ensuite. Une réponse vide n'est pas comptée comme un essai.
+50 % (3e), 25 % ensuite. Une réponse vide n'est pas comptée comme un essai, ni un code de départ
+validé alors qu'il reste des `...` à remplacer (l'élève reçoit « Il reste des ... dans votre code (ligne N) »).
 
 ## 4. Variété et « jamais deux fois la même question »
 

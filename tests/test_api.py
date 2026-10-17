@@ -151,6 +151,32 @@ class ApiTest(unittest.TestCase):
         prof.ok("DELETE", f"/api/assignments/{aid}/reworks/{members['rw1']}")
         self.assertEqual(e1.ok("GET", "/api/me/dashboard")["assignments"], [])
 
+    def test_leftover_ellipsis_not_counted(self):
+        """Code de départ validé sans remplacer ses `...` : refusé, sans décompter d'essai."""
+        admin = Client(self.base)
+        admin.login("admin", "admin-pass")
+        admin.ok("POST", "/api/users", {"username": "prof-trous", "password": "prof", "role": "teacher"})
+        prof = Client(self.base)
+        prof.login("prof-trous", "prof")
+        cid = prof.ok("POST", "/api/classes", {"name": "Trous"})["id"]
+        prof.ok("POST", "/api/users/import", {"csv": "tr1;pass1;T Un", "class_id": cid})
+        template = {"code": "L = [randint(1, 9) for _ in range(3)]", "statement": "Afficher {{ L }}",
+                    "fields": [{"type": "code", "given": "{'L': L}", "starter": "for ... in L:\n    print(...)\n",
+                                "tests": "check(student_output.split() == [str(x) for x in L], 'affichage')",
+                                "reference": "for x in L:\n    print(x)"}]}
+        qid = prof.ok("POST", "/api/questions", {"title": "Trous", "template": template, "class_ids": [cid]})["id"]
+        eleve = Client(self.base)
+        eleve.login("tr1", "pass1")
+        at = eleve.ok("POST", "/api/practice/next", {"mode": "free", "question_id": qid})["attempt"]
+        status, err = eleve.call("POST", f"/api/attempts/{at['id']}/answer", {"answers": ["for ... in L:\n    print(...)\n"]})
+        self.assertEqual(status, 400)
+        self.assertIn("Il reste des ... dans votre code (ligne 1)", err["error"])
+        self.assertIn("pas décompté", err["error"])
+        # des `...` dans un commentaire ou un texte ne gênent pas ; l'essai est alors compté
+        res = eleve.ok("POST", f"/api/attempts/{at['id']}/answer", {"answers": ["for x in L:\n    print(x)  # ...\n"]})
+        self.assertEqual(res["tries"], 1)
+        self.assertTrue(res["result"]["correct"])
+
     def test_full_scenario(self):
         admin = Client(self.base)
         self.assertEqual(admin.call("POST", "/api/auth/login", {"username": "admin", "password": "bad"})[0], 401)

@@ -22,6 +22,7 @@ import random
 import re
 import signal
 import sqlite3
+import tokenize
 import traceback
 import unicodedata
 
@@ -547,6 +548,22 @@ def _short(v, limit=120):
     return s if len(s) <= limit else s[:limit] + "…"
 
 
+def leftover_ellipsis(code):
+    """Ligne du premier `...` laissé dans le code (hors commentaires et chaînes), ou None.
+    Sert à expliquer l'erreur quand l'élève valide un code de départ sans remplacer les `...`."""
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(code).readline):
+            if tok.type == tokenize.OP and tok.string == "...":
+                return tok.start[0]
+    except (tokenize.TokenError, SyntaxError):
+        pass
+    return None
+
+
+def _leftover_message(line):
+    return f"Il reste des `...` dans votre code (ligne {line}) : remplacez-les par ce qu'il faut, puis validez."
+
+
 def _check_code(field, ns, answer):
     code = str(answer or "")
     if not code.strip():
@@ -554,6 +571,9 @@ def _check_code(field, ns, answer):
     try:
         tree = ast.parse(code, "<eleve>")
     except SyntaxError as exc:
+        line = leftover_ellipsis(code)
+        if line:
+            return 0.0, _leftover_message(line)
         return 0.0, f"Erreur de syntaxe ligne {exc.lineno} : {exc.msg}"
     bad = _forbidden_usage(tree, field.get("forbid"))
     if bad:
@@ -577,6 +597,9 @@ def _check_code(field, ns, answer):
     except helpers.ExecutionError as exc:
         return 0.0, str(exc)
     except BaseException as exc:  # noqa: BLE001 - y compris SystemExit
+        leftover = leftover_ellipsis(code) if "ellipsis" in str(exc) else None
+        if leftover:
+            return 0.0, _leftover_message(leftover)
         line = _user_line(exc, "<eleve>")
         return 0.0, f"Erreur à l'exécution{f' ligne {line}' if line else ''} : {type(exc).__name__}: {exc}"
 

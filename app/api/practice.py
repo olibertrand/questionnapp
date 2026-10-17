@@ -1,8 +1,10 @@
 """Travail de l'élève : séances du jour, entraînement par chapitre, mode adaptatif."""
 
 import datetime
+import io
 import json
 import secrets
+import tokenize
 from collections import defaultdict
 
 from .. import adaptive, db, engine_client, security
@@ -133,6 +135,29 @@ def _is_blank(value):
     return value is None or value == [] or (isinstance(value, str) and not value.strip())
 
 
+def _leftover_ellipsis(code):
+    """Ligne du premier `...` du code (hors commentaires et chaînes), ou None."""
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(code).readline):
+            if tok.type == tokenize.OP and tok.string == "...":
+                return tok.start[0]
+    except (tokenize.TokenError, SyntaxError):
+        pass
+    return None
+
+
+def _check_leftover_ellipsis(fields, answers):
+    """Code de départ à trous validé sans remplacer ses `...` : refusé sans décompter d'essai
+    (comme une réponse vide)."""
+    for i, f in enumerate(fields):
+        if f.get("type") == "code" and _leftover_ellipsis(f.get("starter") or ""):
+            line = _leftover_ellipsis(str(answers[i]))
+            if line:
+                where = f"champ {i + 1}, " if len(fields) > 1 else ""
+                raise HttpError(400, f"Il reste des ... dans votre code ({where}ligne {line}) : remplacez-les par ce qu'il faut, "
+                                     "puis validez. Cet essai n'est pas décompté.")
+
+
 def _public_feedback(result):
     """Retour d'un essai intermédiaire : juste / faux et commentaires, sans la solution."""
     return {"score": result["score"], "correct": result["correct"],
@@ -166,6 +191,7 @@ def answer(req):
     instance = json.loads(a["instance"])
     if len(answers) < len(instance["fields"]) or any(_is_blank(x) for x in answers[:len(instance["fields"])]):
         raise HttpError(400, "Répondez à toutes les questions avant de valider (un essai n'est pas décompté).")
+    _check_leftover_ellipsis(instance["fields"], answers)
     result = engine_client.call_or_raise({"action": "check", "template": json.loads(a["template"]),
                                           "seed": a["seed"], "answers": answers}, status=500)
     tries = (a["tries"] or 0) + 1
